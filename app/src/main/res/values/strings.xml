@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">Grouping Messages</string>
+    <string-array name="from_sms">
+        <item>VM-SHOPMT</item>
+        <item>VK-SHOPMT</item>
+        <item>AD-MYNTRA</item>
+        <item>AM-SCLUES</item>
+        <item>AM-IPAYTM</item>
+        <item>VK-iPaytm</item>
+        <item>AM-CBSSBI</item>
+        <item>AM-DOMINO</item>
+        <item>VK-SHOPCL</item>
+        <item>AD-GROFRS</item>
+    </string-array>
+    <string-array name="buckets">
+        <item>None</item>
+        <item>Critical</item>
+        <item>Error</item>
+        <item>Debug</item>
+        <item>Info</item>
+    </string-array>
+    <string name="title_activity_show">Grouping Messages</string>
+    <string name="action_settings">Settings</string>
+    <string name="change_bucket">Change Bucket</string>
+</resources>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_view_sms"
+    android:layout_gravity="center"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    card_view:cardUseCompatPadding="true"
+    card_view:cardCornerRadius="1dp"
+    card_view:cardElevation="5dp">
+
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <Button
+            android:text="@string/change_bucket"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/bucket_button"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:background="@color/colorPrimaryDark"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="5dp"
+            android:layout_alignParentStart="true"
+            android:textAppearance="@style/TextAppearance.AppCompat.Small"
+            android:id="@+id/sms_time_textview"
+            android:layout_below="@+id/bucket_button" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="5dp"
+            android:layout_alignParentStart="true"
+            android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+            android:id="@+id/sms_from_textview"
+            android:layout_below="@+id/sms_time_textview" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="5dp"
+            android:layout_alignParentStart="true"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:id="@+id/sms_body_textview"
+            android:layout_below="@+id/sms_from_textview" />
+
+    </RelativeLayout>
+
+</android.support.v7.widget.CardView>
