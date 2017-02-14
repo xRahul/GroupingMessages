@@ -25,20 +25,26 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.opencsv.CSVWriter;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 
@@ -68,22 +74,9 @@ public class ShowActivity extends AppCompatActivity {
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        // Create the adapter that will return a fragment for each of the three
-        // primary sections of the activity.
-        /*
-      The {@link android.support.v4.view.PagerAdapter} that will provide
-      fragments for each of the sections. We use a
-      {@link FragmentPagerAdapter} derivative, which will keep every
-      loaded fragment in memory. If this becomes too memory intensive, it
-      may be best to switch to a
-      {@link android.support.v4.app.FragmentStatePagerAdapter}.
-     */
+
         SectionsPagerAdapter mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
 
-        // Set up the ViewPager with the sections adapter.
-        /*
-      The {@link ViewPager} that will host the section contents.
-     */
         ViewPager mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
 
@@ -100,6 +93,11 @@ public class ShowActivity extends AppCompatActivity {
         }
         Log.d("SM/lb", listOfBuckets.toString());
 
+//        try {
+//            saveAllSms();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
         readAllSms();
         bucketizeSmsFromApi();
 
@@ -301,6 +299,66 @@ public class ShowActivity extends AppCompatActivity {
         } catch (SQLiteException ex) {
             Log.d("SQLiteException", ex.getMessage());
         }
+    }
+
+    // function to get all sms from device on csv
+    private void saveAllSms() throws IOException {
+        String baseDir = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
+        String fileName = "AnalysisData.csv";
+        String filePath = baseDir + File.separator + fileName;
+        File f = new File(filePath);
+        CSVWriter writer;
+        // File exist
+        if (f.exists() && !f.isDirectory()) {
+            writer = new CSVWriter(new FileWriter(filePath, true));
+        } else {
+            writer = new CSVWriter(new FileWriter(filePath));
+        }
+
+
+        listOfSms = new ArrayList<>();
+        try {
+            Uri uri = Uri.parse(SMS_URI_INBOX);
+            String[] projection = new String[]{"_id", "address", "body", "date"};
+            StringBuilder searchString = new StringBuilder();
+            searchString.append("read = 0 AND address IN (");
+            for (int i = 0; i <= fromSms.length - 1; i++) {
+                if (i == fromSms.length - 1) {
+                    searchString.append("'").append(fromSms[i]).append("')");
+                } else {
+                    searchString.append("'").append(fromSms[i]).append("', ");
+                }
+            }
+            Log.d("SM/searchString", searchString.toString());
+            Cursor cur = getContentResolver().query(uri, projection, null, null, "date desc");
+            if (cur != null && cur.moveToFirst()) {
+                int indexAddress = cur.getColumnIndex("address");
+                int indexBody = cur.getColumnIndex("body");
+                int indexDate = cur.getColumnIndex("date");
+                do {
+                    String strAddress = cur.getString(indexAddress);
+                    String strBody = cur.getString(indexBody);
+                    long longDate = cur.getLong(indexDate);
+
+                    String[] data = {
+                            new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", new Locale("en")).format(longDate),
+                            strAddress,
+                            strBody
+                    };
+                    writer.writeNext(data);
+
+                } while (cur.moveToNext());
+
+                Log.d("SM/SizeMsgs", String.valueOf(listOfSms.size()));
+
+                if (!cur.isClosed()) {
+                    cur.close();
+                }
+            }
+        } catch (SQLiteException ex) {
+            Log.d("SQLiteException", ex.getMessage());
+        }
+        writer.close();
     }
 
     @Override

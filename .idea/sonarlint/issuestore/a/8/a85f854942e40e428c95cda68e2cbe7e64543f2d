@@ -1,8 +1,14 @@
 
 Fsquid:S1166"%Either log or rethrow this exception.(÷¿­¹ÿÿÿÿÿ8Ù¹ğ£+
-Asquid:S1166"%Either log or rethrow this exception.(”¹µ°8Ù¹ğ£+
+4squid:S2095"Close this "FileWriter".(ˆâ¡‰8ä––”£+
 osquid:MaximumInheritanceDepth"<This class has 8 parents which is greater than 5 authorized.(‘¿œıÿÿÿÿ8Ù¹ğ£+
+Asquid:S1166"%Either log or rethrow this exception.(”¹µ°8Ù¹ğ£+
+Fsquid:S1166"%Either log or rethrow this exception.(÷¿­¹ÿÿÿÿÿ8Æ¶¤”£+
 Asquid:S1166"%Either log or rethrow this exception.(ï­£Ä8Ù¹ğ£+
 Fsquid:S1166"%Either log or rethrow this exception.(÷¿­¹ÿÿÿÿÿ8Ù¹ğ£+
-Fsquid:S1166"%Either log or rethrow this exception.(÷¿­¹ÿÿÿÿÿ8Ù¹ğ£+
+Asquid:S1166"%Either log or rethrow this exception.(”¹µ°8Æ¶¤”£+
+dsquid:S1192"HDefine a constant instead of duplicating this literal "address" 4 times.(¥¢8•æÎ“£+
+9squid:S2095"Close this "FileWriter".(ğ±¥ùÿÿÿÿ8ä––”£+
 Dsquid:S1148"#Use a logger to log this exception.(€ÉÔ…ıÿÿÿÿ8ÌÒš’£+
+Ysquid:UnusedPrivateMethod"/Remove this unused private "saveAllSms" method.(¾°„8±Ğï”£+
+lsquid:CommentedOutCodeLine"<This block of commented-out lines of code should be removed.(ñ¥ùšøÿÿÿÿ8±Ğï”£+
