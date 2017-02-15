@@ -5,7 +5,7 @@ import android.provider.BaseColumns;
 
 public final class DatabaseContract {
 
-    public static final int DATABASE_VERSION = 1;
+    public static final int DATABASE_VERSION = 2;
     public static final String DATABASE_NAME = "groupMessage.db";
     /* An array list of all the SQL create table statements */
     public static final String[] SQL_CREATE_TABLE_ARRAY = {
@@ -24,6 +24,7 @@ public final class DatabaseContract {
     public static abstract class Category implements BaseColumns {
         public static final String TABLE_NAME = "category";
         public static final String KEY_NAME = "name";
+        public static final String KEY_COLOR = "color";
         public static final String KEY_VISIBILITY = "visibility";
 
         /**
@@ -35,6 +36,7 @@ public final class DatabaseContract {
                 TABLE_NAME + " (" +
                 _ID + INTEGER_TYPE + " PRIMARY KEY" + COMMA_SEP +
                 KEY_NAME + TEXT_TYPE + COMMA_SEP +
+                KEY_COLOR + TEXT_TYPE + COMMA_SEP +
                 KEY_VISIBILITY + INTEGER_TYPE + " )";
         public static final String DELETE_TABLE = "DROP TABLE IF EXISTS " + TABLE_NAME;
 
@@ -42,7 +44,9 @@ public final class DatabaseContract {
          * Array of all the columns. Makes for cleaner code
          */
         public static final String[] KEY_ARRAY = {
+                _ID,
                 KEY_NAME,
+                KEY_COLOR,
                 KEY_VISIBILITY
         };
 
