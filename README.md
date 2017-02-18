@@ -11,7 +11,14 @@ The data processing is done in app, reducing the need for any external apis.
 Advanced Feature-
 You can choose the algorithm and base similarity score in settings to truly make the categorization yours.
 
-Future Roadmap-
+### Screenshots
+
+![Activities](https://github.com/xRahul/GroupingMessages/raw/master/Screenshots/Activities_View.jpg) 
+---
+![Settings](https://github.com/xRahul/GroupingMessages/raw/master/Screenshots/Settings_View.jpg) 
+
+
+## Future Roadmap-
 * Add more intelligence (another layer?)
 * Automatically marking the SMS as read when it's read in app
 * Show notifications on new sms received
