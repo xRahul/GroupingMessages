@@ -1,5 +1,7 @@
 package in.rahulja.groupingmessages;
 
+import android.content.Context;
+import android.content.Intent;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.RelativeLayout;
@@ -10,36 +12,43 @@ import java.util.Map;
 
 class CategoryListItemHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
+    private static final String COUNT = "count";
+    private static final String CATEGORY_ID = "category_id";
+    private final Context context;
     private final TextView categoryNameTextView;
     private final TextView categoryCountTextView;
     private final RelativeLayout categoryListViewParent;
+    private String categoryId;
 
     CategoryListItemHolder(View itemView) {
         super(itemView);
 
-        // 1. Set the context
+        context = itemView.getContext();
 
-        // 2. Set up the UI widgets of the holder
         categoryNameTextView = (TextView) itemView.findViewById(R.id.category_name_textview);
         categoryCountTextView = (TextView) itemView.findViewById(R.id.category_count_textview);
         categoryListViewParent = (RelativeLayout) itemView.findViewById(R.id.category_list_parent);
 
-        // 3. Set the "onClick" listener of the holder
         itemView.setOnClickListener(this);
     }
 
 
     void bindCategory(Map<String, String> category) {
-        // 4. Bind the data to the ViewHolder
-        categoryNameTextView.setText(category.get("name"));
-        categoryCountTextView.setText("0");
-        if (category.get("color") != null) {
-            categoryListViewParent.setBackgroundColor(Integer.parseInt(category.get("color")));
+        categoryId = category.get(DatabaseContract.Category._ID);
+        categoryNameTextView.setText(category.get(DatabaseContract.Category.KEY_NAME));
+        categoryCountTextView.setText(category.get(COUNT));
+        if (category.get(DatabaseContract.Category.KEY_COLOR) != null) {
+            categoryListViewParent.setBackgroundColor(
+                    Integer.parseInt(category.get(DatabaseContract.Category.KEY_COLOR))
+            );
         }
     }
 
     @Override
     public void onClick(View v) {
-        // just empty
+        final Intent intent;
+        intent = new Intent(context, SmsActivity.class);
+        intent.putExtra(CATEGORY_ID, categoryId);
+        context.startActivity(intent);
     }
 }

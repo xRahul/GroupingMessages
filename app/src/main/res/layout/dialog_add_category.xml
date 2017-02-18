@@ -29,4 +29,16 @@
         app:lightnessSliderView="@+id/v_lightness_slider"
         app:wheelType="FLOWER" />
 
+    <com.flask.colorpicker.slider.LightnessSlider
+        android:id="@+id/v_lightness_slider"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_below="@+id/pick_category_color" />
+
+    <com.flask.colorpicker.slider.AlphaSlider
+        android:id="@+id/v_alpha_slider"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_below="@+id/v_lightness_slider" />
+
 </RelativeLayout>

@@ -2,13 +2,11 @@ package in.rahulja.groupingmessages;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -18,15 +16,14 @@ import java.util.Map;
 
 class SmsListItemHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
 
-    private static final String BUCKET_ID = "bucketId";
+    private static final String KEY_FROM = "from";
     private final TextView smsBodyTextView;
     private final TextView smsFromTextView;
     private final TextView smsTimeTextView;
-    private final Button smsBucketButton;
+    private final Button smsCategoryButton;
 
     private Map<String, String> sms;
     private Context context;
-    private String[] bucketNames;
 
     SmsListItemHolder(Context contextTemp, View itemView) {
         super(itemView);
@@ -38,15 +35,13 @@ class SmsListItemHolder extends RecyclerView.ViewHolder implements View.OnClickL
         smsBodyTextView = (TextView) itemView.findViewById(R.id.sms_body_textview);
         smsFromTextView = (TextView) itemView.findViewById(R.id.sms_from_textview);
         smsTimeTextView = (TextView) itemView.findViewById(R.id.sms_time_textview);
-        smsBucketButton = (Button) itemView.findViewById(R.id.bucket_button);
-        bucketNames = context.getResources().getStringArray(R.array.buckets);
+        smsCategoryButton = (Button) itemView.findViewById(R.id.bucket_button);
 
         // 3. Set the "onClick" listener of the holder
         itemView.setOnClickListener(this);
     }
 
-    private static String getDate(long milliSeconds, String dateFormat)
-    {
+    private static String getDate(long milliSeconds, String dateFormat) {
         // Create a DateFormatter object for displaying date in specified format.
         SimpleDateFormat formatter = new SimpleDateFormat(dateFormat, new Locale("en"));
 
@@ -59,49 +54,30 @@ class SmsListItemHolder extends RecyclerView.ViewHolder implements View.OnClickL
     void bindSms(Map<String, String> smsTemp) {
         sms = smsTemp;
         // 4. Bind the data to the ViewHolder
-        smsBodyTextView.setText(sms.get("body"));
-        smsFromTextView.setText(sms.get("from"));
-        smsTimeTextView.setText(getDate(Long.parseLong(sms.get("time")), "dd/MM/yyyy hh:mm:ss a"));
-        smsBucketButton.setText(bucketNames[Integer.parseInt(sms.get(BUCKET_ID))] + " - " + "Change Bucket");
+        smsBodyTextView.setText(sms.get(DatabaseContract.Sms.KEY_BODY));
 
+        smsFromTextView.setText(sms.get(KEY_FROM));
+        smsTimeTextView.setText(
+                getDate(
+                        Long.parseLong(sms.get(DatabaseContract.Sms.KEY_DATE)),
+                        "dd/MM/yyyy hh:mm:ss a"
+                )
+        );
+        smsCategoryButton.setText(
+                String.format("Change Category - %s", sms.get("category_name"))
+        );
 
-        if ("Critical".equals(bucketNames[Integer.parseInt(sms.get(BUCKET_ID))]))
-        {
-            smsBucketButton.setBackgroundColor(Color.parseColor("#E57373"));
-            smsBucketButton.setTextColor(Color.BLACK);
-        }
-        else if ("None".equals(bucketNames[Integer.parseInt(sms.get(BUCKET_ID))]))
-        {
-            smsBucketButton.setBackgroundColor(Color.parseColor("#E0E0E0"));
-            smsBucketButton.setTextColor(Color.BLACK);
-        }
-        else if ("Info".equals(bucketNames[Integer.parseInt(sms.get(BUCKET_ID))]))
-        {
-            smsBucketButton.setBackgroundColor(Color.parseColor("#81C784"));
-            smsBucketButton.setTextColor(Color.BLACK);
-        }
-        else if ("Debug".equals(bucketNames[Integer.parseInt(sms.get(BUCKET_ID))]))
-        {
-            smsBucketButton.setBackgroundColor(Color.parseColor("#4DD0E1"));
-            smsBucketButton.setTextColor(Color.BLACK);
-        }
-        else if ("Error".equals(bucketNames[Integer.parseInt(sms.get(BUCKET_ID))]))
-        {
-            smsBucketButton.setBackgroundColor(Color.parseColor("#FFF176"));
-            smsBucketButton.setTextColor(Color.BLACK);
-        }
-
-        smsBucketButton.setOnClickListener(this);
+        smsCategoryButton.setOnClickListener(this);
     }
 
     @Override
     public void onClick(View v) {
-        if (v.getId() == smsBucketButton.getId()){
-            Intent i = new Intent(context, ChooseBucketActivity.class);
-            i.putExtra("sms_position", getAdapterPosition());
-            i.putExtra("old_bucket_id", Integer.parseInt(sms.get(BUCKET_ID)));
+        if (v.getId() == smsCategoryButton.getId()) {
+            Intent i = new Intent(context, ChangeCategoryActivity.class);
+            i.putExtra("sms_id", Long.parseLong(sms.get(DatabaseContract.Sms._ID)));
+            i.putExtra("sms_list_position", getAdapterPosition());
+
             ((AppCompatActivity) context).startActivityForResult(i, 111);
-            Toast.makeText(v.getContext(), "ITEM PRESSED = " + getAdapterPosition(), Toast.LENGTH_SHORT).show();
         }
     }
 

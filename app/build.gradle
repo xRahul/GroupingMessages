@@ -7,14 +7,18 @@ android {
         applicationId "in.rahulja.groupingmessages"
         minSdkVersion 19
         targetSdkVersion 25
-        versionCode 1
+        versionCode 10
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        vectorDrawables.useSupportLibrary = true
+        resConfigs "en"
+        return void
     }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            shrinkResources true
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     return void
@@ -29,8 +33,10 @@ dependencies {
     compile 'com.android.support:design:25.1.1'
     compile 'com.android.support:cardview-v7:25.1.1'
     compile 'com.android.support:recyclerview-v7:25.1.1'
-    compile 'com.opencsv:opencsv:3.9'
     compile 'com.android.support:support-v4:25.1.1'
     compile 'com.github.QuadFlask:colorpicker:0.0.13'
+    compile 'com.github.mpkorstanje:simmetrics-core:4.1.1'
+    compile 'com.android.support:support-vector-drawable:25.1.1'
+    compile 'com.pavelsikun:material-seekbar-preference:2.3.0'
     testCompile 'junit:junit:4.12'
 }

@@ -17,34 +17,26 @@ class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHold
     private Context context;
     private List<Map<String, String>> categoryList;
 
-    CategoryListArrayAdapter(Context context, List<Map<String, String>> objects) {
+    CategoryListArrayAdapter(Context contextParam, List<Map<String, String>> objects) {
 
-        this.context = context;
+        context = contextParam;
         if (objects == null) {
-            this.categoryList = new ArrayList<>();
+            categoryList = new ArrayList<>();
         } else {
-            this.categoryList = objects;
+            categoryList = objects;
         }
     }
 
-    // 2. Override the onCreateViewHolder method
     @Override
     public CategoryListItemHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        // 3. Inflate the view and return the new ViewHolder
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
         View view = inflater.inflate(R.layout.category_list_item, parent, false);
-
         return new CategoryListItemHolder(view);
     }
 
-    // 4. Override the onBindViewHolder method
     @Override
     public void onBindViewHolder(CategoryListItemHolder holder, int position) {
-
-        // 5. Use position to access the correct category object
         Map<String, String> category = this.categoryList.get(position);
-
-        // 6. Bind the category object to the holder
         holder.bindCategory(category);
     }
 

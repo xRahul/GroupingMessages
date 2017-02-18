@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="SimilarityAlgorithms">
+        <item>Cosine Similarity</item>
+        <item>Block Distance</item>
+        <item>Damerau Levenshtein</item>
+        <item>Dice</item>
+        <item>Euclidean Distance</item>
+        <item>Generalized Jaccard</item>
+        <item>Identity</item>
+        <item>Jaccard</item>
+        <item>Jaro</item>
+        <item>Jaro Winkler</item>
+        <item>Levenshtein</item>
+        <item>Monge Elkan</item>
+        <item>Needleman Wunch</item>
+        <item>Overlap Coefficient</item>
+        <item>Q Grams Distance</item>
+        <item>Simon White</item>
+        <item>Smith Waterman</item>
+        <item>Smith Waterman Gotoh</item>
+        <item>Soundex</item>
+        <item>Longest Common Subsequence</item>
+        <item>Longest Common Substring</item>
+    </string-array>
+    <string-array name="SimilarityAlgorithmsAlias">
+        <item>cosineSimilarity</item>
+        <item>blockDistance</item>
+        <item>damerauLevenshtein</item>
+        <item>dice</item>
+        <item>euclideanDistance</item>
+        <item>generalizedJaccard</item>
+        <item>identity</item>
+        <item>jaccard</item>
+        <item>jaro</item>
+        <item>jaroWinkler</item>
+        <item>levenshtein</item>
+        <item>mongeElkan</item>
+        <item>needlemanWunch</item>
+        <item>overlapCoefficient</item>
+        <item>qGramsDistance</item>
+        <item>simonWhite</item>
+        <item>smithWaterman</item>
+        <item>smithWatermanGotoh</item>
+        <item>soundex</item>
+        <item>longestCommonSubsequence</item>
+        <item>longestCommonSubstring</item>
+    </string-array>
+</resources>

@@ -1,18 +1,28 @@
 package in.rahulja.groupingmessages;
 
-import android.content.ContentValues;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import android.Manifest;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.flask.colorpicker.ColorPickerView;
@@ -25,37 +35,240 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity
         implements AddCategoryFragment.AddCategoryDialogListener {
 
-    public static final String GM_ADD_CAT = "GM/addCat";
-    private SQLiteDatabase db;
+    private static final String ADD_CATEGORY_TAG = "add_category_tag";
+    private static final String COUNT = "count";
+    private static final String GM_ADD_CAT = "GM/addCat";
+    private static final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 124;
+    private long numRowsAddedToSms;
     private List<Map<String, String>> categoryList;
+    private ProgressBar pbCircle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setupActionBar();
+
+        pbCircle = (ProgressBar) findViewById(R.id.progressBarCircle);
+
+        createAddCategoryButton();
+    }
+
+    private void setupActionBar() {
+        // set custom toolbar
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+    }
 
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+        // Return true to show menu
+        return true;
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            Intent settingsIntent = new Intent(this, SettingsActivity.class);
+
+            startActivity(settingsIntent);
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void init() {
+        getLatestSmsAndTrainThem();
+        createUi();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void checkAndGetPermissions() {
+        List<String> permissionsNeeded = new ArrayList<>();
+
+        final List<String> permissionsList = new ArrayList<>();
+        if (!addPermission(permissionsList, Manifest.permission.READ_SMS))
+            permissionsNeeded.add("Read SMS");
+        if (!addPermission(permissionsList, Manifest.permission.READ_CONTACTS))
+            permissionsNeeded.add("Read Contacts");
+
+        Log.d("GM/permNeed", permissionsNeeded.toString());
+        Log.d("GM/permList", permissionsList.toString());
+
+        if (!permissionsList.isEmpty()) {
+            if (!permissionsNeeded.isEmpty()) {
+
+                StringBuilder message = new StringBuilder();
+                message.append("You need to grant access to ")
+                        .append(permissionsNeeded.get(0));
+                for (int i = 1; i < permissionsNeeded.size(); i++)
+                    message.append(", ").append(permissionsNeeded.get(i));
+
+                showMessageOKCancel(message.toString(),
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                ActivityCompat.requestPermissions(
+                                        MainActivity.this,
+                                        permissionsList.toArray(new String[permissionsList.size()]),
+                                        REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS
+                                );
+                            }
+                        }
+                );
+                return;
+            }
+            ActivityCompat.requestPermissions(
+                    this,
+                    permissionsList.toArray(new String[permissionsList.size()]),
+                    REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS
+            );
+            return;
+        }
+        init();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private boolean addPermission(List<String> permissionsList, String permission) {
+        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+            permissionsList.add(permission);
+            // Check for Rationale Option
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(this, permission))
+                return false;
+        }
+        return true;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    public void showMessageOKCancel(String message, DialogInterface.OnClickListener okListener) {
+        Log.d("GM/showPermMessage", message);
+        new AlertDialog.Builder(MainActivity.this)
+                .setMessage(message)
+                .setPositiveButton("OK", okListener)
+                .setNegativeButton("Cancel", null)
+                .create()
+                .show();
+    }
+
+    public void showTitleProgressSpinner() {
+        // Show progress item
+        if (pbCircle != null) {
+            pbCircle.setVisibility(View.VISIBLE);
+        }
+    }
+
+    public void hideTitleProgressSpinner() {
+        // Hide progress item
+        if (pbCircle != null) {
+            pbCircle.setVisibility(View.INVISIBLE);
+        }
+    }
+
+    private void getLatestSmsAndTrainThem() {
+
+        showTitleProgressSpinner();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                asyncGetLatestSmsAndTrainThem();
+            }
+        };
+        new Thread(runnable).start();
+    }
+
+    private void asyncGetLatestSmsAndTrainThem() {
+        String selection = DatabaseContract.Sms.KEY_SIM_SCORE + " = ?";
+        String[] selectionArgs = {String.valueOf(1.0)};
+        List<Map<String, String>> allOldTrainedSms = DatabaseBridge.getFilteredSms(
+                getBaseContext(), selection, selectionArgs
+        );
+        List<Map<String, String>> trainedLatestSmsFromInbox = TrainSms.getTrainedListOfSms(
+                getBaseContext(),
+                DatabaseBridge.getLatestSmsFromInbox(getBaseContext()),
+                allOldTrainedSms
+        );
+
+        numRowsAddedToSms = DatabaseBridge.storeTrainedInboxSms(
+                getBaseContext(),
+                trainedLatestSmsFromInbox
+        );
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (numRowsAddedToSms > 0) {
+                    Toast.makeText(
+                            getBaseContext(),
+                            String.valueOf(numRowsAddedToSms) + " new sms added",
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
+                createUi();
+                hideTitleProgressSpinner();
+            }
+        });
+    }
+
+    private void createAddCategoryButton() {
         FloatingActionButton fabAddCategory = (FloatingActionButton) findViewById(R.id.fab_add_category);
         fabAddCategory.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 DialogFragment newFragment = new AddCategoryFragment();
-                newFragment.show(getSupportFragmentManager(), "add_category_tag");
+                newFragment.show(getSupportFragmentManager(), ADD_CATEGORY_TAG);
             }
         });
-
-        // Create new helper
-        DatabaseHelper dbHelper = new DatabaseHelper(this);
-        // Get the database. If it does not exist, this is where it will
-        // also be created.
-        db = dbHelper.getWritableDatabase();
-
-        create_ui();
     }
 
-    private void create_ui() {
-        refresh_ui();
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Log.d("GM/checkPerm", String.valueOf(Build.VERSION.SDK_INT));
+            checkAndGetPermissions();
+        } else {
+            init();
+        }
+    }
+
+    private void addSmsCountToCategories() {
+
+        Map<String, String> categoryIdsWithSmsCount = DatabaseBridge.getCategoryIdsWithSmsCount(this);
+
+        for (int i = 0; i < categoryList.size(); i++) {
+            Map<String, String> categoryListItem = categoryList.get(i);
+            if (categoryIdsWithSmsCount.containsKey(categoryListItem.get(DatabaseContract.Category._ID))) {
+                categoryListItem.put(
+                        COUNT,
+                        String.valueOf(categoryIdsWithSmsCount.get(
+                                categoryListItem.get(DatabaseContract.Category._ID)
+                        ))
+                );
+            }
+            categoryList.set(i, categoryListItem);
+        }
+
+        Log.d("GM/updatedCatCount", categoryList.toString());
+    }
+
+
+    private void createUi() {
+        refreshUi();
     }
 
     @Override
@@ -66,27 +279,31 @@ public class MainActivity extends AppCompatActivity
         EditText categoryName = (EditText) dialog.getDialog().findViewById(R.id.editTextAddCategory);
         ColorPickerView cpView = (ColorPickerView) dialog.getDialog().findViewById(R.id.pick_category_color);
 
-        // Create insert entries
-        ContentValues values = new ContentValues();
-        values.put(DatabaseContract.Category.KEY_NAME, categoryName.getText().toString());
-        values.put(DatabaseContract.Category.KEY_VISIBILITY, 1);
-        values.put(DatabaseContract.Category.KEY_COLOR, cpView.getSelectedColor());
-
-        long addCatRowId = db.insert(DatabaseContract.Category.TABLE_NAME, null, values);
-
-        if (addCatRowId == -1) {
-            Toast.makeText(this, "Error while adding new category", Toast.LENGTH_SHORT).show();
-            Log.e(GM_ADD_CAT, "Error while adding new category");
-        } else {
-            Toast.makeText(this, "Successfully added category: " + categoryName.getText(), Toast.LENGTH_SHORT).show();
-            Log.i(GM_ADD_CAT, "Successfully added category: " + categoryName.getText());
-            refresh_ui();
+        if (categoryName.getText().toString().isEmpty()) {
+            Toast.makeText(this, "Need Category Name", Toast.LENGTH_SHORT).show();
+            Log.e(GM_ADD_CAT, "Need Category Name");
+            return;
         }
 
+        Map<String, String> newCategory = new HashMap<>();
+
+        newCategory.put(DatabaseContract.Category.KEY_NAME, categoryName.getText().toString());
+        newCategory.put(DatabaseContract.Category.KEY_VISIBILITY, String.valueOf(1));
+        newCategory.put(DatabaseContract.Category.KEY_COLOR, String.valueOf(cpView.getSelectedColor()));
+
+        Boolean categoryAdded = DatabaseBridge.addCategory(this, newCategory);
+
+        if (categoryAdded) {
+            Toast.makeText(this, "Successfully added category: " + categoryName.getText(), Toast.LENGTH_SHORT).show();
+            Log.i(GM_ADD_CAT, "Successfully added category: " + categoryName.getText());
+            refreshUi();
+        }
     }
 
-    private void refresh_ui() {
-        getDataFromDb();
+    private void refreshUi() {
+        Log.d("GM/refreshCatUi", "refreshed");
+        getAllCategoriesWithoutCount();
+        addSmsCountToCategories();
 
         CategoryListArrayAdapter categoryItemsAdapter = new CategoryListArrayAdapter(this, categoryList);
         RecyclerView listView = (RecyclerView) findViewById(R.id.category_list_view);
@@ -96,20 +313,9 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    private void getDataFromDb() {
-        // Filter results WHERE "title" = 'My Title'
-        String selection = DatabaseContract.Category.KEY_VISIBILITY + " = ?";
-        String[] selectionArgs = {"1"};
-        
-        Cursor cursor = db.query(
-                DatabaseContract.Category.TABLE_NAME,           // The table to query
-                DatabaseContract.Category.KEY_ARRAY,            // The columns to return
-                selection,                                      // The columns for the WHERE clause
-                selectionArgs,                                  // The values for the WHERE clause
-                null,                                           // don't group the rows
-                null,                                           // don't filter by row groups
-                DatabaseContract.Category.DEFAULT_SORT_ORDER    // The sort order
-        );
+    private void getAllCategoriesWithoutCount() {
+
+        List<Map<String, String>> allCategories = DatabaseBridge.getAllCategories(this);
 
         if (categoryList == null) {
             categoryList = new ArrayList<>();
@@ -117,21 +323,10 @@ public class MainActivity extends AppCompatActivity
             categoryList.clear();
         }
 
-        while (cursor.moveToNext()) {
-            long categoryId = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Category._ID));
-            String categoryName = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Category.KEY_NAME));
-            String categoryColor = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Category.KEY_COLOR));
-
-            Map<String, String> categoryMap = new HashMap<>();
-            categoryMap.put("name", categoryName);
-            categoryMap.put("color", categoryColor);
-            categoryMap.put("id", String.valueOf(categoryId));
-            categoryList.add(categoryMap);
+        for (Map<String, String> category : allCategories) {
+            category.put(COUNT, "0");
+            categoryList.add(category);
         }
-        cursor.close();
     }
 
     @Override
@@ -141,8 +336,26 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    protected void onDestroy() {
-        db.close();
-        super.onDestroy();
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS) {
+            Map<String, Integer> perms = new HashMap<>();
+            perms.put(Manifest.permission.READ_SMS, PackageManager.PERMISSION_GRANTED);
+            perms.put(Manifest.permission.READ_CONTACTS, PackageManager.PERMISSION_GRANTED);
+            for (int i = 0; i < permissions.length; i++)
+                perms.put(permissions[i], grantResults[i]);
+            if (perms.get(Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+                    && perms.get(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+                // All Permissions Granted
+                init();
+            } else {
+                // Permission Denied
+                Toast.makeText(MainActivity.this, "Some Permission is Denied", Toast.LENGTH_SHORT)
+                        .show();
+            }
+
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
     }
+
 }

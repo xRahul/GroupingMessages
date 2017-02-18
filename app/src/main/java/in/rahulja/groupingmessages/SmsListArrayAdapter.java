@@ -48,4 +48,3 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
         return this.smsList.size();
     }
 }
-

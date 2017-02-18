@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:sample="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="Settings">
+        <ListPreference
+            android:defaultValue="levenshtein"
+            android:entries="@array/SimilarityAlgorithms"
+            android:entryValues="@array/SimilarityAlgorithmsAlias"
+            android:key="key_similarity_algorithm"
+            android:summary="%s"
+            android:title="String Similarity Algorithm" />
+
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:defaultValue="80"
+            android:enabled="true"
+            android:key="key_similarity_score"
+            android:summary="Select minimum considerable similarity %age for string comparison"
+            android:title="Base String Similarity"
+
+            sample:msbp_dialogEnabled="true"
+            sample:msbp_interval="1"
+            sample:msbp_maxValue="100"
+            sample:msbp_measurementUnit="%"
+            sample:msbp_minValue="1" />
+
+        <PreferenceScreen
+            android:key="key_reset_model"
+            android:summary=""
+            android:title="Reset trained Model" />
+        <PreferenceScreen
+            android:key="key_reset_model_delete_cat"
+            android:summary=""
+            android:title="Reset Model &amp; Delete Categories" />
+
+    </PreferenceCategory>
+    <PreferenceCategory android:title="About">
+        <PreferenceScreen
+            android:key="key_developer"
+            android:summary="@string/developer_name"
+            android:title="Developer" />
+        <PreferenceScreen
+            android:key="key_version"
+            android:summary=""
+            android:title="Version" />
+    </PreferenceCategory>
+
+</PreferenceScreen>
