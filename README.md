@@ -1,18 +1,18 @@
 # Grouping Messages
 
-This is an android app that categorizes your sms into various buckets like logs, ecommerce, personal, notification etc.
+This is an android app that learns and categorizes your sms into various categories of your choice.
 
 Every trained model will be user specific, so each user can categorize their sms according to their needs. 
 It requires some learning at the beginning, 
 and it will learn with every training data you provide by choosing correct categories for sms if there's a miss somewhere.
 
-The api endpoint for this is- [SMART](https://github.com/reetawwsum/SMART)
-This requires a webserver with php and python installed for processing.
+The data processing is done in app, reducing the need for any external apis.
 
-You can choose which sender you want to gather data for and whom to ignore,
-categories are color coded for easier representation.
+Advanced Feature-
+You can choose the algorithm and base similarity score in settings to truly make the categorization yours.
 
 Future Roadmap-
-* Add preferences for selecting senders, creating buckets
-* Add filtering for sms data(_currently only reads unread messages_)
-* On phone machine learning making it truly secure and offline
+* Add more intelligence (another layer?)
+* Automatically marking the SMS as read when it's read in app
+* Show notifications on new sms received
+* edit or delete category
