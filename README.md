@@ -16,3 +16,4 @@ Future Roadmap-
 * Automatically marking the SMS as read when it's read in app
 * Show notifications on new sms received
 * edit or delete category
+* String cleaning options given in preference
