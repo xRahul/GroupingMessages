@@ -92,4 +92,6 @@
     <string name="pref_title_vibrate">Vibrate</string>
     <string name="hello_blank_fragment">Hello Blank Fragment</string>
     <string name="key_similarity_algorithm" />
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
 </resources>

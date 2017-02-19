@@ -36,11 +36,7 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
     @Override
     public void onBindViewHolder(SmsListItemHolder holder, int position) {
 
-        // 5. Use position to access the correct Bakery object
-        Map<String, String> sms = this.smsList.get(position);
-
-        // 6. Bind the bakery object to the holder
-        holder.bindSms(sms);
+        holder.bindSms(this.smsList.get(position));
     }
 
     @Override

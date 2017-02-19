@@ -36,8 +36,8 @@ class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHold
 
     @Override
     public void onBindViewHolder(CategoryListItemHolder holder, int position) {
-        Map<String, String> category = this.categoryList.get(position);
-        holder.bindCategory(category);
+        holder.bindCategory(this.categoryList.get(position));
+        holder.itemView.setLongClickable(true);
     }
 
     @Override

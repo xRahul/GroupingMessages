@@ -14,7 +14,7 @@ import android.support.v4.app.DialogFragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -230,6 +230,9 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onClick(View view) {
                 DialogFragment newFragment = new AddCategoryFragment();
+                Bundle args = new Bundle();
+                args.putString("ACTION", "CREATE");
+                newFragment.setArguments(args);
                 newFragment.show(getSupportFragmentManager(), ADD_CATEGORY_TAG);
             }
         });
@@ -272,7 +275,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onDialogPositiveClick(DialogFragment dialog) {
+    public void onDialogPositiveClick(DialogFragment dialog, Bundle oldArgs) {
         // User touched the dialog's positive button
         Log.i(GM_ADD_CAT, "User touched the add category dialog's add button");
 
@@ -291,13 +294,24 @@ public class MainActivity extends AppCompatActivity
         newCategory.put(DatabaseContract.Category.KEY_VISIBILITY, String.valueOf(1));
         newCategory.put(DatabaseContract.Category.KEY_COLOR, String.valueOf(cpView.getSelectedColor()));
 
-        Boolean categoryAdded = DatabaseBridge.addCategory(this, newCategory);
-
-        if (categoryAdded) {
-            Toast.makeText(this, "Successfully added category: " + categoryName.getText(), Toast.LENGTH_SHORT).show();
-            Log.i(GM_ADD_CAT, "Successfully added category: " + categoryName.getText());
-            refreshUi();
+        if ("EDIT".equals(oldArgs.getString("ACTION"))) {
+            newCategory.put(
+                    DatabaseContract.Category._ID,
+                    String.valueOf(oldArgs.getLong(DatabaseContract.Category._ID))
+            );
+            Boolean categoryUpdated = DatabaseBridge.updateCategory(this, newCategory);
+            if (categoryUpdated) {
+                Toast.makeText(this, "Successfully updated category: " + categoryName.getText(), Toast.LENGTH_SHORT).show();
+                Log.i(GM_ADD_CAT, "Successfully updated category: " + categoryName.getText());
+            }
+        } else {
+            Boolean categoryAdded = DatabaseBridge.addCategory(this, newCategory);
+            if (categoryAdded) {
+                Toast.makeText(this, "Successfully added category: " + categoryName.getText(), Toast.LENGTH_SHORT).show();
+                Log.i(GM_ADD_CAT, "Successfully added category: " + categoryName.getText());
+            }
         }
+        refreshUi();
     }
 
     private void refreshUi() {
@@ -306,8 +320,9 @@ public class MainActivity extends AppCompatActivity
         addSmsCountToCategories();
 
         CategoryListArrayAdapter categoryItemsAdapter = new CategoryListArrayAdapter(this, categoryList);
+        categoryItemsAdapter.setHasStableIds(true);
         RecyclerView listView = (RecyclerView) findViewById(R.id.category_list_view);
-        listView.setLayoutManager(new LinearLayoutManager(this));
+        listView.setLayoutManager(new GridLayoutManager(this, 2));
         listView.setHasFixedSize(true);
         listView.setAdapter(categoryItemsAdapter);
 
@@ -330,7 +345,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onDialogNegativeClick(DialogFragment dialog) {
+    public void onDialogNegativeClick(DialogFragment dialog, Bundle oldArgs) {
         // User touched the dialog's negative button
         Log.i(GM_ADD_CAT, "User touched the add category dialog's cancel button");
     }

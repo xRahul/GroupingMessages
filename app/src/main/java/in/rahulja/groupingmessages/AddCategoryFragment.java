@@ -9,6 +9,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.view.View;
+import android.widget.EditText;
 
 /**
  * A simple {@link DialogFragment} subclass.
@@ -38,23 +39,34 @@ public class AddCategoryFragment extends DialogFragment {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 
+        View categoryDialogView = View.inflate(getContext(), R.layout.dialog_add_category, null);
+
+        final Bundle mArgs = getArguments();
+        if ("EDIT".equals(mArgs.getString("ACTION"))) {
+            String categoryNameArg = mArgs.getString(DatabaseContract.Category.KEY_NAME);
+            int categoryColorArg = mArgs.getInt(DatabaseContract.Category.KEY_COLOR);
+            EditText editTextCategoryName = (EditText)categoryDialogView.findViewById(R.id.editTextAddCategory);
+            editTextCategoryName.setText(categoryNameArg);
+            com.flask.colorpicker.ColorPickerView colorPickerView = (com.flask.colorpicker.ColorPickerView)categoryDialogView.findViewById(R.id.pick_category_color);
+            colorPickerView.setColor(categoryColorArg, true);
+        }
+
         builder.setTitle(R.string.add_category_dialog_title);
 
-        // Inflate and set the layout for the dialog
-        // Pass null as the parent view because its going in the dialog layout
-        builder.setView(View.inflate(getContext(), R.layout.dialog_add_category, null))
+        builder.setView(categoryDialogView)
                 // Add action buttons
                 .setPositiveButton(R.string.add, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int id) {
-                        mListener.onDialogPositiveClick(AddCategoryFragment.this);
+                        mListener.onDialogPositiveClick(AddCategoryFragment.this, mArgs);
                     }
                 })
                 .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        mListener.onDialogNegativeClick(AddCategoryFragment.this);
+                        mListener.onDialogNegativeClick(AddCategoryFragment.this, mArgs);
                     }
                 });
+
         return builder.create();
     }
 
@@ -62,9 +74,9 @@ public class AddCategoryFragment extends DialogFragment {
      * interface that can be called by the parent activity
      */
     public interface AddCategoryDialogListener {
-        void onDialogPositiveClick(DialogFragment dialog);
+        void onDialogPositiveClick(DialogFragment dialog, Bundle bundle);
 
-        void onDialogNegativeClick(DialogFragment dialog);
+        void onDialogNegativeClick(DialogFragment dialog, Bundle bundle);
     }
 
 }

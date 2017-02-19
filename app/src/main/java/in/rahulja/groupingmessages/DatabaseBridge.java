@@ -18,6 +18,7 @@ class DatabaseBridge {
     private static final String LAST_SMS_TIME_CONFIG = "lastSmsTime";
     private static final String SMS_COUNT = "sms_count";
     private static final String SMS_URI_INBOX = "content://sms/inbox";
+    private static final String DOUBLE_EQUALS_QUESTION = " == ?";
     private static SQLiteDatabase db;
 
 
@@ -533,5 +534,77 @@ class DatabaseBridge {
                 selectionArgs
         );
         return count > 0;
+    }
+
+    static Boolean deleteCategory(Context context, long categoryId) {
+
+        initializeDb(context);
+        deleteModelForCategory(context, categoryId);
+
+        // Which row to update, based on the title
+        String selection = DatabaseContract.Category._ID + DOUBLE_EQUALS_QUESTION;
+        String[] selectionArgs = {String.valueOf(categoryId)};
+
+        int count = db.delete(
+                DatabaseContract.Category.TABLE_NAME,
+                selection,
+                selectionArgs
+        );
+        return count > 0;
+    }
+
+    private static Boolean deleteModelForCategory(Context context, long categoryId) {
+        initializeDb(context);
+
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.Sms.KEY_CATEGORY_ID, 1);
+        values.put(DatabaseContract.Sms.KEY_SIMILAR_TO, 0);
+        values.put(DatabaseContract.Sms.KEY_SIM_SCORE, 0.0);
+
+        // Which row to update, based on the title
+        String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + DOUBLE_EQUALS_QUESTION;
+        String[] selectionArgs = {String.valueOf(categoryId)};
+
+        int count = db.update(
+                DatabaseContract.Sms.TABLE_NAME,
+                values,
+                selection,
+                selectionArgs);
+
+        return count > 0;
+    }
+
+    static Boolean updateCategory(Context context, Map<String, String> category) {
+
+        initializeDb(context);
+
+        ContentValues values = new ContentValues();
+        values.put(
+                DatabaseContract.Category.KEY_NAME,
+                category.get(DatabaseContract.Category.KEY_NAME)
+        );
+        values.put(
+                DatabaseContract.Category.KEY_VISIBILITY,
+                Integer.parseInt(category.get(DatabaseContract.Category.KEY_VISIBILITY))
+        );
+        values.put(
+                DatabaseContract.Category.KEY_COLOR,
+                Integer.parseInt(category.get(DatabaseContract.Category.KEY_COLOR))
+        );
+
+        // Which row to update, based on the title
+        String selection = DatabaseContract.Category._ID + DOUBLE_EQUALS_QUESTION;
+        String[] selectionArgs = {String.valueOf(category.get(DatabaseContract.Category._ID))};
+
+        int count = db.update(
+                DatabaseContract.Category.TABLE_NAME,
+                values,
+                selection,
+                selectionArgs
+        );
+
+        return count > 0;
+
+
     }
 }

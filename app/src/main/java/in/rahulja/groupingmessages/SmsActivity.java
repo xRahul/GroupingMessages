@@ -123,6 +123,7 @@ public class SmsActivity extends AppCompatActivity {
 
     private void createUi() {
         SmsListArrayAdapter smsItemsAdapter = new SmsListArrayAdapter(this, smsList);
+        smsItemsAdapter.setHasStableIds(true);
         RecyclerView listView = (RecyclerView) findViewById(R.id.sms_list_view);
         listView.setLayoutManager(new LinearLayoutManager(this));
         listView.setHasFixedSize(true);
