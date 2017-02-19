@@ -82,11 +82,11 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
                     args.putInt(DatabaseContract.Category.KEY_COLOR, Integer.parseInt(categoryColor));
 
                     newFragment.setArguments(args);
-                    newFragment.show(((MainActivity)context).getSupportFragmentManager(), EDIT_CATEGORY_TAG);
+                    newFragment.show(((MainActivity) context).getSupportFragmentManager(), EDIT_CATEGORY_TAG);
 
                 } else if (id == R.id.category_popup_delete_item) {
                     DatabaseBridge.deleteCategory(context, Long.parseLong(categoryId));
-                    ((MainActivity)context).onPostResume();
+                    ((MainActivity) context).onPostResume();
                 }
                 return true;
             }

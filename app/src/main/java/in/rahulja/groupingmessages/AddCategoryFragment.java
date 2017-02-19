@@ -45,9 +45,9 @@ public class AddCategoryFragment extends DialogFragment {
         if ("EDIT".equals(mArgs.getString("ACTION"))) {
             String categoryNameArg = mArgs.getString(DatabaseContract.Category.KEY_NAME);
             int categoryColorArg = mArgs.getInt(DatabaseContract.Category.KEY_COLOR);
-            EditText editTextCategoryName = (EditText)categoryDialogView.findViewById(R.id.editTextAddCategory);
+            EditText editTextCategoryName = (EditText) categoryDialogView.findViewById(R.id.editTextAddCategory);
             editTextCategoryName.setText(categoryNameArg);
-            com.flask.colorpicker.ColorPickerView colorPickerView = (com.flask.colorpicker.ColorPickerView)categoryDialogView.findViewById(R.id.pick_category_color);
+            com.flask.colorpicker.ColorPickerView colorPickerView = (com.flask.colorpicker.ColorPickerView) categoryDialogView.findViewById(R.id.pick_category_color);
             colorPickerView.setColor(categoryColorArg, true);
         }
 

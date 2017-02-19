@@ -13,7 +13,7 @@ import java.util.Map;
 
 
 class SmsListItemHolder extends RecyclerView.ViewHolder
-        implements View.OnClickListener, View.OnLongClickListener  {
+        implements View.OnClickListener, View.OnLongClickListener {
 
     private static final String KEY_FROM = "from";
     private final TextView smsBodyTextView;
