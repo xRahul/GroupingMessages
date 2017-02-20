@@ -113,7 +113,9 @@ class TrainSms {
     private static String cleanString(String s) {
         String[] words = s.replaceAll("[\\p{P}]", " ")
                 .replaceAll("\\s+", " ")
-                .toLowerCase().split(" ");
+                .replaceAll("\\d", "1")
+                .toLowerCase()
+                .split(" ");
         StringBuilder wordsList = new StringBuilder();
 
         for (String word : words) {

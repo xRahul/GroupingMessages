@@ -2,11 +2,14 @@ package in.rahulja.groupingmessages;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.text.format.DateUtils;
 import android.view.View;
 import android.widget.Button;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.util.Map;
@@ -20,6 +23,7 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
     private final TextView smsFromTextView;
     private final TextView smsTimeTextView;
     private final Button smsCategoryButton;
+    private final CardView listItemContent;
 
     private Map<String, String> sms;
     private Context context;
@@ -35,9 +39,11 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
         smsFromTextView = (TextView) itemView.findViewById(R.id.sms_from_textview);
         smsTimeTextView = (TextView) itemView.findViewById(R.id.sms_time_textview);
         smsCategoryButton = (Button) itemView.findViewById(R.id.bucket_button);
+        listItemContent = (CardView) itemView.findViewById(R.id.sms_list_item_content);
 
         // 3. Set the "onClick" listener of the holder
         itemView.setOnClickListener(this);
+        listItemContent.setOnClickListener(this);
     }
 
     private String getDate(long milliSeconds) {
@@ -55,6 +61,10 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
         sms = smsTemp;
         // 4. Bind the data to the ViewHolder
         smsBodyTextView.setText(sms.get(DatabaseContract.Sms.KEY_BODY));
+
+        if (Integer.parseInt(sms.get(DatabaseContract.Sms.KEY_READ)) == 0) {
+            listItemContent.setCardBackgroundColor(Color.LTGRAY);
+        }
 
         smsFromTextView.setText(sms.get(KEY_FROM));
         smsTimeTextView.setText(getDate(Long.parseLong(sms.get(DatabaseContract.Sms.KEY_DATE))));
@@ -74,6 +84,12 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
 
             ((AppCompatActivity) context).startActivityForResult(i, 111);
         }
+
+        else if (v.getId() == listItemContent.getId()) {
+            DatabaseBridge.setSmsAsRead(context, sms.get(DatabaseContract.Sms._ID));
+            listItemContent.setCardBackgroundColor(Color.WHITE);
+        }
+
     }
 
     @Override

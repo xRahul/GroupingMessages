@@ -33,7 +33,7 @@
             android:padding="5dp">
 
             <TextView
-                android:id="@+id/category_read_count_textview"
+                android:id="@+id/category_unread_count_textview"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -42,7 +42,7 @@
                 android:textColor="@color/cardview_dark_background" />
 
             <TextView
-                android:id="@+id/category_unread_count_textview"
+                android:id="@+id/category_read_count_textview"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"

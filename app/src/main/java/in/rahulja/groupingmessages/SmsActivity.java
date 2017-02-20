@@ -32,8 +32,6 @@ public class SmsActivity extends AppCompatActivity {
     private long categoryId;
     private Map<String, String> categories;
     private ProgressBar pbCircle;
-    private SmsListArrayAdapter smsItemsAdapter;
-    private RecyclerView listView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -124,8 +122,8 @@ public class SmsActivity extends AppCompatActivity {
     }
 
     private void createUi() {
-        smsItemsAdapter = new SmsListArrayAdapter(this, smsList);
-        listView = (RecyclerView) findViewById(R.id.sms_list_view);
+        SmsListArrayAdapter smsItemsAdapter = new SmsListArrayAdapter(this, smsList);
+        RecyclerView listView = (RecyclerView) findViewById(R.id.sms_list_view);
         listView.setLayoutManager(new LinearLayoutManager(this));
         listView.setHasFixedSize(true);
         listView.setAdapter(smsItemsAdapter);
@@ -133,7 +131,6 @@ public class SmsActivity extends AppCompatActivity {
 
     private void refreshUi() {
         createUi();
-        //smsItemsAdapter.notifyDataSetChanged();
     }
 
     private void getCategorySmsData() {
@@ -231,19 +228,15 @@ public class SmsActivity extends AppCompatActivity {
             Runnable runnable = new Runnable() {
                 @Override
                 public void run() {
-                    asyncRetrainAllSms(trainedSms, smsListPosition);
+                    asyncRetrainAllSms(trainedSms);
                 }
             };
             new Thread(runnable).start();
         }
     }
 
-    private void asyncRetrainAllSms(Map<String, String> trainedSms, int trainedSmsListPosition) {
+    private void asyncRetrainAllSms(Map<String, String> trainedSms) {
         DatabaseBridge.updateSmsData(getBaseContext(), trainedSms);
-
-        if (!trainedSms.get(DatabaseContract.Sms.KEY_CATEGORY_ID).equals(String.valueOf(categoryId))) {
-            removeSmsAt(trainedSmsListPosition);
-        }
 
         List<Map<String, String>> allSms = DatabaseBridge.getAllSms(getBaseContext());
         List<Map<String, String>> retrainedSmsList = TrainSms.retrainExistingSms(getBaseContext(), trainedSms, allSms);
@@ -255,19 +248,12 @@ public class SmsActivity extends AppCompatActivity {
             public void run() {
                 Toast.makeText(
                         getBaseContext(),
-                        "Trained Sms- " + numRetrainedSms,
+                        "Trained " + numRetrainedSms + " Sms",
                         Toast.LENGTH_SHORT
                 ).show();
                 getDataInBackground();
                 hideTitleProgressSpinner();
             }
         });
-    }
-
-    private void removeSmsAt(int smsListPosition) {
-        smsList.remove(smsListPosition);
-        listView.removeViewAt(smsListPosition);
-        smsItemsAdapter.notifyItemRemoved(smsListPosition);
-        smsItemsAdapter.notifyItemRangeChanged(smsListPosition, smsList.size());
     }
 }

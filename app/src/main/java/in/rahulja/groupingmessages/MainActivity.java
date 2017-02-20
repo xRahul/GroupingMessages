@@ -266,7 +266,7 @@ public class MainActivity extends AppCompatActivity
                         .equals(categoryListItem.get(DatabaseContract.Category._ID))) {
 
                     String countKey = COUNT_UNREAD;
-                    if (Integer.parseInt(categoryIdsWithSmsCount.get(j).get(DatabaseContract.Sms.KEY_READ)) > 0) {
+                    if (Integer.parseInt(categoryIdsWithSmsCount.get(j).get(DatabaseContract.Sms.KEY_READ)) == 1) {
                         countKey = COUNT_READ;
                     }
 

@@ -135,13 +135,14 @@ class DatabaseBridge {
 
                 latestSms.add(smsTemp);
 
+                Log.d("GM/temp", smsTemp.toString());
+
             } while (cur.moveToNext());
 
             if (!cur.isClosed()) {
                 cur.close();
             }
         }
-
         return latestSms;
     }
 
@@ -693,5 +694,23 @@ class DatabaseBridge {
         }
         initializeDb(context);
         return false;
+    }
+
+    static Boolean setSmsAsRead(Context context, String smsId) {
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.Sms.KEY_READ, 1);
+
+
+        // Which row to update, based on the title
+        String selection = DatabaseContract.Sms._ID + " = ?";
+        String[] selectionArgs = {smsId};
+
+        int count = db.update(
+                DatabaseContract.Sms.TABLE_NAME,
+                values,
+                selection,
+                selectionArgs);
+
+        return count > 0;
     }
 }

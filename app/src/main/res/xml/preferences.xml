@@ -12,7 +12,7 @@
             android:title="String Similarity Algorithm" />
 
         <com.pavelsikun.seekbarpreference.SeekBarPreference
-            android:defaultValue="80"
+            android:defaultValue="60"
             android:enabled="true"
             android:key="key_similarity_score"
             android:summary="Select minimum considerable similarity %age for string comparison"
@@ -22,7 +22,7 @@
             sample:msbp_interval="1"
             sample:msbp_maxValue="100"
             sample:msbp_measurementUnit="%"
-            sample:msbp_minValue="1" />
+            sample:msbp_minValue="0" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Data Settings">
