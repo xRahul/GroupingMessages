@@ -6,8 +6,13 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.os.Environment;
 import android.util.Log;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +35,13 @@ class DatabaseBridge {
         if (db == null) {
             DatabaseHelper dbHelper = new DatabaseHelper(context);
             db = dbHelper.getWritableDatabase();
+        }
+    }
+
+    private static void unInitializeDb() {
+        if (db.isOpen()) {
+            db.close();
+            db = null;
         }
     }
 
@@ -367,12 +379,13 @@ class DatabaseBridge {
         return resultId > 0;
     }
 
-    static Map<String, String> getCategoryIdsWithSmsCount(Context context) {
+    static List<Map<String, String>> getCategoryIdsWithSmsCount(Context context) {
 
         initializeDb(context);
 
         String[] projection = {
                 DatabaseContract.Sms.KEY_CATEGORY_ID,
+                DatabaseContract.Sms.KEY_READ,
                 "COUNT(" + DatabaseContract.Sms.KEY_CATEGORY_ID + ") as " + SMS_COUNT
         };
 
@@ -381,26 +394,36 @@ class DatabaseBridge {
                 projection,                                     // The columns to return
                 null,                                           // The columns for the WHERE clause
                 null,                                           // The values for the WHERE clause
-                DatabaseContract.Sms.KEY_CATEGORY_ID,           // don't group the rows
+                DatabaseContract.Sms.KEY_CATEGORY_ID
+                        + ", "
+                        + DatabaseContract.Sms.KEY_READ,        // don't group the rows
                 null,                                           // don't filter by row groups
                 DatabaseContract.Sms.DEFAULT_SORT_ORDER         // The sort order
         );
 
-        Map<String, String> categoryIdWithSmsCount = new HashMap<>();
+        List<Map<String, String>> categoryIdsWithSmsCount = new ArrayList<>();
 
         while (cursor.moveToNext()) {
             final long categoryId = cursor.getLong(
                     cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_CATEGORY_ID));
+            final long readKey = cursor.getLong(
+                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ));
             final long smsCount = cursor.getLong(
                     cursor.getColumnIndexOrThrow(SMS_COUNT));
 
-            categoryIdWithSmsCount.put(String.valueOf(categoryId), String.valueOf(smsCount));
+            Map<String, String> categorySmsCount = new HashMap<>();
+
+            categorySmsCount.put(DatabaseContract.Sms.KEY_CATEGORY_ID, String.valueOf(categoryId));
+            categorySmsCount.put(DatabaseContract.Sms.KEY_READ, String.valueOf(readKey));
+            categorySmsCount.put(SMS_COUNT, String.valueOf(smsCount));
+
+            categoryIdsWithSmsCount.add(categorySmsCount);
         }
 
         if (!cursor.isClosed()) {
             cursor.close();
         }
-        return categoryIdWithSmsCount;
+        return categoryIdsWithSmsCount;
     }
 
     static Boolean addCategory(Context context, Map<String, String> category) {
@@ -604,7 +627,71 @@ class DatabaseBridge {
         );
 
         return count > 0;
+    }
 
+    static boolean importDB(Context context) {
 
+        unInitializeDb();
+
+        try {
+            File sd = Environment.getExternalStorageDirectory();
+            if (sd.canWrite()) {
+                String backupDBPath = "GroupMessagingBackup"; // From SD directory.
+                File backupDB = new File(sd, backupDBPath);
+                File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
+
+                try (FileInputStream fis = new FileInputStream(backupDB)) {
+                    try (FileOutputStream fos = new FileOutputStream(currentDB)) {
+                        FileChannel src = fis.getChannel();
+                        FileChannel dst = fos.getChannel();
+                        dst.transferFrom(src, 0, src.size());
+                        src.close();
+                        dst.close();
+                        fis.close();
+                        fos.close();
+                    }
+                }
+                initializeDb(context);
+                return true;
+            }
+        } catch (Exception e) {
+            Log.e("GM/importDb", e.toString());
+        }
+
+        initializeDb(context);
+        return false;
+    }
+
+    static Boolean exportDB(Context context) {
+
+        unInitializeDb();
+
+        try {
+            File sd = Environment.getExternalStorageDirectory();
+
+            if (sd.canWrite()) {
+                String backupDBPath = "GroupMessagingBackup";
+                File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
+                File backupDB = new File(sd, backupDBPath);
+
+                try (FileInputStream fis = new FileInputStream(currentDB)) {
+                    try (FileOutputStream fos = new FileOutputStream(backupDB)) {
+                        FileChannel src = fis.getChannel();
+                        FileChannel dst = fos.getChannel();
+                        dst.transferFrom(src, 0, src.size());
+                        src.close();
+                        dst.close();
+                        fis.close();
+                        fos.close();
+                    }
+                }
+                initializeDb(context);
+                return true;
+            }
+        } catch (Exception e) {
+            Log.e("GM/exportDb", e.toString());
+        }
+        initializeDb(context);
+        return false;
     }
 }

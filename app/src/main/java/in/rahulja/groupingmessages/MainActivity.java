@@ -36,8 +36,11 @@ public class MainActivity extends AppCompatActivity
         implements AddCategoryFragment.AddCategoryDialogListener {
 
     private static final String ADD_CATEGORY_TAG = "add_category_tag";
-    private static final String COUNT = "count";
+    private static final String COUNT_UNREAD = "count_unread";
+    private static final String COUNT_READ = "count_read";
     private static final String GM_ADD_CAT = "GM/addCat";
+    private static final String SMS_COUNT = "sms_count";
+
     private static final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 124;
     private long numRowsAddedToSms;
     private List<Map<String, String>> categoryList;
@@ -106,6 +109,8 @@ public class MainActivity extends AppCompatActivity
             permissionsNeeded.add("Read SMS");
         if (!addPermission(permissionsList, Manifest.permission.READ_CONTACTS))
             permissionsNeeded.add("Read Contacts");
+        if (!addPermission(permissionsList, Manifest.permission.WRITE_EXTERNAL_STORAGE))
+            permissionsNeeded.add("Write to external storage");
 
         Log.d("GM/permNeed", permissionsNeeded.toString());
         Log.d("GM/permList", permissionsList.toString());
@@ -251,17 +256,25 @@ public class MainActivity extends AppCompatActivity
 
     private void addSmsCountToCategories() {
 
-        Map<String, String> categoryIdsWithSmsCount = DatabaseBridge.getCategoryIdsWithSmsCount(this);
+        List<Map<String, String>> categoryIdsWithSmsCount = DatabaseBridge.getCategoryIdsWithSmsCount(this);
 
         for (int i = 0; i < categoryList.size(); i++) {
             Map<String, String> categoryListItem = categoryList.get(i);
-            if (categoryIdsWithSmsCount.containsKey(categoryListItem.get(DatabaseContract.Category._ID))) {
-                categoryListItem.put(
-                        COUNT,
-                        String.valueOf(categoryIdsWithSmsCount.get(
-                                categoryListItem.get(DatabaseContract.Category._ID)
-                        ))
-                );
+
+            for (int j = 0; j < categoryIdsWithSmsCount.size(); j++) {
+                if (categoryIdsWithSmsCount.get(j).get(DatabaseContract.Sms.KEY_CATEGORY_ID)
+                        .equals(categoryListItem.get(DatabaseContract.Category._ID))) {
+
+                    String countKey = COUNT_UNREAD;
+                    if (Integer.parseInt(categoryIdsWithSmsCount.get(j).get(DatabaseContract.Sms.KEY_READ)) > 0) {
+                        countKey = COUNT_READ;
+                    }
+
+                    categoryListItem.put(
+                            countKey,
+                            String.valueOf(categoryIdsWithSmsCount.get(j).get(SMS_COUNT))
+                    );
+                }
             }
             categoryList.set(i, categoryListItem);
         }
@@ -320,7 +333,6 @@ public class MainActivity extends AppCompatActivity
         addSmsCountToCategories();
 
         CategoryListArrayAdapter categoryItemsAdapter = new CategoryListArrayAdapter(this, categoryList);
-        categoryItemsAdapter.setHasStableIds(true);
         RecyclerView listView = (RecyclerView) findViewById(R.id.category_list_view);
         listView.setLayoutManager(new GridLayoutManager(this, 2));
         listView.setHasFixedSize(true);
@@ -339,7 +351,8 @@ public class MainActivity extends AppCompatActivity
         }
 
         for (Map<String, String> category : allCategories) {
-            category.put(COUNT, "0");
+            category.put(COUNT_UNREAD, "0");
+            category.put(COUNT_READ, "0");
             categoryList.add(category);
         }
     }

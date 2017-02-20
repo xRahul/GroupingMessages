@@ -18,12 +18,14 @@ import java.util.Map;
 class CategoryListItemHolder extends RecyclerView.ViewHolder
         implements View.OnClickListener, View.OnLongClickListener {
 
-    private static final String COUNT = "count";
+    private static final String COUNT_UNREAD = "count_unread";
+    private static final String COUNT_READ = "count_read";
     private static final String CATEGORY_ID = "category_id";
     private static final String EDIT_CATEGORY_TAG = "EDIT_CATEGORY_TAG";
     private final Context context;
     private final TextView categoryNameTextView;
-    private final TextView categoryCountTextView;
+    private final TextView categoryUnreadCountTextView;
+    private final TextView categoryReadCountTextView;
     private final RelativeLayout categoryListViewParent;
     private String categoryId;
     private String categoryName;
@@ -35,7 +37,8 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
         context = itemView.getContext();
 
         categoryNameTextView = (TextView) itemView.findViewById(R.id.category_name_textview);
-        categoryCountTextView = (TextView) itemView.findViewById(R.id.category_count_textview);
+        categoryUnreadCountTextView = (TextView) itemView.findViewById(R.id.category_unread_count_textview);
+        categoryReadCountTextView = (TextView) itemView.findViewById(R.id.category_read_count_textview);
         categoryListViewParent = (RelativeLayout) itemView.findViewById(R.id.category_list_parent);
 
         itemView.setOnClickListener(this);
@@ -48,7 +51,8 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
         categoryName = category.get(DatabaseContract.Category.KEY_NAME);
         categoryColor = category.get(DatabaseContract.Category.KEY_COLOR);
         categoryNameTextView.setText(category.get(DatabaseContract.Category.KEY_NAME));
-        categoryCountTextView.setText(category.get(COUNT));
+        categoryUnreadCountTextView.setText(category.get(COUNT_UNREAD));
+        categoryReadCountTextView.setText(category.get(COUNT_READ));
         if (category.get(DatabaseContract.Category.KEY_COLOR) != null) {
             categoryListViewParent.setBackgroundColor(
                     Integer.parseInt(category.get(DatabaseContract.Category.KEY_COLOR))

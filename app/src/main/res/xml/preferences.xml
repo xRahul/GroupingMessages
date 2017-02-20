@@ -2,7 +2,7 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:sample="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory android:title="Settings">
+    <PreferenceCategory android:title="Advanced Settings">
         <ListPreference
             android:defaultValue="levenshtein"
             android:entries="@array/SimilarityAlgorithms"
@@ -23,7 +23,9 @@
             sample:msbp_maxValue="100"
             sample:msbp_measurementUnit="%"
             sample:msbp_minValue="1" />
+    </PreferenceCategory>
 
+    <PreferenceCategory android:title="Data Settings">
         <PreferenceScreen
             android:key="key_reset_model"
             android:summary=""
@@ -32,6 +34,14 @@
             android:key="key_reset_model_delete_cat"
             android:summary=""
             android:title="Reset Model &amp; Delete Categories" />
+        <PreferenceScreen
+            android:key="key_export_db"
+            android:summary=""
+            android:title="Export database" />
+        <PreferenceScreen
+            android:key="key_import_db"
+            android:summary=""
+            android:title="Import Database" />
 
     </PreferenceCategory>
     <PreferenceCategory android:title="About">

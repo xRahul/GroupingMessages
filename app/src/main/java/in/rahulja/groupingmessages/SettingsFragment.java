@@ -5,11 +5,13 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -21,12 +23,17 @@ public class SettingsFragment extends PreferenceFragment {
     public static final String PREF_DEVELOPER = "key_developer";
     public static final String PREF_RESET_MODEL = "key_reset_model";
     public static final String PREF_DELETE_CAT = "key_reset_model_delete_cat";
+    public static final String PREF_EXPORT_DB = "key_export_db";
+    public static final String PREF_IMPORT_DB = "key_import_db";
+    private static final String backupDBPath = "GroupMessagingBackup";
     private String versionSummary;
     private Preference versionPref;
     private String latestVersionUrl;
     private Preference developerPref;
     private Preference resetModelPref;
     private Preference deleteCatPref;
+    private Preference exportDbPref;
+    private Preference importDbPref;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -43,6 +50,8 @@ public class SettingsFragment extends PreferenceFragment {
         developerPref = findPreference(PREF_DEVELOPER);
         resetModelPref = findPreference(PREF_RESET_MODEL);
         deleteCatPref = findPreference(PREF_DELETE_CAT);
+        exportDbPref = findPreference(PREF_EXPORT_DB);
+        importDbPref = findPreference(PREF_IMPORT_DB);
     }
 
     private void updatePreferenceView() {
@@ -55,6 +64,8 @@ public class SettingsFragment extends PreferenceFragment {
         developerPref = findPreference(PREF_DEVELOPER);
         resetModelPref = findPreference(PREF_RESET_MODEL);
         deleteCatPref = findPreference(PREF_DELETE_CAT);
+        exportDbPref = findPreference(PREF_EXPORT_DB);
+        importDbPref = findPreference(PREF_IMPORT_DB);
 
         initializePreferenceListener();
     }
@@ -116,6 +127,134 @@ public class SettingsFragment extends PreferenceFragment {
         initializeVersionPreferenceClickListener();
 
         initializeDeveloperPreferenceClickListener();
+
+        initializeExportDbPreferenceClickListener();
+
+        initializeImportDbPreferenceClickListener();
+    }
+
+    private void initializeImportDbPreferenceClickListener() {
+        importDbPref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            public boolean onPreferenceClick(Preference importDbPref) {
+                importDbPreferenceClick(importDbPref);
+                return true;
+            }
+        });
+    }
+
+    private void importDbPreferenceClick(Preference importDbPref) {
+        Log.d("GM/importDbClick", importDbPref.toString());
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(
+                getActivity()
+        );
+
+        builder.setTitle("Import & Overwrite existing db");
+        builder.setMessage(
+                "Import & Overwrite existing db with one at \n" +
+                        new File(
+                                Environment.getExternalStorageDirectory(),
+                                backupDBPath
+                        ).getAbsolutePath()
+        );
+        builder.setPositiveButton("Yes",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,
+                                        int which) {
+
+                        Runnable runnable = new Runnable() {
+                            @Override
+                            public void run() {
+                                asyncImportDb();
+                            }
+                        };
+                        new Thread(runnable).start();
+                    }
+                });
+        builder.setNegativeButton("No",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,
+                                        int which) {
+                        // do nothing
+                    }
+                });
+        builder.show();
+    }
+
+    private void asyncImportDb() {
+        DatabaseBridge.importDB(getActivity());
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(
+                        getActivity(),
+                        "Import completed!",
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
+        });
+    }
+
+    private void initializeExportDbPreferenceClickListener() {
+        exportDbPref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            public boolean onPreferenceClick(Preference exportDbPref) {
+                exportDbPreferenceClick(exportDbPref);
+                return true;
+            }
+        });
+    }
+
+    private void exportDbPreferenceClick(Preference exportDbPref) {
+        Log.d("GM/exportDbClick", exportDbPref.toString());
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(
+                getActivity()
+        );
+
+        builder.setTitle("Export Apllication db");
+        builder.setMessage(
+                "Export application db & overwrite if old backup exist at \n" +
+                        new File(
+                                Environment.getExternalStorageDirectory(),
+                                backupDBPath
+                        ).getAbsolutePath()
+        );
+        builder.setPositiveButton("Yes",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,
+                                        int which) {
+
+                        Runnable runnable = new Runnable() {
+                            @Override
+                            public void run() {
+                                asyncExportDb();
+                            }
+                        };
+                        new Thread(runnable).start();
+                    }
+                });
+        builder.setNegativeButton("No",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,
+                                        int which) {
+                        // do nothing
+                    }
+                });
+        builder.show();
+    }
+
+    private void asyncExportDb() {
+        DatabaseBridge.exportDB(getActivity());
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(
+                        getActivity(),
+                        "Export completed!",
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
+        });
     }
 
     private void initializeDeleteCategoriesPreferenceClickListener() {
