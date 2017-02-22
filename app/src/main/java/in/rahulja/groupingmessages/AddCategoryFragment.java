@@ -42,6 +42,7 @@ public class AddCategoryFragment extends DialogFragment {
         View categoryDialogView = View.inflate(getContext(), R.layout.dialog_add_category, null);
 
         final Bundle mArgs = getArguments();
+        int positiveButton = R.string.add;
         if ("EDIT".equals(mArgs.getString("ACTION"))) {
             String categoryNameArg = mArgs.getString(DatabaseContract.Category.KEY_NAME);
             int categoryColorArg = mArgs.getInt(DatabaseContract.Category.KEY_COLOR);
@@ -49,13 +50,14 @@ public class AddCategoryFragment extends DialogFragment {
             editTextCategoryName.setText(categoryNameArg);
             com.flask.colorpicker.ColorPickerView colorPickerView = (com.flask.colorpicker.ColorPickerView) categoryDialogView.findViewById(R.id.pick_category_color);
             colorPickerView.setColor(categoryColorArg, true);
+            positiveButton = R.string.edit;
         }
 
         builder.setTitle(R.string.add_category_dialog_title);
 
         builder.setView(categoryDialogView)
                 // Add action buttons
-                .setPositiveButton(R.string.add, new DialogInterface.OnClickListener() {
+                .setPositiveButton(positiveButton, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int id) {
                         mListener.onDialogPositiveClick(AddCategoryFragment.this, mArgs);

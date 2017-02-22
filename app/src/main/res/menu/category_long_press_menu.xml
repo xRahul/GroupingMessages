@@ -12,4 +12,9 @@
         app:showAsAction="ifRoom|withText"
         android:title="@string/delete"
         android:visible="true"/>
+    <item
+        android:id="@+id/category_popup_all_read_item"
+        app:showAsAction="ifRoom|withText"
+        android:title="@string/mark_all_as_read"
+        android:visible="true"/>
 </menu>

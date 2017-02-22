@@ -78,6 +78,7 @@ class TrainSms {
                             DatabaseContract.Sms.KEY_SIMILAR_TO,
                             toTrainAgainstSmsMap.get(DatabaseContract.Sms._ID)
                     );
+                    highestSimScore = tempSimScore;
                 }
             }
 

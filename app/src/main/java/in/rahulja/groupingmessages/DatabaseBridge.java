@@ -697,6 +697,9 @@ class DatabaseBridge {
     }
 
     static Boolean setSmsAsRead(Context context, String smsId) {
+
+        initializeDb(context);
+
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.Sms.KEY_READ, 1);
 
@@ -711,6 +714,28 @@ class DatabaseBridge {
                 selection,
                 selectionArgs);
 
+        Log.d("GM/smsRead", "Count: " + String.valueOf(count));
+        return count > 0;
+    }
+
+    static Boolean setAllCategorySmsAsRead(Context context, String categoryId) {
+        initializeDb(context);
+
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.Sms.KEY_READ, 1);
+
+
+        // Which row to update, based on the title
+        String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + " = ?";
+        String[] selectionArgs = {categoryId};
+
+        int count = db.update(
+                DatabaseContract.Sms.TABLE_NAME,
+                values,
+                selection,
+                selectionArgs);
+
+        Log.d("GM/catSmsRead", "Count: " + String.valueOf(count));
         return count > 0;
     }
 }

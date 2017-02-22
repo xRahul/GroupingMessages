@@ -11,6 +11,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.Map;
 
@@ -88,8 +89,15 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
                     newFragment.setArguments(args);
                     newFragment.show(((MainActivity) context).getSupportFragmentManager(), EDIT_CATEGORY_TAG);
 
-                } else if (id == R.id.category_popup_delete_item) {
+                } else if (id == R.id.category_popup_delete_item && !"1".equals(categoryId)) {
                     DatabaseBridge.deleteCategory(context, Long.parseLong(categoryId));
+                    ((MainActivity) context).onPostResume();
+
+                } else if (id == R.id.category_popup_delete_item && "1".equals(categoryId)) {
+                    Toast.makeText(context, "Cannot Delete Unknown Category", Toast.LENGTH_SHORT).show();
+
+                } else if (id == R.id.category_popup_all_read_item) {
+                    DatabaseBridge.setAllCategorySmsAsRead(context, categoryId);
                     ((MainActivity) context).onPostResume();
                 }
                 return true;

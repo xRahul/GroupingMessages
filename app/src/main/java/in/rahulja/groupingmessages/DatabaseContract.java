@@ -169,4 +169,42 @@ final class DatabaseContract {
 
     }
 
+    abstract static class SmsFeatures implements BaseColumns {
+        static final String TABLE_NAME = "sms_features";
+        static final String DELETE_TABLE = DROP_TABLE_IF_EXISTS + TABLE_NAME;
+        static final String KEY_CLEANED_SMS = "cleaned_sms";
+        static final String KEY_SMS_ID = "sms_id";
+        static final String[] SENDER_TYPES = new String[]{"contact", "number", "company"};
+        static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
+        static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
+        static final String DEFAULT_SORT_ORDER = KEY_SMS_ID + " DESC";
+
+        static final String CREATE_TABLE = DatabaseContract.CREATE_TABLE_PREFIX +
+                TABLE_NAME + " (" +
+                _ID + INTEGER_TYPE + PRIMARY_KEY + COMMA_SEP +
+                KEY_SMS_ID + INTEGER_TYPE + COMMA_SEP +
+                KEY_CLEANED_SMS + TEXT_TYPE + COMMA_SEP +
+                KEY_CREATED_AT + TIME_TYPE + DEFAULT + CURRENT_TIMESTAMP + COMMA_SEP +
+                KEY_UPDATED_AT + TIME_TYPE + DEFAULT + CURRENT_TIMESTAMP + COMMA_SEP +
+                " FOREIGN KEY (" + KEY_SMS_ID + ") REFERENCES "
+                + DatabaseContract.Sms.TABLE_NAME + "(" + DatabaseContract.Sms._ID + ")" + ");";
+        static final String UPDATE_AT_TRIGGER =
+                String.format(CREATE_TRIGGER_FORMAT, TABLE_NAME, TABLE_NAME, TABLE_NAME, KEY_UPDATED_AT, CURRENT_TIMESTAMP, _ID, _ID);
+        /**
+         * Array of all the columns. Makes for cleaner code
+         */
+        static final String[] KEY_ARRAY = {
+                _ID,
+                KEY_SMS_ID,
+                KEY_CLEANED_SMS,
+                KEY_CREATED_AT,
+                KEY_UPDATED_AT
+        };
+
+        private SmsFeatures() {
+            throw new IllegalAccessError(CANT_INSTANTIATE_CLASS);
+        }
+
+    }
+
 }
