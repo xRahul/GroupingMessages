@@ -22,8 +22,11 @@
         android:id="@+id/fab_add_category"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
         android:layout_margin="@dimen/fab_margin"
-        app:srcCompat="@drawable/float_add" />
+        android:foreground="?android:attr/selectableItemBackground"
+        app:srcCompat="@drawable/float_add"
+        app:layout_anchorGravity="center_vertical|center_horizontal"
+        android:layout_gravity="bottom|center_horizontal"
+        app:elevation="10dp" />
 
 </android.support.design.widget.CoordinatorLayout>

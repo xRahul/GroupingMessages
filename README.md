@@ -1,6 +1,6 @@
 # Grouping Messages
 
-This is an android app that learns and categorizes your sms into various categories of your choice.
+This is an android app that automatically categorizes your sms into various categories of your choice.
 
 Every trained model will be user specific, so each user can categorize their sms according to their needs. 
 It requires some learning at the beginning, 
@@ -13,14 +13,13 @@ You can choose the algorithm and base similarity score in settings to truly make
 
 ### Screenshots
 
-![Activities](https://github.com/xRahul/GroupingMessages/raw/master/Screenshots/Activities_View.jpg) 
+![Activities](https://github.com/xRahul/GroupingMessages/raw/master/Screenshots/Activities_View_1.2.jpg) 
 ---
-![Settings](https://github.com/xRahul/GroupingMessages/raw/master/Screenshots/Settings_View.jpg) 
+![Settings](https://github.com/xRahul/GroupingMessages/raw/master/Screenshots/Settings_View_1.2.jpg) 
 
 
 ## Future Roadmap-
 * Add more intelligence (another layer?)
-* Automatically marking the SMS as read when it's read in app
 * Show notifications on new sms received
-* edit or delete category
 * String cleaning options given in preference
+* Show reports on daily average
