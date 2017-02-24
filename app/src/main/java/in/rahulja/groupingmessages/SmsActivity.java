@@ -5,10 +5,12 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract.PhoneLookup;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -32,6 +34,7 @@ public class SmsActivity extends AppCompatActivity {
     private long categoryId;
     private Map<String, String> categories;
     private ProgressBar pbCircle;
+    private RecyclerView listView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,10 +126,42 @@ public class SmsActivity extends AppCompatActivity {
 
     private void createUi() {
         SmsListArrayAdapter smsItemsAdapter = new SmsListArrayAdapter(this, smsList);
-        RecyclerView listView = (RecyclerView) findViewById(R.id.sms_list_view);
+        listView = (RecyclerView) findViewById(R.id.sms_list_view);
         listView.setLayoutManager(new LinearLayoutManager(this));
         listView.setHasFixedSize(true);
         listView.setAdapter(smsItemsAdapter);
+        setSwipeForRecyclerView();
+    }
+
+    private void setSwipeForRecyclerView() {
+
+        SwipeUtil swipeHelper = new SwipeUtil(0, ItemTouchHelper.LEFT, this) {
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+                int swipedPosition = viewHolder.getAdapterPosition();
+                SmsListArrayAdapter adapter = (SmsListArrayAdapter) listView.getAdapter();
+                adapter.pendingRemoval(swipedPosition);
+            }
+
+            @Override
+            public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+                int position = viewHolder.getAdapterPosition();
+                SmsListArrayAdapter adapter = (SmsListArrayAdapter) listView.getAdapter();
+                if (adapter.isPendingRemoval(position)) {
+                    return 0;
+                }
+                return super.getSwipeDirs(recyclerView, viewHolder);
+            }
+        };
+
+        ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(swipeHelper);
+        mItemTouchHelper.attachToRecyclerView(listView);
+
+        //set swipe label
+        swipeHelper.setLeftSwipeLable("Delete");
+        //set swipe background-Color
+        swipeHelper.setLeftcolorCode(ContextCompat.getColor(this, android.R.color.holo_red_dark));
+
     }
 
     private void refreshUi() {

@@ -738,4 +738,8 @@ class DatabaseBridge {
         Log.d("GM/catSmsRead", "Count: " + String.valueOf(count));
         return count > 0;
     }
+
+    static void deleteSmsOrChangeVisibility(Map<String, String> data) {
+
+    }
 }

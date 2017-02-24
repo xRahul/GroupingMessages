@@ -60,7 +60,6 @@ class TrainSms {
 
                 double tempSimScore = getSmsSimilarityScore(
                         simAlgo,
-                        limitSimScore,
                         toTrainSmsMap.get(CLEAN_SMS),
                         toTrainAgainstSmsMap.get(CLEAN_SMS)
                 );
@@ -145,7 +144,6 @@ class TrainSms {
 
             double tempSimScore = getSmsSimilarityScore(
                     simAlgo,
-                    limitSimScore,
                     toTrainSmsMap.get(CLEAN_SMS),
                     cleanedTrainedSms.get(CLEAN_SMS)
             );
@@ -170,15 +168,12 @@ class TrainSms {
         return reTrainedSmsList;
     }
 
-    private static double getSmsSimilarityScore(String algo, double limitSimScore, String sms1, String sms2) {
+    private static double getSmsSimilarityScore(String algo, String sms1, String sms2) {
         Method method;
         try {
             method = StringMetrics.class.getMethod(algo);
             StringMetric m = (StringMetric) method.invoke(null);
-            double score = m.compare(sms1, sms2);
-            if (score > limitSimScore)
-                Log.d("GM/SimScore", String.format("%s %s %s %s %s", algo, String.valueOf(limitSimScore), String.valueOf(score), sms1, sms2));
-            return score;
+            return m.compare(sms1, sms2);
         } catch (IllegalAccessException | InvocationTargetException | SecurityException | NoSuchMethodException e) {
             Log.e("GM/simError", e.toString());
             return 0.0;

@@ -9,6 +9,7 @@ import android.support.v7.widget.RecyclerView;
 import android.text.format.DateUtils;
 import android.view.View;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -24,6 +25,9 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
     private final TextView smsTimeTextView;
     private final Button smsCategoryButton;
     private final CardView listItemContent;
+    RelativeLayout regularLayout;
+    LinearLayout swipeLayout;
+    TextView undo;
 
     private Map<String, String> sms;
     private Context context;
@@ -40,6 +44,10 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
         smsTimeTextView = (TextView) itemView.findViewById(R.id.sms_time_textview);
         smsCategoryButton = (Button) itemView.findViewById(R.id.bucket_button);
         listItemContent = (CardView) itemView.findViewById(R.id.sms_list_item_content);
+
+        regularLayout = (RelativeLayout) itemView.findViewById(R.id.regularLayout);
+        swipeLayout = (LinearLayout) itemView.findViewById(R.id.swipeLayout);
+        undo = (TextView) itemView.findViewById(R.id.undo);
 
         // 3. Set the "onClick" listener of the holder
         itemView.setOnClickListener(this);

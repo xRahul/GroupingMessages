@@ -1,6 +1,5 @@
 package in.rahulja.groupingmessages;
 
-import android.app.Activity;
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -29,8 +28,7 @@ class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHold
 
     @Override
     public CategoryListItemHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        LayoutInflater inflater = (LayoutInflater) context.getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
-        View view = inflater.inflate(R.layout.category_list_item, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.category_list_item, parent, false);
         return new CategoryListItemHolder(view);
     }
 
