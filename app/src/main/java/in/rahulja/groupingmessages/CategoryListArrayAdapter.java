@@ -13,12 +13,10 @@ import java.util.Map;
 
 class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHolder> {
 
-    private Context context;
     private List<Map<String, String>> categoryList;
 
     CategoryListArrayAdapter(Context contextParam, List<Map<String, String>> objects) {
 
-        context = contextParam;
         if (objects == null) {
             categoryList = new ArrayList<>();
         } else {

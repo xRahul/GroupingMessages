@@ -126,7 +126,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void getCategoryListData() {
-        showTitleProgressSpinner();
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -137,7 +136,6 @@ public class MainActivity extends AppCompatActivity
                     @Override
                     public void run() {
                         drawUi();
-                        hideTitleProgressSpinner();
                     }
                 });
             }
@@ -374,7 +372,10 @@ public class MainActivity extends AppCompatActivity
         listView.setLayoutManager(glm);
         listView.setHasFixedSize(true);
         listView.setAdapter(categoryItemsAdapter);
-        glm.scrollToPosition(positionIndex);
+        if (categoryList.size() > positionIndex)
+            glm.scrollToPosition(positionIndex);
+        else
+            glm.scrollToPosition(categoryList.size() - 1);
     }
 
     private void getAllCategoriesWithoutCount() {
@@ -423,5 +424,12 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    @Override
+    public void onDestroy() {
+        categoryList = null;
+        pbCircle = null;
+        glm = null;
+        super.onDestroy();
+    }
 
 }

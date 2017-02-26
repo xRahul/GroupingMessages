@@ -90,4 +90,12 @@ public class ChangeCategoryActivity extends AppCompatActivity {
         // DataBind ListView with items from ArrayAdapter
         categoryListView.setAdapter(arrayAdapter);
     }
+
+    @Override
+    public void onDestroy() {
+        oldIntent = null;
+        categories = null;
+        categoryListView = null;
+        super.onDestroy();
+    }
 }

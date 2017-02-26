@@ -1,6 +1,8 @@
 package in.rahulja.groupingmessages;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
@@ -109,8 +111,42 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
             DatabaseBridge.setAllCategorySmsAsRead(context, categoryId);
             ((MainActivity) context).onPostResume();
         } else if (id == R.id.category_popup_delete_all_sms) {
-            DatabaseBridge.deleteAllSmsOfCategoryById(context, Long.parseLong(categoryId));
-            ((MainActivity) context).onPostResume();
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+
+            builder.setTitle("Delete All Sms in " + categoryName + "?");
+            builder.setMessage(
+                    "All sms from this category " +
+                            "will be deleted from this application's database. " +
+                            "Real SMS are not affected"
+            );
+            builder.setPositiveButton("Yes",
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog,
+                                            int which) {
+
+                            Runnable runnable = new Runnable() {
+                                @Override
+                                public void run() {
+                                    DatabaseBridge.deleteAllSmsOfCategoryById(context, Long.parseLong(categoryId));
+                                    ((MainActivity) context).runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            ((MainActivity) context).onPostResume();
+                                        }
+                                    });
+                                }
+                            };
+                            new Thread(runnable).start();
+                        }
+                    });
+            builder.setNegativeButton("No",
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog,
+                                            int which) {
+                            // do nothing
+                        }
+                    });
+            builder.show();
         }
         return true;
     }

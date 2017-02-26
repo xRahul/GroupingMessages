@@ -38,7 +38,7 @@ class TrainSms {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         String simAlgo = prefs.getString("key_similarity_algorithm", "levenshtein");
-        double limitSimScore = prefs.getInt("key_similarity_score", LIMIT_SIM_SCORE) / 100;
+        double limitSimScore = prefs.getInt("key_similarity_score", LIMIT_SIM_SCORE) / (double) 100;
 
         for (Map<String, String> toTrainSmsMap : cleanedSmsListToTrain) {
 
@@ -73,6 +73,13 @@ class TrainSms {
                 );
 
                 if (tempSimScore >= limitSimScore && tempSimScore >= highestSimScore) {
+                    Log.d("GM/SimNewSms", String.format(
+                            "%s %s %s %s",
+                            String.valueOf(tempSimScore),
+                            String.valueOf(limitSimScore),
+                            String.valueOf(highestSimScore),
+                            toTrainSmsMap.toString()
+                    ));
                     toTrainSmsMap.put(
                             DatabaseContract.Sms.KEY_SIM_SCORE,
                             String.valueOf(tempSimScore)

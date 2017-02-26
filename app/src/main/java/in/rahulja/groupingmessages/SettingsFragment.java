@@ -25,7 +25,7 @@ public class SettingsFragment extends PreferenceFragment {
     public static final String PREF_DELETE_CAT = "key_reset_model_delete_cat";
     public static final String PREF_EXPORT_DB = "key_export_db";
     public static final String PREF_IMPORT_DB = "key_import_db";
-    private static final String backupDBPath = "GroupMessagingBackup";
+    private static final String BACKUP_DB_PATH = "GroupMessagingBackupV" + DatabaseContract.DATABASE_VERSION;
     private String versionSummary;
     private Preference versionPref;
     private String latestVersionUrl;
@@ -154,7 +154,7 @@ public class SettingsFragment extends PreferenceFragment {
                 "Import & Overwrite existing db with one at \n" +
                         new File(
                                 Environment.getExternalStorageDirectory(),
-                                backupDBPath
+                                BACKUP_DB_PATH
                         ).getAbsolutePath()
         );
         builder.setPositiveButton("Yes",
@@ -216,7 +216,7 @@ public class SettingsFragment extends PreferenceFragment {
                 "Export application db & overwrite if old backup exist at \n" +
                         new File(
                                 Environment.getExternalStorageDirectory(),
-                                backupDBPath
+                                BACKUP_DB_PATH
                         ).getAbsolutePath()
         );
         builder.setPositiveButton("Yes",
@@ -245,9 +245,11 @@ public class SettingsFragment extends PreferenceFragment {
 
     private void asyncExportDb() {
         DatabaseBridge.exportDB(getActivity());
+
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                showShareExportedDbAlert();
                 Toast.makeText(
                         getActivity(),
                         "Export completed!",
@@ -255,6 +257,40 @@ public class SettingsFragment extends PreferenceFragment {
                 ).show();
             }
         });
+    }
+
+    private void showShareExportedDbAlert() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(
+                getActivity()
+        );
+
+        builder.setTitle("Share exported db");
+        builder.setMessage(
+                "Share the database as file that you've just exported"
+        );
+        builder.setPositiveButton("Yes",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,
+                                        int which) {
+                        Uri dbUri = Uri.fromFile(new File(
+                                Environment.getExternalStorageDirectory(),
+                                BACKUP_DB_PATH
+                        ));
+                        Intent shareIntent = new Intent();
+                        shareIntent.setAction(Intent.ACTION_SEND);
+                        shareIntent.putExtra(Intent.EXTRA_STREAM, dbUri);
+                        shareIntent.setType("*/*");
+                        startActivity(Intent.createChooser(shareIntent, "Share database via"));
+                    }
+                });
+        builder.setNegativeButton("No",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,
+                                        int which) {
+                        // do nothing
+                    }
+                });
+        builder.show();
     }
 
     private void initializeDeleteCategoriesPreferenceClickListener() {

@@ -23,11 +23,11 @@ class DatabaseBridge {
 
     private static final String LAST_SMS_TIME_CONFIG = "lastSmsTime";
     private static final String SMS_COUNT = "sms_count";
-    private static final String SMS_URI_INBOX = "content://sms/inbox";
     private static final String EQUALS_QUESTION = " = ? ";
     private static final String GM_CURSOR = "GM/cursor";
     private static final String CURSOR_IS_NULL = "Cursor is null: ";
     private static final String GM_STORE_TRAINED_INBOX_SMS = "GM/storeTrainedInboxSms";
+    private static final String BACKUP_DB_PATH = "GroupMessagingBackupV" + DatabaseContract.DATABASE_VERSION;
     private static SQLiteDatabase db;
     private static DatabaseHelper dbHelper;
 
@@ -698,8 +698,7 @@ class DatabaseBridge {
         try {
             File sd = Environment.getExternalStorageDirectory();
             if (sd.canWrite()) {
-                String backupDBPath = "GroupMessagingBackupV" + DatabaseContract.DATABASE_VERSION;
-                File backupDB = new File(sd, backupDBPath);
+                File backupDB = new File(sd, BACKUP_DB_PATH);
                 File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
 
                 try (FileInputStream fis = new FileInputStream(backupDB)) {
@@ -732,9 +731,8 @@ class DatabaseBridge {
             File sd = Environment.getExternalStorageDirectory();
 
             if (sd.canWrite()) {
-                String backupDBPath = "GroupMessagingBackupV" + DatabaseContract.DATABASE_VERSION;
                 File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
-                File backupDB = new File(sd, backupDBPath);
+                File backupDB = new File(sd, BACKUP_DB_PATH);
 
                 try (FileInputStream fis = new FileInputStream(currentDB)) {
                     try (FileOutputStream fos = new FileOutputStream(backupDB)) {

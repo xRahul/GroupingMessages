@@ -138,7 +138,10 @@ public class SmsActivity extends AppCompatActivity {
         listView.setHasFixedSize(true);
         listView.setAdapter(smsItemsAdapter);
         setSwipeForRecyclerView();
-        llm.scrollToPosition(positionIndex);
+        if (smsList.size() > positionIndex)
+            llm.scrollToPosition(positionIndex);
+        else
+            llm.scrollToPosition(smsList.size() - 1);
     }
 
     private void setSwipeForRecyclerView() {
@@ -222,14 +225,27 @@ public class SmsActivity extends AppCompatActivity {
     public void onActivityResult(int requestCode, int resultCode, Intent receivedIntent) {
         super.onActivityResult(requestCode, resultCode, receivedIntent);
         if (requestCode == 111 && resultCode == RESULT_OK) {
-            final long newCategoryId = Long.parseLong(receivedIntent.getStringExtra(CATEGORY_ID));
-            final int smsListPosition = Integer.parseInt(receivedIntent.getStringExtra("sms_list_position"));
+            final long newCategoryId = Long.parseLong(
+                    receivedIntent.getStringExtra(CATEGORY_ID)
+            );
+            final int smsListPosition = Integer.parseInt(
+                    receivedIntent.getStringExtra("sms_list_position")
+            );
             Log.d("GM/choseCat", receivedIntent.getExtras().toString());
 
             final Map<String, String> trainedSms = smsList.get(smsListPosition);
-            trainedSms.put(DatabaseContract.Sms.KEY_CATEGORY_ID, String.valueOf(newCategoryId));
-            trainedSms.put(DatabaseContract.Sms.KEY_SIMILAR_TO, trainedSms.get(DatabaseContract.Sms._ID));
-            trainedSms.put(DatabaseContract.Sms.KEY_SIM_SCORE, String.valueOf(1.0));
+            trainedSms.put(
+                    DatabaseContract.Sms.KEY_CATEGORY_ID,
+                    String.valueOf(newCategoryId)
+            );
+            trainedSms.put(
+                    DatabaseContract.Sms.KEY_SIMILAR_TO,
+                    trainedSms.get(DatabaseContract.Sms._ID)
+            );
+            trainedSms.put(
+                    DatabaseContract.Sms.KEY_SIM_SCORE,
+                    String.valueOf(1.0)
+            );
 
             showTitleProgressSpinner();
             Runnable runnable = new Runnable() {
@@ -245,9 +261,15 @@ public class SmsActivity extends AppCompatActivity {
     private void asyncRetrainAllSms(Map<String, String> trainedSms) {
         DatabaseBridge.updateSmsData(getBaseContext(), trainedSms);
 
-        List<Map<String, String>> retrainedSmsList = TrainSms.retrainExistingSms(getBaseContext(), trainedSms);
+        List<Map<String, String>> retrainedSmsList = TrainSms.retrainExistingSms(
+                getBaseContext(),
+                trainedSms
+        );
 
-        final long numRetrainedSms = DatabaseBridge.storeReTrainedSms(getBaseContext(), retrainedSmsList);
+        final long numRetrainedSms = DatabaseBridge.storeReTrainedSms(
+                getBaseContext(),
+                retrainedSmsList
+        );
 
         runOnUiThread(new Runnable() {
             @Override
@@ -261,5 +283,15 @@ public class SmsActivity extends AppCompatActivity {
                 hideTitleProgressSpinner();
             }
         });
+    }
+
+    @Override
+    public void onDestroy() {
+        llm = null;
+        smsList = null;
+        categories = null;
+        pbCircle = null;
+        listView = null;
+        super.onDestroy();
     }
 }
