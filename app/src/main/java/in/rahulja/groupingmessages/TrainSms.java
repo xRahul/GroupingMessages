@@ -20,7 +20,7 @@ import java.util.Set;
 
 class TrainSms {
 
-    private static final String CLEAN_SMS = "clean_sms";
+    private static final String CLEAN_SMS = DatabaseContract.Sms.KEY_CLEANED_SMS;
     private static final int LIMIT_SIM_SCORE = 80;
     private static String[] stopWordsofwordnet = {"without", "see", "unless", "due", "also", "must", "might", "like", "will", "may", "can", "much", "every", "the", "in", "other", "this", "the", "many", "any", "an", "or", "for", "in", "an", "an ", "is", "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "arent", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "cant", "cannot", "could", "couldnt", "did", "didnt", "do", "does", "doesnt", "doing", "dont", "down", "during", "each", "few", "for", "from", "further", "had", "hadnt", "has", "hasnt", "have", "havent", "having", "he", "hed", "hell", "hes", "her", "here", "heres", "hers", "herself", "him", "himself", "his", "how", "hows", "i ", " i", "id", "ill", "im", "ive", "if", "in", "into", "is", "isnt", "it", "its", "its", "itself", "lets", "me", "more", "most", "mustnt", "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "shant", "she", "shed", "shell", "shes", "should", "shouldnt", "so", "some", "such", "than", "that", "thats", "their", "theirs", "them", "themselves", "then", "there", "theres", "these", "they", "theyd", "theyll", "theyre", "theyve", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasnt", "we", "wed", "well", "were", "weve", "were", "werent", "what", "whats", "when", "whens", "where", "wheres", "which", "while", "who", "whos", "whom", "why", "whys", "with", "wont", "would", "wouldnt", "you", "youd", "youll", "youre", "youve", "your", "yours", "yourself", "yourselves", "without", "see", "unless", "due", "also", "must", "might", "like", "will", "may", "can", "much", "every", "the", "in", "other", "this", "the", "many", "any", "an", "or", "for", "in", "an", "an ", "is", "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "arent", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "cant", "cannot", "could", "couldnt", "did", "didnt", "do", "does", "doesnt", "doing", "dont", "down", "during", "each", "few", "for", "from", "further", "had", "hadnt", "has", "hasnt", "have", "havent", "having", "he", "hed", "hell", "hes", "her", "here", "heres", "hers", "herself", "him", "himself", "his", "how", "hows", "i ", " i", "id", "ill", "im", "ive", "if", "in", "into", "is", "isnt", "it", "its", "its", "itself", "lets", "me", "more", "most", "mustnt", "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "shant", "she", "shed", "shell", "shes", "should", "shouldnt", "so", "some", "such", "than", "that", "thats", "their", "theirs", "them", "themselves", "then", "there", "theres", "these", "they", "theyd", "theyll", "theyre", "theyve", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasnt", "we", "wed", "well", "were", "weve", "were", "werent", "what", "whats", "when", "whens", "where", "wheres", "which", "while", "who", "whos", "whom", "why", "whys", "with", "wont", "would", "wouldnt", "you", "youd", "youll", "youre", "youve", "your", "yours", "yourself", "yourselves"};
     private static final Set<String> stopWordsSet = new HashSet<>(Arrays.asList(stopWordsofwordnet));
@@ -52,8 +52,16 @@ class TrainSms {
                     String.valueOf(1)
             );
             toTrainSmsMap.put(
+                    DatabaseContract.Sms.KEY_VISIBILITY,
+                    String.valueOf(1)
+            );
+            toTrainSmsMap.put(
                     DatabaseContract.Sms.KEY_SIMILAR_TO,
                     String.valueOf(0)
+            );
+            toTrainSmsMap.put(
+                    DatabaseContract.Sms.KEY_SENDER_TYPE,
+                    String.valueOf(-1)
             );
 
             for (Map<String, String> toTrainAgainstSmsMap : cleanedSmsListToTrainAgainst) {
@@ -84,6 +92,7 @@ class TrainSms {
             trainedLatestSmsList.add(toTrainSmsMap);
         }
 
+        Log.i("GM/getTrainedListOfSms", "Trained Latest SMS count: " + trainedLatestSmsList.size());
         return trainedLatestSmsList;
     }
 
@@ -100,12 +109,16 @@ class TrainSms {
 
     private static Map<String, String> cleanSmsMap(Map<String, String> sms) {
 
-        sms.put(
-                CLEAN_SMS,
-                cleanString(sms.get(DatabaseContract.Sms.KEY_ADDRESS)
-                        + " "
-                        + sms.get(DatabaseContract.Sms.KEY_BODY))
-        );
+        if (sms.get(CLEAN_SMS) == null ||
+                (sms.get(CLEAN_SMS) != null && sms.get(CLEAN_SMS).isEmpty())
+                ) {
+            sms.put(
+                    CLEAN_SMS,
+                    cleanString(sms.get(DatabaseContract.Sms.KEY_ADDRESS)
+                            + " "
+                            + sms.get(DatabaseContract.Sms.KEY_BODY))
+            );
+        }
 
         return sms;
     }
@@ -128,8 +141,9 @@ class TrainSms {
     }
 
 
-    static List<Map<String, String>> retrainExistingSms(Context context, Map<String, String> trainedSms, List<Map<String, String>> allSms) {
+    static List<Map<String, String>> retrainExistingSms(Context context, Map<String, String> trainedSms) {
 
+        List<Map<String, String>> allSms = DatabaseBridge.getAllSms(context);
         List<Map<String, String>> reTrainedSmsList = new ArrayList<>();
         List<Map<String, String>> cleanedAllSms = cleanListOfSms(allSms);
         Map<String, String> cleanedTrainedSms = cleanSmsMap(trainedSms);

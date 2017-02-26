@@ -52,6 +52,7 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
         // 3. Set the "onClick" listener of the holder
         itemView.setOnClickListener(this);
         listItemContent.setOnClickListener(this);
+        smsBodyTextView.setOnClickListener(this);
     }
 
     private String getDate(long milliSeconds) {
@@ -91,9 +92,7 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
             i.putExtra("sms_list_position", getAdapterPosition());
 
             ((AppCompatActivity) context).startActivityForResult(i, 111);
-        }
-
-        else if (v.getId() == listItemContent.getId()) {
+        } else if (v.getId() == listItemContent.getId() || v.getId() == smsBodyTextView.getId()) {
             DatabaseBridge.setSmsAsRead(context, sms.get(DatabaseContract.Sms._ID));
             listItemContent.setCardBackgroundColor(Color.WHITE);
         }

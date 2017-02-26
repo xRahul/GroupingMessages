@@ -43,8 +43,33 @@ public class MainActivity extends AppCompatActivity
 
     private static final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 124;
     private long numRowsAddedToSms;
-    private List<Map<String, String>> categoryList;
+    private List<Map<String, String>> categoryList = new ArrayList<>();
     private ProgressBar pbCircle;
+    private GridLayoutManager glm = new GridLayoutManager(getBaseContext(), 2);
+
+    static List<Map<String, String>> addSenderTypeToListOfSms(List<Map<String, String>> listOfSms) {
+
+        for (int i = 0; i < listOfSms.size(); i++) {
+            Map<String, String> tempSms = listOfSms.get(i);
+            String fromString = tempSms.get(DatabaseContract.Sms.KEY_ADDRESS);
+            int senderType = DatabaseContract.Sms.SENDER_CONTACT;
+            if ("0".equals(String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_PERSON)))) {
+                senderType = DatabaseContract.Sms.SENDER_COMPANY;
+                if (fromString.matches(".*[0-9]{10}.*") && !fromString.matches(".*[a-zA-Z]+.*")) {
+                    senderType = DatabaseContract.Sms.SENDER_NUMBER;
+                }
+            }
+
+            tempSms.put(
+                    DatabaseContract.Sms.KEY_SENDER_TYPE,
+                    String.valueOf(senderType)
+            );
+
+            listOfSms.set(i, tempSms);
+        }
+
+        return listOfSms;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +112,6 @@ public class MainActivity extends AppCompatActivity
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             Intent settingsIntent = new Intent(this, SettingsActivity.class);
-
             startActivity(settingsIntent);
             return true;
         }
@@ -97,7 +121,28 @@ public class MainActivity extends AppCompatActivity
 
     private void init() {
         getLatestSmsAndTrainThem();
-        createUi();
+        getCategoryListData();
+        drawUi();
+    }
+
+    private void getCategoryListData() {
+        showTitleProgressSpinner();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                getAllCategoriesWithoutCount();
+                addSmsCountToCategories();
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        drawUi();
+                        hideTitleProgressSpinner();
+                    }
+                });
+            }
+        };
+        new Thread(runnable).start();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -197,15 +242,15 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void asyncGetLatestSmsAndTrainThem() {
-        String selection = DatabaseContract.Sms.KEY_SIM_SCORE + " = ?";
-        String[] selectionArgs = {String.valueOf(1.0)};
-        List<Map<String, String>> allOldTrainedSms = DatabaseBridge.getFilteredSms(
-                getBaseContext(), selection, selectionArgs
-        );
+
         List<Map<String, String>> trainedLatestSmsFromInbox = TrainSms.getTrainedListOfSms(
                 getBaseContext(),
-                DatabaseBridge.getLatestSmsFromInbox(getBaseContext()),
-                allOldTrainedSms
+                ExternalContentBridge.getLatestSmsFromInbox(getBaseContext()),
+                DatabaseBridge.getSelfTrainedSms(getBaseContext())
+        );
+
+        trainedLatestSmsFromInbox = addSenderTypeToListOfSms(
+                trainedLatestSmsFromInbox
         );
 
         numRowsAddedToSms = DatabaseBridge.storeTrainedInboxSms(
@@ -222,8 +267,8 @@ public class MainActivity extends AppCompatActivity
                             String.valueOf(numRowsAddedToSms) + " new sms added",
                             Toast.LENGTH_SHORT
                     ).show();
+                    getCategoryListData();
                 }
-                createUi();
                 hideTitleProgressSpinner();
             }
         });
@@ -279,12 +324,7 @@ public class MainActivity extends AppCompatActivity
             categoryList.set(i, categoryListItem);
         }
 
-        Log.d("GM/updatedCatCount", categoryList.toString());
-    }
-
-
-    private void createUi() {
-        refreshUi();
+        Log.i("GM/addCountToCategories", categoryList.toString());
     }
 
     @Override
@@ -324,25 +364,22 @@ public class MainActivity extends AppCompatActivity
                 Log.i(GM_ADD_CAT, "Successfully added category: " + categoryName.getText());
             }
         }
-        refreshUi();
+        getCategoryListData();
     }
 
-    private void refreshUi() {
-        Log.d("GM/refreshCatUi", "refreshed");
-        getAllCategoriesWithoutCount();
-        addSmsCountToCategories();
-
-        CategoryListArrayAdapter categoryItemsAdapter = new CategoryListArrayAdapter(this, categoryList);
+    private void drawUi() {
+        int positionIndex = glm.findFirstVisibleItemPosition();
+        CategoryListArrayAdapter categoryItemsAdapter = new CategoryListArrayAdapter(getBaseContext(), categoryList);
         RecyclerView listView = (RecyclerView) findViewById(R.id.category_list_view);
-        listView.setLayoutManager(new GridLayoutManager(this, 2));
+        listView.setLayoutManager(glm);
         listView.setHasFixedSize(true);
         listView.setAdapter(categoryItemsAdapter);
-
+        glm.scrollToPosition(positionIndex);
     }
 
     private void getAllCategoriesWithoutCount() {
 
-        List<Map<String, String>> allCategories = DatabaseBridge.getAllCategories(this);
+        List<Map<String, String>> allCategories = DatabaseBridge.getAllVisibleCategories(this);
 
         if (categoryList == null) {
             categoryList = new ArrayList<>();
@@ -385,5 +422,6 @@ public class MainActivity extends AppCompatActivity
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
+
 
 }

@@ -31,7 +31,7 @@ public class ChangeCategoryActivity extends AppCompatActivity {
         setTitle("Choose category");
         oldIntent = getIntent();
 
-        categories = DatabaseBridge.getAllCategories(this);
+        categories = DatabaseBridge.getAllVisibleCategories(this);
 
         categoryListView = (ListView) findViewById(R.id.activity_choose_category_list_view);
 

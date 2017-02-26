@@ -28,7 +28,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@+id/category_name_textview"
-            android:layout_weight="1"
             android:orientation="horizontal"
             android:padding="5dp">
 

@@ -97,4 +97,5 @@
     <string name="mark_all_as_read">Mark all as Read</string>
     <string name="deleted">Deleted</string>
     <string name="undo">Undo</string>
+    <string name="delete_all_sms">Delete all SMS</string>
 </resources>

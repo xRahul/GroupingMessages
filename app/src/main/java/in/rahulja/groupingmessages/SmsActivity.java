@@ -1,10 +1,7 @@
 package in.rahulja.groupingmessages;
 
 import android.content.Intent;
-import android.database.Cursor;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.ContactsContract.PhoneLookup;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -30,6 +27,7 @@ public class SmsActivity extends AppCompatActivity {
     public static final String KEY_FROM = "from";
     public static final String KEY_CATEGORY_NAME = "category_name";
     public static final String CATEGORY_ID = "category_id";
+    LinearLayoutManager llm = new LinearLayoutManager(this);
     private List<Map<String, String>> smsList;
     private long categoryId;
     private Map<String, String> categories;
@@ -46,9 +44,17 @@ public class SmsActivity extends AppCompatActivity {
 
         categoryId = Long.parseLong(getIntent().getStringExtra(CATEGORY_ID));
         smsList = new ArrayList<>();
+    }
 
-        createUi();
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        init();
+    }
+
+    private void init() {
         getDataInBackground();
+        drawUi();
     }
 
     private void setupActionBar() {
@@ -115,7 +121,7 @@ public class SmsActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        refreshUi();
+                        drawUi();
                         hideTitleProgressSpinner();
                     }
                 });
@@ -124,13 +130,15 @@ public class SmsActivity extends AppCompatActivity {
         new Thread(runnable).start();
     }
 
-    private void createUi() {
+    private void drawUi() {
+        int positionIndex = llm.findFirstVisibleItemPosition();
         SmsListArrayAdapter smsItemsAdapter = new SmsListArrayAdapter(this, smsList);
         listView = (RecyclerView) findViewById(R.id.sms_list_view);
-        listView.setLayoutManager(new LinearLayoutManager(this));
+        listView.setLayoutManager(llm);
         listView.setHasFixedSize(true);
         listView.setAdapter(smsItemsAdapter);
         setSwipeForRecyclerView();
+        llm.scrollToPosition(positionIndex);
     }
 
     private void setSwipeForRecyclerView() {
@@ -164,16 +172,9 @@ public class SmsActivity extends AppCompatActivity {
 
     }
 
-    private void refreshUi() {
-        createUi();
-    }
-
     private void getCategorySmsData() {
 
-        String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + " = ?";
-        String[] selectionArgs = {String.valueOf(categoryId)};
-
-        smsList = DatabaseBridge.getFilteredSms(this, selection, selectionArgs);
+        smsList = DatabaseBridge.getVisibleSmsFromCategory(this, categoryId);
 
         Log.d("GM/GotFilteredSMS", String.valueOf(smsList.size()));
 
@@ -187,7 +188,7 @@ public class SmsActivity extends AppCompatActivity {
 
         Log.d("GM/addressSet", addressSet.toString());
 
-        Map<String, String> contactNames = getContactNames(addressSet);
+        Map<String, String> contactNames = ExternalContentBridge.getContactNames(this, addressSet);
 
         for (int i = 0; i < smsList.size(); i++) {
             Map<String, String> tempSms = smsList.get(i);
@@ -195,6 +196,7 @@ public class SmsActivity extends AppCompatActivity {
             if (!"0".equals(String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_PERSON)))) {
                 fromString = contactNames.get(fromString);
             }
+
             tempSms.put(KEY_FROM, fromString);
             tempSms.put(KEY_CATEGORY_NAME, categories.get(
                     String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_CATEGORY_ID))
@@ -204,39 +206,9 @@ public class SmsActivity extends AppCompatActivity {
         }
     }
 
-    private Map<String, String> getContactNames(Set<String> addressSet) {
-
-        Map<String, String> contactList = new HashMap<>();
-
-        for (String phoneNumber : addressSet) {
-            contactList.put(phoneNumber, getContactName(phoneNumber));
-        }
-
-        return contactList;
-    }
-
-    private String getContactName(String phoneNumber) {
-        Uri uri = Uri.withAppendedPath(PhoneLookup.CONTENT_FILTER_URI,
-                Uri.encode(phoneNumber));
-        Cursor cursor = getContentResolver().query(uri,
-                new String[]{PhoneLookup.DISPLAY_NAME}, null, null, null);
-        if (cursor == null) {
-            return null;
-        }
-        String contactName = null;
-        if (cursor.moveToFirst()) {
-            contactName = cursor.getString(cursor
-                    .getColumnIndex(PhoneLookup.DISPLAY_NAME));
-        }
-        if (!cursor.isClosed()) {
-            cursor.close();
-        }
-        return contactName;
-    }
-
     private void loadAllCategories() {
 
-        List<Map<String, String>> allCategories = DatabaseBridge.getAllCategories(this);
+        List<Map<String, String>> allCategories = DatabaseBridge.getAllVisibleCategories(this);
         categories = new HashMap<>();
         for (Map<String, String> category : allCategories) {
             categories.put(
@@ -273,8 +245,7 @@ public class SmsActivity extends AppCompatActivity {
     private void asyncRetrainAllSms(Map<String, String> trainedSms) {
         DatabaseBridge.updateSmsData(getBaseContext(), trainedSms);
 
-        List<Map<String, String>> allSms = DatabaseBridge.getAllSms(getBaseContext());
-        List<Map<String, String>> retrainedSmsList = TrainSms.retrainExistingSms(getBaseContext(), trainedSms, allSms);
+        List<Map<String, String>> retrainedSmsList = TrainSms.retrainExistingSms(getBaseContext(), trainedSms);
 
         final long numRetrainedSms = DatabaseBridge.storeReTrainedSms(getBaseContext(), retrainedSmsList);
 

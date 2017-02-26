@@ -10,8 +10,21 @@ import android.util.Log;
 
 class DatabaseHelper extends SQLiteOpenHelper {
 
+    private static DatabaseHelper sInstance;
+
     DatabaseHelper(Context context) {
         super(context, DatabaseContract.DATABASE_NAME, null, DatabaseContract.DATABASE_VERSION);
+    }
+
+    public static synchronized DatabaseHelper getInstance(Context context) {
+
+        // Use the application context, which will ensure that you
+        // don't accidentally leak an Activity's context.
+        // See this article for more information: http://bit.ly/6LRzfx
+        if (sInstance == null) {
+            sInstance = new DatabaseHelper(context.getApplicationContext());
+        }
+        return sInstance;
     }
 
     // Method is called during creation of the database
@@ -65,8 +78,14 @@ class DatabaseHelper extends SQLiteOpenHelper {
     // Method is called during an upgrade of the database
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        deleteAllTables(db);
-        onCreate(db);
+        switch (oldVersion) {
+            case 1:
+                for (String query : DatabaseContract.Sms.CHANGES_V2) {
+                    db.execSQL(query);
+                }
+            default:
+                // do nothing
+        }
     }
 
     private void deleteAllTables(SQLiteDatabase db) {

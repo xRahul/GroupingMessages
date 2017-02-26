@@ -76,35 +76,42 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
         menu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
-                int id = item.getItemId();
-                if (id == R.id.category_popup_edit_item) {
-                    DialogFragment newFragment = new AddCategoryFragment();
-
-                    Bundle args = new Bundle();
-                    args.putString("ACTION", "EDIT");
-                    args.putLong(DatabaseContract.Category._ID, Long.parseLong(categoryId));
-                    args.putString(DatabaseContract.Category.KEY_NAME, categoryName);
-                    args.putInt(DatabaseContract.Category.KEY_COLOR, Integer.parseInt(categoryColor));
-
-                    newFragment.setArguments(args);
-                    newFragment.show(((MainActivity) context).getSupportFragmentManager(), EDIT_CATEGORY_TAG);
-
-                } else if (id == R.id.category_popup_delete_item && !"1".equals(categoryId)) {
-                    DatabaseBridge.deleteCategory(context, Long.parseLong(categoryId));
-                    ((MainActivity) context).onPostResume();
-
-                } else if (id == R.id.category_popup_delete_item && "1".equals(categoryId)) {
-                    Toast.makeText(context, "Cannot Delete Unknown Category", Toast.LENGTH_SHORT).show();
-
-                } else if (id == R.id.category_popup_all_read_item) {
-                    DatabaseBridge.setAllCategorySmsAsRead(context, categoryId);
-                    ((MainActivity) context).onPostResume();
-                }
-                return true;
+                return onCategoryMenuItemClick(item);
             }
         });
         menu.inflate(R.menu.category_long_press_menu);
         menu.show();
+        return true;
+    }
+
+    private boolean onCategoryMenuItemClick(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.category_popup_edit_item) {
+            DialogFragment newFragment = new AddCategoryFragment();
+
+            Bundle args = new Bundle();
+            args.putString("ACTION", "EDIT");
+            args.putLong(DatabaseContract.Category._ID, Long.parseLong(categoryId));
+            args.putString(DatabaseContract.Category.KEY_NAME, categoryName);
+            args.putInt(DatabaseContract.Category.KEY_COLOR, Integer.parseInt(categoryColor));
+
+            newFragment.setArguments(args);
+            newFragment.show(((MainActivity) context).getSupportFragmentManager(), EDIT_CATEGORY_TAG);
+
+        } else if (id == R.id.category_popup_delete_item && !"1".equals(categoryId)) {
+            DatabaseBridge.deleteCategory(context, Long.parseLong(categoryId));
+            ((MainActivity) context).onPostResume();
+
+        } else if (id == R.id.category_popup_delete_item && "1".equals(categoryId)) {
+            Toast.makeText(context, "Cannot Delete Unknown Category", Toast.LENGTH_SHORT).show();
+
+        } else if (id == R.id.category_popup_all_read_item) {
+            DatabaseBridge.setAllCategorySmsAsRead(context, categoryId);
+            ((MainActivity) context).onPostResume();
+        } else if (id == R.id.category_popup_delete_all_sms) {
+            DatabaseBridge.deleteAllSmsOfCategoryById(context, Long.parseLong(categoryId));
+            ((MainActivity) context).onPostResume();
+        }
         return true;
     }
 }

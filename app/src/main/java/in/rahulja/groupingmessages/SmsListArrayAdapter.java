@@ -104,7 +104,7 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
         if (smsList.contains(data)) {
             smsList.remove(position);
             notifyItemRemoved(position);
-            DatabaseBridge.deleteSmsOrChangeVisibility(data);
+            DatabaseBridge.deleteSmsByMap(context, data);
         }
     }
 

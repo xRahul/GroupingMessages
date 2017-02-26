@@ -5,8 +5,9 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.net.Uri;
 import android.os.Environment;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import java.io.File;
@@ -23,8 +24,12 @@ class DatabaseBridge {
     private static final String LAST_SMS_TIME_CONFIG = "lastSmsTime";
     private static final String SMS_COUNT = "sms_count";
     private static final String SMS_URI_INBOX = "content://sms/inbox";
-    private static final String DOUBLE_EQUALS_QUESTION = " == ?";
+    private static final String EQUALS_QUESTION = " = ? ";
+    private static final String GM_CURSOR = "GM/cursor";
+    private static final String CURSOR_IS_NULL = "Cursor is null: ";
+    private static final String GM_STORE_TRAINED_INBOX_SMS = "GM/storeTrainedInboxSms";
     private static SQLiteDatabase db;
+    private static DatabaseHelper dbHelper;
 
 
     private DatabaseBridge() {
@@ -32,405 +37,265 @@ class DatabaseBridge {
     }
 
     private static void initializeDb(Context context) {
-        if (db == null) {
-            DatabaseHelper dbHelper = new DatabaseHelper(context);
+        if (dbHelper == null) {
+            dbHelper = DatabaseHelper.getInstance(context);
+        }
+        if (db == null || !db.isOpen()) {
             db = dbHelper.getWritableDatabase();
+            Log.d("GM/getDb", "Initialized");
         }
     }
 
     private static void unInitializeDb() {
-        if (db.isOpen()) {
-            db.close();
+        if (db != null) {
             db = null;
+            Log.d("GM/setDbNull", "Uninitialized");
         }
     }
 
-    static List<Map<String, String>> getAllCategories(Context context) {
+    private static List<Map<String, String>> getFromConfigs(Context context, String selection, String[] selectArgs) {
+
+        List<Map<String, String>> configs = new ArrayList<>();
 
         initializeDb(context);
+        Cursor cursor = db.query(
+                DatabaseContract.Config.TABLE_NAME,           // The table to query
+                DatabaseContract.Config.KEY_ARRAY,            // The columns to return
+                selection,                                      // The columns for the WHERE clause
+                selectArgs,                                     // The values for the WHERE clause
+                null,                                           // don't group the rows
+                null,                                           // don't filter by row groups
+                DatabaseContract.Config.DEFAULT_SORT_ORDER    // The sort order
+        );
+
+        if (cursor != null && cursor.moveToFirst()) {
+            int indexId = cursor.getColumnIndexOrThrow(DatabaseContract.Config._ID);
+            int indexName = cursor.getColumnIndexOrThrow(DatabaseContract.Config.KEY_NAME);
+            int indexValue = cursor.getColumnIndexOrThrow(DatabaseContract.Config.KEY_VALUE);
+            Map<String, String> configTemp;
+
+            while (!cursor.isAfterLast()) {
+                configTemp = new HashMap<>();
+
+                final long configId = cursor.getLong(indexId);
+                final String configName = cursor.getString(indexName);
+                final String configValue = cursor.getString(indexValue);
+
+                configTemp.put(DatabaseContract.Config._ID, String.valueOf(configId));
+                configTemp.put(DatabaseContract.Config.KEY_NAME, configName);
+                configTemp.put(DatabaseContract.Config.KEY_VALUE, configValue);
+                configs.add(configTemp);
+                cursor.moveToNext();
+            }
+        } else {
+            Log.e(GM_CURSOR, CURSOR_IS_NULL + "getFromConfigs");
+        }
+
+        if (cursor != null && !cursor.isClosed()) {
+            cursor.close();
+        }
+
+        unInitializeDb();
+
+        return configs;
+    }
+
+    private static List<Map<String, String>> getFromCategories(Context context, String selection, String[] selectArgs) {
 
         List<Map<String, String>> categories = new ArrayList<>();
 
+        initializeDb(context);
         Cursor cursor = db.query(
                 DatabaseContract.Category.TABLE_NAME,           // The table to query
                 DatabaseContract.Category.KEY_ARRAY,            // The columns to return
-                null,                                           // The columns for the WHERE clause
-                null,                                           // The values for the WHERE clause
+                selection,                                      // The columns for the WHERE clause
+                selectArgs,                                     // The values for the WHERE clause
                 null,                                           // don't group the rows
                 null,                                           // don't filter by row groups
                 DatabaseContract.Category.DEFAULT_SORT_ORDER    // The sort order
         );
 
-        while (cursor.moveToNext()) {
-            Map<String, String> categoryTemp = new HashMap<>();
-            final long categoryId = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Category._ID));
-            final String categoryName = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Category.KEY_NAME));
-            final String categoryColor = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Category.KEY_COLOR));
-            final int categoryVisibility = cursor.getInt(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Category.KEY_VISIBILITY));
+        if (cursor != null && cursor.moveToFirst()) {
+            int indexId = cursor.getColumnIndexOrThrow(DatabaseContract.Category._ID);
+            int indexName = cursor.getColumnIndexOrThrow(DatabaseContract.Category.KEY_NAME);
+            int indexColor = cursor.getColumnIndexOrThrow(DatabaseContract.Category.KEY_COLOR);
+            int indexVisibility = cursor.getColumnIndexOrThrow(DatabaseContract.Category.KEY_VISIBILITY);
 
-            categoryTemp.put(DatabaseContract.Category._ID, String.valueOf(categoryId));
-            categoryTemp.put(DatabaseContract.Category.KEY_NAME, categoryName);
-            categoryTemp.put(DatabaseContract.Category.KEY_COLOR, categoryColor);
-            categoryTemp.put(DatabaseContract.Category.KEY_VISIBILITY, String.valueOf(categoryVisibility));
-            categories.add(categoryTemp);
-        }
-        if (!cursor.isClosed()) {
-            cursor.close();
-        }
+            Map<String, String> categoryTemp;
 
-        return categories;
-    }
+            while (!cursor.isAfterLast()) {
+                final long categoryId = cursor.getLong(indexId);
+                final String categoryName = cursor.getString(indexName);
+                final String categoryColor = cursor.getString(indexColor);
+                final int categoryVisibility = cursor.getInt(indexVisibility);
 
+                categoryTemp = new HashMap<>();
 
-    static List<Map<String, String>> getLatestSmsFromInbox(Context context) {
-
-        long lastSmsTime = Long.parseLong(DatabaseBridge.getConfig(context, LAST_SMS_TIME_CONFIG));
-
-        List<Map<String, String>> latestSms = new ArrayList<>();
-
-        Uri uri = Uri.parse(SMS_URI_INBOX);
-
-        String[] projection = new String[]{
-                "_id", "date", "person", "read", "seen", "subject", "body", "address"
-        };
-
-        StringBuilder searchString = new StringBuilder();
-        searchString.append("date > ").append(String.valueOf(lastSmsTime));
-
-        Log.d("GM/searchString", searchString.toString());
-        Cursor cur = context.getContentResolver()
-                .query(uri, projection, searchString.toString(), null, "date asc");
-
-        if (cur != null && cur.moveToFirst()) {
-            int indexDate = cur.getColumnIndex("date");
-            int indexPerson = cur.getColumnIndex("person");
-            int indexRead = cur.getColumnIndex("read");
-            int indexSeen = cur.getColumnIndex("seen");
-            int indexSubject = cur.getColumnIndex("subject");
-            int indexBody = cur.getColumnIndex("body");
-            int indexAddress = cur.getColumnIndex("address");
-
-            do {
-                long longDate = cur.getLong(indexDate);
-                long longPerson = cur.getLong(indexPerson);
-                long longRead = cur.getLong(indexRead);
-                long longSeen = cur.getLong(indexSeen);
-                String strSubject = cur.getString(indexSubject);
-                String strBody = cur.getString(indexBody);
-                String strAddress = cur.getString(indexAddress);
-
-                Map<String, String> smsTemp = new HashMap<>();
-
-                smsTemp.put(DatabaseContract.Sms.KEY_DATE, String.valueOf(longDate));
-                smsTemp.put(DatabaseContract.Sms.KEY_PERSON, String.valueOf(longPerson));
-                smsTemp.put(DatabaseContract.Sms.KEY_READ, String.valueOf(longRead));
-                smsTemp.put(DatabaseContract.Sms.KEY_SEEN, String.valueOf(longSeen));
-                smsTemp.put(DatabaseContract.Sms.KEY_SUBJECT, strSubject);
-                smsTemp.put(DatabaseContract.Sms.KEY_BODY, strBody);
-                smsTemp.put(DatabaseContract.Sms.KEY_ADDRESS, strAddress);
-
-                latestSms.add(smsTemp);
-
-                Log.d("GM/temp", smsTemp.toString());
-
-            } while (cur.moveToNext());
-
-            if (!cur.isClosed()) {
-                cur.close();
+                categoryTemp.put(DatabaseContract.Category._ID, String.valueOf(categoryId));
+                categoryTemp.put(DatabaseContract.Category.KEY_NAME, categoryName);
+                categoryTemp.put(DatabaseContract.Category.KEY_COLOR, categoryColor);
+                categoryTemp.put(DatabaseContract.Category.KEY_VISIBILITY, String.valueOf(categoryVisibility));
+                categories.add(categoryTemp);
+                cursor.moveToNext();
             }
-        }
-        return latestSms;
-    }
-
-    private static String getConfig(Context context, String configName) {
-
-        initializeDb(context);
-
-        String configValue = null;
-
-        String selection = DatabaseContract.Config.KEY_NAME + " = ?";
-        String[] selectionArgs = {configName};
-
-        Cursor cursor = db.query(
-                DatabaseContract.Config.TABLE_NAME,             // The table to query
-                DatabaseContract.Config.KEY_ARRAY,              // The columns to return
-                selection,                                      // The columns for the WHERE clause
-                selectionArgs,                                  // The values for the WHERE clause
-                null,                                           // don't group the rows
-                null,                                           // don't filter by row groups
-                DatabaseContract.Config.DEFAULT_SORT_ORDER      // The sort order
-        );
-
-        if (cursor.moveToNext()) {
-            configValue = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Config.KEY_VALUE));
+        } else {
+            Log.e(GM_CURSOR, CURSOR_IS_NULL + "getFromCategories");
         }
 
-        cursor.close();
-
-        return configValue;
-    }
-
-    static List<Map<String, String>> getAllSms(Context context) {
-
-        initializeDb(context);
-
-        List<Map<String, String>> smsList = new ArrayList<>();
-
-        Cursor cursor = db.query(
-                DatabaseContract.Sms.TABLE_NAME,            // The table to query
-                DatabaseContract.Sms.KEY_ARRAY,             // The columns to return
-                null,                                       // The columns for the WHERE clause
-                null,                                       // The values for the WHERE clause
-                null,                                       // don't group the rows
-                null,                                       // don't filter by row groups
-                DatabaseContract.Sms.DEFAULT_SORT_ORDER     // The sort order
-        );
-
-        while (cursor.moveToNext()) {
-            final long smsId = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms._ID));
-            final long smsDate = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_DATE));
-            final long smsPerson = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_PERSON));
-            final long smsRead = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ));
-            final long smsSeen = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SEEN));
-            final String smsSubject = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SUBJECT));
-            final String smsAddress = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_ADDRESS));
-            final String smsBody = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_BODY));
-            final long smsSimilarTo = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SIMILAR_TO));
-            final float smsSimScore = cursor.getFloat(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SIM_SCORE));
-            final long smsCategoryId = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_CATEGORY_ID));
-
-            Map<String, String> tempSms = new HashMap<>();
-
-            tempSms.put(DatabaseContract.Sms._ID, String.valueOf(smsId));
-            tempSms.put(DatabaseContract.Sms.KEY_DATE, String.valueOf(smsDate));
-            tempSms.put(DatabaseContract.Sms.KEY_PERSON, String.valueOf(smsPerson));
-            tempSms.put(DatabaseContract.Sms.KEY_READ, String.valueOf(smsRead));
-            tempSms.put(DatabaseContract.Sms.KEY_SEEN, String.valueOf(smsSeen));
-            tempSms.put(DatabaseContract.Sms.KEY_SUBJECT, smsSubject);
-            tempSms.put(DatabaseContract.Sms.KEY_ADDRESS, smsAddress);
-            tempSms.put(DatabaseContract.Sms.KEY_BODY, smsBody);
-            tempSms.put(DatabaseContract.Sms.KEY_SIMILAR_TO, String.valueOf(smsSimilarTo));
-            tempSms.put(DatabaseContract.Sms.KEY_SIM_SCORE, String.valueOf(smsSimScore));
-            tempSms.put(DatabaseContract.Sms.KEY_CATEGORY_ID, String.valueOf(smsCategoryId));
-
-            smsList.add(tempSms);
-        }
-
-        if (!cursor.isClosed()) {
+        if (cursor != null && !cursor.isClosed()) {
             cursor.close();
         }
 
-        return smsList;
+        unInitializeDb();
+
+        Log.i("GM/getFromCategories", String.valueOf(categories.size()));
+        return categories;
+
     }
 
-    static List<Map<String, String>> getFilteredSms(Context context, String selection, String[] selectionArgs) {
-
-        initializeDb(context);
+    private static List<Map<String, String>> getFromSms(Context context, String selection, String[] selectArgs) {
 
         List<Map<String, String>> smsList = new ArrayList<>();
 
+        initializeDb(context);
         Cursor cursor = db.query(
                 DatabaseContract.Sms.TABLE_NAME,            // The table to query
                 DatabaseContract.Sms.KEY_ARRAY,             // The columns to return
                 selection,                                  // The columns for the WHERE clause
-                selectionArgs,                              // The values for the WHERE clause
+                selectArgs,                                 // The values for the WHERE clause
                 null,                                       // don't group the rows
                 null,                                       // don't filter by row groups
                 DatabaseContract.Sms.DEFAULT_SORT_ORDER     // The sort order
         );
 
-        while (cursor.moveToNext()) {
-            final long smsId = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms._ID));
-            final long smsDate = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_DATE));
-            final long smsPerson = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_PERSON));
-            final long smsRead = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ));
-            final long smsSeen = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SEEN));
-            final String smsSubject = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SUBJECT));
-            final String smsAddress = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_ADDRESS));
-            final String smsBody = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_BODY));
-            final long smsSimilarTo = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SIMILAR_TO));
-            final float smsSimScore = cursor.getFloat(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SIM_SCORE));
-            final long smsCategoryId = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_CATEGORY_ID));
+        if (cursor != null && cursor.moveToFirst()) {
+            int indexId = cursor.getColumnIndexOrThrow(DatabaseContract.Sms._ID);
+            int indexDate = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_DATE);
+            int indexPerson = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_PERSON);
+            int indexRead = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ);
+            int indexSeen = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SEEN);
+            int indexSubject = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SUBJECT);
+            int indexAddress = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_ADDRESS);
+            int indexBody = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_BODY);
+            int indexCleanedSms = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_CLEANED_SMS);
+            int indexVisibility = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_VISIBILITY);
+            int indexSenderType = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SENDER_TYPE);
+            int indexSimilarTo = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SIMILAR_TO);
+            int indexSimScore = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SIM_SCORE);
+            int indexCategoryId = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_CATEGORY_ID);
 
-            Map<String, String> tempSms = new HashMap<>();
+            Map<String, String> tempSms;
 
-            tempSms.put(DatabaseContract.Sms._ID, String.valueOf(smsId));
-            tempSms.put(DatabaseContract.Sms.KEY_DATE, String.valueOf(smsDate));
-            tempSms.put(DatabaseContract.Sms.KEY_PERSON, String.valueOf(smsPerson));
-            tempSms.put(DatabaseContract.Sms.KEY_READ, String.valueOf(smsRead));
-            tempSms.put(DatabaseContract.Sms.KEY_SEEN, String.valueOf(smsSeen));
-            tempSms.put(DatabaseContract.Sms.KEY_SUBJECT, smsSubject);
-            tempSms.put(DatabaseContract.Sms.KEY_ADDRESS, smsAddress);
-            tempSms.put(DatabaseContract.Sms.KEY_BODY, smsBody);
-            tempSms.put(DatabaseContract.Sms.KEY_SIMILAR_TO, String.valueOf(smsSimilarTo));
-            tempSms.put(DatabaseContract.Sms.KEY_SIM_SCORE, String.valueOf(smsSimScore));
-            tempSms.put(DatabaseContract.Sms.KEY_CATEGORY_ID, String.valueOf(smsCategoryId));
+            while (!cursor.isAfterLast()) {
+                final long smsId = cursor.getLong(indexId);
+                final long smsDate = cursor.getLong(indexDate);
+                final long smsPerson = cursor.getLong(indexPerson);
+                final long smsRead = cursor.getLong(indexRead);
+                final long smsSeen = cursor.getLong(indexSeen);
+                final String smsSubject = cursor.getString(indexSubject);
+                final String smsAddress = cursor.getString(indexAddress);
+                final String smsBody = cursor.getString(indexBody);
+                final String smsCleanedSms = cursor.getString(indexCleanedSms);
+                final long smsVisibility = cursor.getLong(indexVisibility);
+                final long smsSenderType = cursor.getLong(indexSenderType);
+                final long smsSimilarTo = cursor.getLong(indexSimilarTo);
+                final float smsSimScore = cursor.getFloat(indexSimScore);
+                final long smsCategoryId = cursor.getLong(indexCategoryId);
 
-            smsList.add(tempSms);
+                tempSms = new HashMap<>();
+
+                tempSms.put(DatabaseContract.Sms._ID, String.valueOf(smsId));
+                tempSms.put(DatabaseContract.Sms.KEY_DATE, String.valueOf(smsDate));
+                tempSms.put(DatabaseContract.Sms.KEY_PERSON, String.valueOf(smsPerson));
+                tempSms.put(DatabaseContract.Sms.KEY_READ, String.valueOf(smsRead));
+                tempSms.put(DatabaseContract.Sms.KEY_SEEN, String.valueOf(smsSeen));
+                tempSms.put(DatabaseContract.Sms.KEY_SUBJECT, smsSubject);
+                tempSms.put(DatabaseContract.Sms.KEY_ADDRESS, smsAddress);
+                tempSms.put(DatabaseContract.Sms.KEY_BODY, smsBody);
+                tempSms.put(DatabaseContract.Sms.KEY_CLEANED_SMS, smsCleanedSms);
+                tempSms.put(DatabaseContract.Sms.KEY_VISIBILITY, String.valueOf(smsVisibility));
+                tempSms.put(DatabaseContract.Sms.KEY_SENDER_TYPE, String.valueOf(smsSenderType));
+                tempSms.put(DatabaseContract.Sms.KEY_SIMILAR_TO, String.valueOf(smsSimilarTo));
+                tempSms.put(DatabaseContract.Sms.KEY_SIM_SCORE, String.valueOf(smsSimScore));
+                tempSms.put(DatabaseContract.Sms.KEY_CATEGORY_ID, String.valueOf(smsCategoryId));
+
+                smsList.add(tempSms);
+                cursor.moveToNext();
+            }
+        } else {
+            Log.e(GM_CURSOR, CURSOR_IS_NULL + "getFromSms");
         }
 
-        if (!cursor.isClosed()) {
+        if (cursor != null && !cursor.isClosed()) {
             cursor.close();
         }
+
+        unInitializeDb();
 
         return smsList;
+
     }
 
-
-    static long storeTrainedInboxSms(Context context, List<Map<String, String>> trainedInboxSms) {
-
-        initializeDb(context);
-        long lastSmsTime = Long.parseLong(DatabaseBridge.getConfig(context, LAST_SMS_TIME_CONFIG));
-        long numSmsStored = 0;
-
-        for (Map<String, String> trainedSmsMap : trainedInboxSms) {
-
-            long longDate = Long.parseLong(trainedSmsMap.get(DatabaseContract.Sms.KEY_DATE));
-            long longPerson = Long.parseLong(trainedSmsMap.get(DatabaseContract.Sms.KEY_PERSON));
-            long longRead = Long.parseLong(trainedSmsMap.get(DatabaseContract.Sms.KEY_READ));
-            long longSeen = Long.parseLong(trainedSmsMap.get(DatabaseContract.Sms.KEY_SEEN));
-            String strSubject = trainedSmsMap.get(DatabaseContract.Sms.KEY_SUBJECT);
-            String strAddress = trainedSmsMap.get(DatabaseContract.Sms.KEY_ADDRESS);
-            String strBody = trainedSmsMap.get(DatabaseContract.Sms.KEY_BODY);
-            long longCategoryId = Long.parseLong(trainedSmsMap.get(DatabaseContract.Sms.KEY_CATEGORY_ID));
-            long longSimilarTo = Long.parseLong(trainedSmsMap.get(DatabaseContract.Sms.KEY_SIMILAR_TO));
-            double longSimScore = Double.parseDouble(trainedSmsMap.get(DatabaseContract.Sms.KEY_SIM_SCORE));
-
-            ContentValues values = new ContentValues();
-            values.put(DatabaseContract.Sms.KEY_DATE, longDate);
-            values.put(DatabaseContract.Sms.KEY_PERSON, longPerson);
-            values.put(DatabaseContract.Sms.KEY_READ, longRead);
-            values.put(DatabaseContract.Sms.KEY_SEEN, longSeen);
-            values.put(DatabaseContract.Sms.KEY_SUBJECT, strSubject);
-            values.put(DatabaseContract.Sms.KEY_BODY, strBody);
-            values.put(DatabaseContract.Sms.KEY_ADDRESS, strAddress);
-            values.put(DatabaseContract.Sms.KEY_SIMILAR_TO, longSimilarTo);
-            values.put(DatabaseContract.Sms.KEY_SIM_SCORE, longSimScore);
-            values.put(DatabaseContract.Sms.KEY_CATEGORY_ID, longCategoryId);
-
-            long addSmsRowId = db.insert(DatabaseContract.Sms.TABLE_NAME, null, values);
-
-            if (addSmsRowId == -1) {
-                Log.e("GM/insertInbox", values.toString());
-            } else {
-                numSmsStored += 1;
-                lastSmsTime = longDate;
-            }
-        }
-
-        DatabaseBridge.setConfig(context, LAST_SMS_TIME_CONFIG, String.valueOf(lastSmsTime));
-
-        return numSmsStored;
-    }
-
-    private static Boolean setConfig(Context context, String key, String value) {
-
-        String currentConfigValue = DatabaseBridge.getConfig(context, key);
-        Boolean configAlreadyExist = true;
-
-        if (currentConfigValue == null) {
-            configAlreadyExist = false;
-        }
+    private static ContentValues getContentValuesFromSmsMap(Map<String, String> sms) {
 
         ContentValues values = new ContentValues();
-        values.put(DatabaseContract.Config.KEY_VALUE, value);
-
-        // Which row to update, based on the title
-        String selection = DatabaseContract.Config.KEY_NAME + " LIKE ?";
-        String[] selectionArgs = {key};
-        long resultId;
-
-        if (configAlreadyExist) {
-            resultId = db.update(
-                    DatabaseContract.Config.TABLE_NAME,
-                    values,
-                    selection,
-                    selectionArgs);
-        } else {
-            resultId = db.insert(DatabaseContract.Config.TABLE_NAME, null, values);
-        }
-
-        return resultId > 0;
-    }
-
-    static List<Map<String, String>> getCategoryIdsWithSmsCount(Context context) {
-
-        initializeDb(context);
-
-        String[] projection = {
-                DatabaseContract.Sms.KEY_CATEGORY_ID,
+        values.put(
+                DatabaseContract.Sms.KEY_DATE,
+                Long.parseLong(sms.get(DatabaseContract.Sms.KEY_DATE))
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_PERSON,
+                Long.parseLong(sms.get(DatabaseContract.Sms.KEY_PERSON))
+        );
+        values.put(
                 DatabaseContract.Sms.KEY_READ,
-                "COUNT(" + DatabaseContract.Sms.KEY_CATEGORY_ID + ") as " + SMS_COUNT
-        };
-
-        Cursor cursor = db.query(
-                DatabaseContract.Sms.TABLE_NAME,                // The table to query
-                projection,                                     // The columns to return
-                null,                                           // The columns for the WHERE clause
-                null,                                           // The values for the WHERE clause
-                DatabaseContract.Sms.KEY_CATEGORY_ID
-                        + ", "
-                        + DatabaseContract.Sms.KEY_READ,        // don't group the rows
-                null,                                           // don't filter by row groups
-                DatabaseContract.Sms.DEFAULT_SORT_ORDER         // The sort order
+                Long.parseLong(sms.get(DatabaseContract.Sms.KEY_READ))
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_SEEN,
+                Long.parseLong(sms.get(DatabaseContract.Sms.KEY_SEEN))
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_SUBJECT,
+                sms.get(DatabaseContract.Sms.KEY_SUBJECT)
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_BODY,
+                sms.get(DatabaseContract.Sms.KEY_BODY)
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_CLEANED_SMS,
+                sms.get(DatabaseContract.Sms.KEY_CLEANED_SMS)
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_VISIBILITY,
+                Long.parseLong(sms.get(DatabaseContract.Sms.KEY_VISIBILITY))
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_SENDER_TYPE,
+                Long.parseLong(sms.get(DatabaseContract.Sms.KEY_SENDER_TYPE))
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_ADDRESS,
+                sms.get(DatabaseContract.Sms.KEY_ADDRESS)
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_SIMILAR_TO,
+                Long.parseLong(sms.get(DatabaseContract.Sms.KEY_SIMILAR_TO))
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_SIM_SCORE,
+                Double.parseDouble(sms.get(DatabaseContract.Sms.KEY_SIM_SCORE))
+        );
+        values.put(
+                DatabaseContract.Sms.KEY_CATEGORY_ID,
+                Long.parseLong(sms.get(DatabaseContract.Sms.KEY_CATEGORY_ID))
         );
 
-        List<Map<String, String>> categoryIdsWithSmsCount = new ArrayList<>();
-
-        while (cursor.moveToNext()) {
-            final long categoryId = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_CATEGORY_ID));
-            final long readKey = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ));
-            final long smsCount = cursor.getLong(
-                    cursor.getColumnIndexOrThrow(SMS_COUNT));
-
-            Map<String, String> categorySmsCount = new HashMap<>();
-
-            categorySmsCount.put(DatabaseContract.Sms.KEY_CATEGORY_ID, String.valueOf(categoryId));
-            categorySmsCount.put(DatabaseContract.Sms.KEY_READ, String.valueOf(readKey));
-            categorySmsCount.put(SMS_COUNT, String.valueOf(smsCount));
-
-            categoryIdsWithSmsCount.add(categorySmsCount);
-        }
-
-        if (!cursor.isClosed()) {
-            cursor.close();
-        }
-        return categoryIdsWithSmsCount;
+        return values;
     }
 
-    static Boolean addCategory(Context context, Map<String, String> category) {
-
-        initializeDb(context);
-
+    private static ContentValues getContentValuesFromCategoryMap(Map<String, String> category) {
         ContentValues values = new ContentValues();
         values.put(
                 DatabaseContract.Category.KEY_NAME,
@@ -445,80 +310,290 @@ class DatabaseBridge {
                 Integer.parseInt(category.get(DatabaseContract.Category.KEY_COLOR))
         );
 
-        long addCatRowId = db.insert(DatabaseContract.Category.TABLE_NAME, null, values);
-
-        return addCatRowId != -1;
+        return values;
     }
 
-    static Boolean updateSmsData(Context context, Map<String, String> sms) {
+    private static long insertIntoSms(Context context, Map<String, String> sms) {
+
+        ContentValues values = getContentValuesFromSmsMap(sms);
 
         initializeDb(context);
+        long insertResult = db.insert(DatabaseContract.Sms.TABLE_NAME, null, values);
 
-        ContentValues values = new ContentValues();
-        values.put(DatabaseContract.Sms.KEY_DATE, sms.get(DatabaseContract.Sms.KEY_DATE));
-        values.put(DatabaseContract.Sms.KEY_PERSON, sms.get(DatabaseContract.Sms.KEY_PERSON));
-        values.put(DatabaseContract.Sms.KEY_READ, sms.get(DatabaseContract.Sms.KEY_READ));
-        values.put(DatabaseContract.Sms.KEY_SEEN, sms.get(DatabaseContract.Sms.KEY_SEEN));
-        values.put(DatabaseContract.Sms.KEY_SUBJECT, sms.get(DatabaseContract.Sms.KEY_SUBJECT));
-        values.put(DatabaseContract.Sms.KEY_ADDRESS, sms.get(DatabaseContract.Sms.KEY_ADDRESS));
-        values.put(DatabaseContract.Sms.KEY_BODY, sms.get(DatabaseContract.Sms.KEY_BODY));
-        values.put(DatabaseContract.Sms.KEY_CATEGORY_ID, sms.get(DatabaseContract.Sms.KEY_CATEGORY_ID));
-        values.put(DatabaseContract.Sms.KEY_SIMILAR_TO, sms.get(DatabaseContract.Sms.KEY_SIMILAR_TO));
-        values.put(DatabaseContract.Sms.KEY_SIM_SCORE, sms.get(DatabaseContract.Sms.KEY_SIM_SCORE));
+        unInitializeDb();
 
-        // Which row to update, based on the title
-        String selection = DatabaseContract.Sms._ID + " = ?";
-        String[] selectionArgs = {String.valueOf(sms.get(DatabaseContract.Sms._ID))};
+        return insertResult;
+    }
 
-        int count = db.update(
+    private static long insertIntoCategory(Context context, Map<String, String> category) {
+
+        ContentValues values = getContentValuesFromCategoryMap(category);
+
+        initializeDb(context);
+        long insertResult = db.insert(DatabaseContract.Category.TABLE_NAME, null, values);
+
+        unInitializeDb();
+
+        return insertResult;
+    }
+
+    private static long updateInSms(Context context, Map<String, String> sms) {
+
+        ContentValues values = getContentValuesFromSmsMap(sms);
+
+        String selection = DatabaseContract.Sms._ID + EQUALS_QUESTION;
+        String[] selectionArgs = {String.valueOf(Long.parseLong(sms.get(DatabaseContract.Sms._ID)))};
+
+        initializeDb(context);
+        long updateResult = db.update(
                 DatabaseContract.Sms.TABLE_NAME,
                 values,
                 selection,
-                selectionArgs);
+                selectionArgs
+        );
 
-        return count > 0;
+        unInitializeDb();
+
+        return updateResult;
+    }
+
+    private static long updateInSmsBySmsIdAndValues(Context context, long smsId, ContentValues values) {
+
+        // Which row to update, based on the id
+        String selection = DatabaseContract.Sms._ID + EQUALS_QUESTION;
+        String[] selectionArgs = {String.valueOf(smsId)};
+
+        initializeDb(context);
+        long updateResult = db.update(
+                DatabaseContract.Sms.TABLE_NAME,
+                values,
+                selection,
+                selectionArgs
+        );
+
+        unInitializeDb();
+
+        return updateResult;
+    }
+
+    private static long updateInSmsByCategoryIdAndValues(Context context, long categoryId, ContentValues values) {
+
+        // Which row to update, based on the id
+        String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + EQUALS_QUESTION;
+        String[] selectionArgs = {String.valueOf(categoryId)};
+
+        initializeDb(context);
+        long updateResult = db.update(
+                DatabaseContract.Sms.TABLE_NAME,
+                values,
+                selection,
+                selectionArgs
+        );
+
+        unInitializeDb();
+
+        return updateResult;
+    }
+
+    private static long updateInCategory(Context context, Map<String, String> category) {
+
+        ContentValues values = getContentValuesFromCategoryMap(category);
+
+        // Which row to update, based on the title
+        String selection = DatabaseContract.Category._ID + EQUALS_QUESTION;
+        String[] selectionArgs = {String.valueOf(category.get(DatabaseContract.Category._ID))};
+
+        initializeDb(context);
+        long updateResult = db.update(
+                DatabaseContract.Category.TABLE_NAME,
+                values,
+                selection,
+                selectionArgs
+        );
+
+        unInitializeDb();
+
+        return updateResult;
+    }
+
+    @Nullable
+    static String getConfig(Context context, String configName) {
+
+        String selection = DatabaseContract.Config.KEY_NAME + EQUALS_QUESTION;
+        String[] selectionArgs = {configName};
+
+        List<Map<String, String>> configs = getFromConfigs(context, selection, selectionArgs);
+
+        if (!configs.isEmpty()) {
+            return configs.get(0).get(DatabaseContract.Config.KEY_VALUE);
+        }
+
+        return null;
+    }
+
+    static List<Map<String, String>> getAllSms(Context context) {
+        return getFromSms(context, null, null);
+    }
+
+    static List<Map<String, String>> getSelfTrainedSms(Context context) {
+
+        String selection = DatabaseContract.Sms._ID +
+                " = " +
+                DatabaseContract.Sms.KEY_SIMILAR_TO +
+                " AND " +
+                DatabaseContract.Sms.KEY_SIM_SCORE +
+                EQUALS_QUESTION;
+
+        String[] selectionArgs = {String.valueOf(1.0)};
+
+        Log.i("GM/DatabaseBridge", "getSelfTrainedSms, selection= " + selection);
+        return getFromSms(context, selection, selectionArgs);
+    }
+
+    static List<Map<String, String>> getVisibleSmsFromCategory(Context context, long categoryId) {
+
+        String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + EQUALS_QUESTION
+                + " AND " + DatabaseContract.Sms.KEY_VISIBILITY + EQUALS_QUESTION;
+        String[] selectionArgs = {String.valueOf(categoryId), String.valueOf(1)};
+
+        return getFromSms(context, selection, selectionArgs);
+    }
+
+    static long storeTrainedInboxSms(Context context, List<Map<String, String>> trainedInboxSms) {
+
+        long lastSmsTime = Long.parseLong(DatabaseBridge.getConfig(context, LAST_SMS_TIME_CONFIG));
+        Log.i(GM_STORE_TRAINED_INBOX_SMS, "before lastSmsTime: " + lastSmsTime);
+
+        long numSmsStored = 0;
+        long numSmsError = 0;
+        long tempLastSmsTime = lastSmsTime;
+
+        for (Map<String, String> trainedSmsMap : trainedInboxSms) {
+
+            long longDate = Long.parseLong(trainedSmsMap.get(DatabaseContract.Sms.KEY_DATE));
+            long insertResult = insertIntoSms(context, trainedSmsMap);
+
+            if (insertResult != -1) {
+                numSmsStored += 1;
+                tempLastSmsTime = longDate;
+            } else {
+                numSmsError += 1;
+                Log.e(
+                        "GM/insertSms",
+                        "Some error occured while inserting sms- " + trainedSmsMap.toString()
+                );
+            }
+        }
+
+        if (tempLastSmsTime != lastSmsTime)
+            DatabaseBridge.setConfig(context, LAST_SMS_TIME_CONFIG, String.valueOf(tempLastSmsTime));
+
+        Log.i(GM_STORE_TRAINED_INBOX_SMS, "after lastSmsTime: " + tempLastSmsTime);
+        Log.i(GM_STORE_TRAINED_INBOX_SMS, "Number of sms inserted successfully: " + numSmsStored);
+
+        if (numSmsError > 0)
+            Log.e(GM_STORE_TRAINED_INBOX_SMS, "Number of sms failed to insert: " + numSmsError);
+
+        return numSmsStored;
+    }
+
+    @NonNull
+    private static Boolean setConfig(Context context, String key, String value) {
+
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.Config.KEY_NAME, key);
+        values.put(DatabaseContract.Config.KEY_VALUE, value);
+        Log.i("GM/setConfig", "Values: " + values.toString());
+
+        initializeDb(context);
+        long resultId = db.insertWithOnConflict(
+                DatabaseContract.Config.TABLE_NAME,
+                DatabaseContract.Config._ID,
+                values,
+                SQLiteDatabase.CONFLICT_REPLACE
+        );
+
+        unInitializeDb();
+
+        Log.i("GM/setConfig", "Result Id: " + resultId);
+        return resultId > 0;
+    }
+
+    static List<Map<String, String>> getCategoryIdsWithSmsCount(Context context) {
+
+        List<Map<String, String>> categoryIdsWithSmsCount = new ArrayList<>();
+
+        String[] projection = {
+                DatabaseContract.Sms.KEY_CATEGORY_ID,
+                DatabaseContract.Sms.KEY_READ,
+                "COUNT(" + DatabaseContract.Sms.KEY_CATEGORY_ID + ") as " + SMS_COUNT
+        };
+
+        String selection = DatabaseContract.Sms.KEY_VISIBILITY + EQUALS_QUESTION;
+        String[] selectionArgs = {String.valueOf(1)};
+
+        initializeDb(context);
+        Cursor cursor = db.query(
+                DatabaseContract.Sms.TABLE_NAME,                // The table to query
+                projection,                                     // The columns to return
+                selection,                                      // The columns for the WHERE clause
+                selectionArgs,                                  // The values for the WHERE clause
+                DatabaseContract.Sms.KEY_CATEGORY_ID + ", "
+                        + DatabaseContract.Sms.KEY_READ,        // don't group the rows
+                null,                                           // don't filter by row groups
+                DatabaseContract.Sms.DEFAULT_SORT_ORDER         // The sort order
+        );
+
+        if (cursor != null && cursor.moveToFirst()) {
+            int indexCategoryId = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_CATEGORY_ID);
+            int indexRead = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ);
+            int indexSmsCount = cursor.getColumnIndexOrThrow(SMS_COUNT);
+
+            Map<String, String> categorySmsCount;
+
+            while (!cursor.isAfterLast()) {
+                final long categoryId = cursor.getLong(indexCategoryId);
+                final long readKey = cursor.getLong(indexRead);
+                final long smsCount = cursor.getLong(indexSmsCount);
+
+                categorySmsCount = new HashMap<>();
+
+                categorySmsCount.put(DatabaseContract.Sms.KEY_CATEGORY_ID, String.valueOf(categoryId));
+                categorySmsCount.put(DatabaseContract.Sms.KEY_READ, String.valueOf(readKey));
+                categorySmsCount.put(SMS_COUNT, String.valueOf(smsCount));
+
+                categoryIdsWithSmsCount.add(categorySmsCount);
+                cursor.moveToNext();
+            }
+        } else {
+            Log.e(GM_CURSOR, CURSOR_IS_NULL + "getCategoryIdsWithSmsCount");
+        }
+
+        if (cursor != null && !cursor.isClosed()) {
+            cursor.close();
+        }
+
+        unInitializeDb();
+
+        Log.i("GM/getCatsSmsCount", categoryIdsWithSmsCount.toString());
+        return categoryIdsWithSmsCount;
+    }
+
+    @NonNull
+    static Boolean addCategory(Context context, Map<String, String> category) {
+        return insertIntoCategory(context, category) != -1;
+    }
+
+    static Boolean updateSmsData(Context context, Map<String, String> sms) {
+        return updateInSms(context, sms) > 0;
     }
 
     static long storeReTrainedSms(Context context, List<Map<String, String>> retrainedSmsList) {
 
-        initializeDb(context);
         long numSmsUpdated = 0;
-
         for (Map<String, String> reTrainedSmsMap : retrainedSmsList) {
 
-            long longId = Long.parseLong(reTrainedSmsMap.get(DatabaseContract.Sms._ID));
-            long longDate = Long.parseLong(reTrainedSmsMap.get(DatabaseContract.Sms.KEY_DATE));
-            long longPerson = Long.parseLong(reTrainedSmsMap.get(DatabaseContract.Sms.KEY_PERSON));
-            long longRead = Long.parseLong(reTrainedSmsMap.get(DatabaseContract.Sms.KEY_READ));
-            long longSeen = Long.parseLong(reTrainedSmsMap.get(DatabaseContract.Sms.KEY_SEEN));
-            String strSubject = reTrainedSmsMap.get(DatabaseContract.Sms.KEY_SUBJECT);
-            String strAddress = reTrainedSmsMap.get(DatabaseContract.Sms.KEY_ADDRESS);
-            String strBody = reTrainedSmsMap.get(DatabaseContract.Sms.KEY_BODY);
-            long longCategoryId = Long.parseLong(reTrainedSmsMap.get(DatabaseContract.Sms.KEY_CATEGORY_ID));
-            long longSimilarTo = Long.parseLong(reTrainedSmsMap.get(DatabaseContract.Sms.KEY_SIMILAR_TO));
-            double longSimScore = Double.parseDouble(reTrainedSmsMap.get(DatabaseContract.Sms.KEY_SIM_SCORE));
-
-            ContentValues values = new ContentValues();
-            values.put(DatabaseContract.Sms.KEY_DATE, longDate);
-            values.put(DatabaseContract.Sms.KEY_PERSON, longPerson);
-            values.put(DatabaseContract.Sms.KEY_READ, longRead);
-            values.put(DatabaseContract.Sms.KEY_SEEN, longSeen);
-            values.put(DatabaseContract.Sms.KEY_SUBJECT, strSubject);
-            values.put(DatabaseContract.Sms.KEY_BODY, strBody);
-            values.put(DatabaseContract.Sms.KEY_ADDRESS, strAddress);
-            values.put(DatabaseContract.Sms.KEY_SIMILAR_TO, longSimilarTo);
-            values.put(DatabaseContract.Sms.KEY_SIM_SCORE, longSimScore);
-            values.put(DatabaseContract.Sms.KEY_CATEGORY_ID, longCategoryId);
-
-            String selection = DatabaseContract.Sms._ID + " = ?";
-            String[] selectionArgs = {String.valueOf(longId)};
-
-            long updateSmsRowId = db.update(
-                    DatabaseContract.Sms.TABLE_NAME,
-                    values,
-                    selection,
-                    selectionArgs
-            );
+            long updateSmsRowId = updateInSms(context, reTrainedSmsMap);
 
             if (updateSmsRowId > 0) {
                 numSmsUpdated += 1;
@@ -528,57 +603,68 @@ class DatabaseBridge {
     }
 
     static Boolean deleteModel(Context context) {
-        initializeDb(context);
 
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.Sms.KEY_CATEGORY_ID, 1);
         values.put(DatabaseContract.Sms.KEY_SIMILAR_TO, 0);
         values.put(DatabaseContract.Sms.KEY_SIM_SCORE, 0.0);
 
+        initializeDb(context);
         int count = db.update(
                 DatabaseContract.Sms.TABLE_NAME,
                 values,
                 null,
                 null);
 
+        unInitializeDb();
+
         return count > 0;
     }
 
     static Boolean deleteCategories(Context context) {
-        initializeDb(context);
         deleteModel(context);
 
         // Which row to update, based on the title
         String selection = DatabaseContract.Category._ID + " != ?";
         String[] selectionArgs = {String.valueOf(1)};
 
+        initializeDb(context);
         int count = db.delete(
                 DatabaseContract.Category.TABLE_NAME,
                 selection,
                 selectionArgs
         );
+
+        unInitializeDb();
+
         return count > 0;
     }
 
     static Boolean deleteCategory(Context context, long categoryId) {
 
-        initializeDb(context);
         deleteModelForCategory(context, categoryId);
 
         // Which row to update, based on the title
-        String selection = DatabaseContract.Category._ID + DOUBLE_EQUALS_QUESTION;
+        String selection = DatabaseContract.Category._ID + EQUALS_QUESTION;
         String[] selectionArgs = {String.valueOf(categoryId)};
 
-        int count = db.delete(
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.Category.KEY_VISIBILITY, 0);
+
+        initializeDb(context);
+        int count = db.update(
                 DatabaseContract.Category.TABLE_NAME,
+                values,
                 selection,
                 selectionArgs
         );
+
+        unInitializeDb();
+
         return count > 0;
     }
 
     private static Boolean deleteModelForCategory(Context context, long categoryId) {
-        initializeDb(context);
 
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.Sms.KEY_CATEGORY_ID, 1);
@@ -586,48 +672,23 @@ class DatabaseBridge {
         values.put(DatabaseContract.Sms.KEY_SIM_SCORE, 0.0);
 
         // Which row to update, based on the title
-        String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + DOUBLE_EQUALS_QUESTION;
+        String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + EQUALS_QUESTION;
         String[] selectionArgs = {String.valueOf(categoryId)};
 
+        initializeDb(context);
         int count = db.update(
                 DatabaseContract.Sms.TABLE_NAME,
                 values,
                 selection,
                 selectionArgs);
 
+        unInitializeDb();
+
         return count > 0;
     }
 
     static Boolean updateCategory(Context context, Map<String, String> category) {
-
-        initializeDb(context);
-
-        ContentValues values = new ContentValues();
-        values.put(
-                DatabaseContract.Category.KEY_NAME,
-                category.get(DatabaseContract.Category.KEY_NAME)
-        );
-        values.put(
-                DatabaseContract.Category.KEY_VISIBILITY,
-                Integer.parseInt(category.get(DatabaseContract.Category.KEY_VISIBILITY))
-        );
-        values.put(
-                DatabaseContract.Category.KEY_COLOR,
-                Integer.parseInt(category.get(DatabaseContract.Category.KEY_COLOR))
-        );
-
-        // Which row to update, based on the title
-        String selection = DatabaseContract.Category._ID + DOUBLE_EQUALS_QUESTION;
-        String[] selectionArgs = {String.valueOf(category.get(DatabaseContract.Category._ID))};
-
-        int count = db.update(
-                DatabaseContract.Category.TABLE_NAME,
-                values,
-                selection,
-                selectionArgs
-        );
-
-        return count > 0;
+        return updateInCategory(context, category) > 0;
     }
 
     static boolean importDB(Context context) {
@@ -637,7 +698,7 @@ class DatabaseBridge {
         try {
             File sd = Environment.getExternalStorageDirectory();
             if (sd.canWrite()) {
-                String backupDBPath = "GroupMessagingBackup"; // From SD directory.
+                String backupDBPath = "GroupMessagingBackupV" + DatabaseContract.DATABASE_VERSION;
                 File backupDB = new File(sd, backupDBPath);
                 File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
 
@@ -671,7 +732,7 @@ class DatabaseBridge {
             File sd = Environment.getExternalStorageDirectory();
 
             if (sd.canWrite()) {
-                String backupDBPath = "GroupMessagingBackup";
+                String backupDBPath = "GroupMessagingBackupV" + DatabaseContract.DATABASE_VERSION;
                 File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
                 File backupDB = new File(sd, backupDBPath);
 
@@ -703,19 +764,7 @@ class DatabaseBridge {
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.Sms.KEY_READ, 1);
 
-
-        // Which row to update, based on the title
-        String selection = DatabaseContract.Sms._ID + " = ?";
-        String[] selectionArgs = {smsId};
-
-        int count = db.update(
-                DatabaseContract.Sms.TABLE_NAME,
-                values,
-                selection,
-                selectionArgs);
-
-        Log.d("GM/smsRead", "Count: " + String.valueOf(count));
-        return count > 0;
+        return updateInSmsBySmsIdAndValues(context, Long.parseLong(smsId), values) > 0;
     }
 
     static Boolean setAllCategorySmsAsRead(Context context, String categoryId) {
@@ -724,22 +773,89 @@ class DatabaseBridge {
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.Sms.KEY_READ, 1);
 
+        return updateInSmsByCategoryIdAndValues(context, Long.parseLong(categoryId), values) > 0;
+    }
+
+    static void deleteSmsByMap(Context context, Map<String, String> data) {
+
+        if (data.get(DatabaseContract.Sms._ID).equals(data.get(DatabaseContract.Sms.KEY_SIMILAR_TO))) {
+            hideSms(context, data);
+        } else {
+            deleteSms(context, data);
+        }
+
+    }
+
+    static void deleteAllSmsOfCategoryById(Context context, long categoryId) {
+
+        // delete untrained sms first
+        deleteSmsByCategoryId(context, categoryId);
+
+        // hide remaining trained sms
+        hideSmsByCategoryId(context, categoryId);
+
+    }
+
+    private static void deleteSmsByCategoryId(Context context, long categoryId) {
 
         // Which row to update, based on the title
-        String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + " = ?";
-        String[] selectionArgs = {categoryId};
+        String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + EQUALS_QUESTION
+                + " and "
+                + DatabaseContract.Sms._ID + " <> " + DatabaseContract.Sms.KEY_SIMILAR_TO;
+        String[] selectionArgs = {String.valueOf(categoryId)};
 
-        int count = db.update(
+        initializeDb(context);
+        db.delete(
                 DatabaseContract.Sms.TABLE_NAME,
-                values,
                 selection,
-                selectionArgs);
+                selectionArgs
+        );
 
-        Log.d("GM/catSmsRead", "Count: " + String.valueOf(count));
+        unInitializeDb();
+    }
+
+    private static void hideSmsByCategoryId(Context context, long categoryId) {
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.Sms.KEY_VISIBILITY, 0);
+
+        updateInSmsByCategoryIdAndValues(context, categoryId, values);
+    }
+
+    private static Boolean deleteSms(Context context, Map<String, String> data) {
+
+        // Which row to update, based on the title
+        String selection = DatabaseContract.Sms._ID + EQUALS_QUESTION;
+        String[] selectionArgs = {data.get(DatabaseContract.Sms._ID)};
+
+        initializeDb(context);
+        int count = db.delete(
+                DatabaseContract.Sms.TABLE_NAME,
+                selection,
+                selectionArgs
+        );
+
+        unInitializeDb();
+
         return count > 0;
     }
 
-    static void deleteSmsOrChangeVisibility(Map<String, String> data) {
+    private static Boolean hideSms(Context context, Map<String, String> data) {
+        initializeDb(context);
 
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.Sms.KEY_VISIBILITY, 0);
+        long smsId = Long.parseLong(data.get(DatabaseContract.Sms._ID));
+
+        return updateInSmsBySmsIdAndValues(context, smsId, values) > 0;
     }
+
+    static List<Map<String, String>> getAllVisibleCategories(Context context) {
+
+        String selection = DatabaseContract.Category.KEY_VISIBILITY + EQUALS_QUESTION;
+        String[] selectionArgs = {String.valueOf(1)};
+
+        Log.i("GM/getVisibleCategories", "Getting visible categories");
+        return getFromCategories(context, selection, selectionArgs);
+    }
+
 }
