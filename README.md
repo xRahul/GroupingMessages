@@ -1,5 +1,15 @@
 # Grouping Messages
 
+
+[![GitHub license](https://img.shields.io/github/license/xRahul/GroupingMessages.svg)](https://github.com/xRahul/GroupingMessages/blob/master/LICENSE)
+[![Build Status](https://travis-ci.org/xRahul/GroupingMessages.svg?branch=master)](https://travis-ci.org/xRahul/GroupingMessages)
+[![GitHub stars](https://img.shields.io/github/stars/xRahul/GroupingMessages.svg)](https://github.com/xRahul/GroupingMessages/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/xRahul/GroupingMessages.svg)](https://github.com/xRahul/GroupingMessages/network)
+[![GitHub issues](https://img.shields.io/github/issues/xRahul/GroupingMessages.svg)](https://github.com/xRahul/GroupingMessages/issues)
+[![Releases](https://img.shields.io/github/release/xRahul/GroupingMessages.svg)](https://github.com/xRahul/GroupingMessages/releases/latest)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2992e38a8bce453aa521cc02ddc030eb)](https://www.codacy.com/app/xRahul/GroupingMessages)
+
+
 This is an android app that automatically categorizes your sms into various categories of your choice.
 
 Every trained model will be user specific, so each user can categorize their sms according to their needs. 
