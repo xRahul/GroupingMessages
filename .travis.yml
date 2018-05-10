@@ -1,0 +1,42 @@
+language: android
+sudo: false
+jdk: oraclejdk8
+
+android:
+  components:
+    - tools
+    - platform-tools
+    - tools
+    - build-tools-25.0.2
+    - android-25
+    - extra
+    - extra-google-google_play_services
+    - extra-google-m2repository
+    - extra-android-m2repository
+    - addon-google_apis-google-25
+    - addon-google_apis-google-24
+    - add-on
+    - addon
+    - sys-img-arm64-v8a-google_apis-25
+    - sys-img-armeabi-v7a-google_apis-25
+    - sys-img-x86_64-google_apis-25
+    - sys-img-x86-google_apis-25
+
+before_install:
+- yes | sdkmanager "platforms;android-25"
+- chmod +x gradlew
+
+before_script:
+  - cp app/google-services\ \(demo\).json app/google-services.json
+#  - android update sdk --no-ui --filter build-tools-25.0.2,android-25,extra-android-m2repository
+#  - echo no | android create avd --force -n test -t "android-25" --abi armeabi-v7a --tag google_apis
+#  - emulator -avd test -no-skin -no-audio -no-window &
+#  - android-wait-for-emulator
+#  - adb shell input keyevent 82 &
+
+script:
+  - ./gradlew assemble
+  - ./gradlew clean build
+  - ./gradlew build check
+  
+  
