@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 
 public class SettingsFragment extends PreferenceFragment {
 
@@ -108,7 +109,7 @@ public class SettingsFragment extends PreferenceFragment {
         });
       }
     } catch (IOException e) {
-      e.printStackTrace();
+      Log.e("GM/SSFragment", Arrays.toString(e.getStackTrace()));
     }
   }
 

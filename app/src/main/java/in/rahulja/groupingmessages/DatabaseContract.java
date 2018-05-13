@@ -125,6 +125,7 @@ final class DatabaseContract {
     static final int SENDER_CONTACT = 0;
     static final int SENDER_NUMBER = 1;
     static final int SENDER_COMPANY = 2;
+    @SuppressWarnings("unused")
     static final String[] SENDER_TYPES = new String[] { "contact", "number", "company" };
     static final String KEY_SENDER_TYPE = "sender_type";
 

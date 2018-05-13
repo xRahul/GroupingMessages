@@ -11,7 +11,7 @@ class DatabaseHelper extends SQLiteOpenHelper {
 
   private static DatabaseHelper sInstance;
 
-  DatabaseHelper(Context context) {
+  private DatabaseHelper(Context context) {
     super(context, DatabaseContract.DATABASE_NAME, null, DatabaseContract.DATABASE_VERSION);
   }
 
@@ -87,6 +87,7 @@ class DatabaseHelper extends SQLiteOpenHelper {
     }
   }
 
+  @SuppressWarnings("unused")
   private void deleteAllTables(SQLiteDatabase db) {
     db.execSQL(DatabaseContract.Sms.DELETE_TABLE);
     db.execSQL(DatabaseContract.Category.DELETE_TABLE);

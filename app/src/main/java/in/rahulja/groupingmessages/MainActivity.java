@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity
   private ProgressBar pbCircle;
   private GridLayoutManager glm = new GridLayoutManager(getBaseContext(), 2);
 
-  static List<Map<String, String>> addSenderTypeToListOfSms(List<Map<String, String>> listOfSms) {
+  static void addSenderTypeToListOfSms(List<Map<String, String>> listOfSms) {
 
     for (int i = 0; i < listOfSms.size(); i++) {
       Map<String, String> tempSms = listOfSms.get(i);
@@ -65,8 +65,6 @@ public class MainActivity extends AppCompatActivity
 
       listOfSms.set(i, tempSms);
     }
-
-    return listOfSms;
   }
 
   @Override
@@ -192,14 +190,13 @@ public class MainActivity extends AppCompatActivity
     init();
   }
 
+  @SuppressWarnings("BooleanMethodIsAlwaysInverted")
   @RequiresApi(api = Build.VERSION_CODES.M)
   private boolean addPermission(List<String> permissionsList, String permission) {
     if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
       permissionsList.add(permission);
       // Check for Rationale Option
-      if (!ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
-        return false;
-      }
+      return ActivityCompat.shouldShowRequestPermissionRationale(this, permission);
     }
     return true;
   }
@@ -249,9 +246,7 @@ public class MainActivity extends AppCompatActivity
         DatabaseBridge.getSelfTrainedSms(getBaseContext())
     );
 
-    trainedLatestSmsFromInbox = addSenderTypeToListOfSms(
-        trainedLatestSmsFromInbox
-    );
+    addSenderTypeToListOfSms(trainedLatestSmsFromInbox);
 
     numRowsAddedToSms = DatabaseBridge.storeTrainedInboxSms(
         getBaseContext(),

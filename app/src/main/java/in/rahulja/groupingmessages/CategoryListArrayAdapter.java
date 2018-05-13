@@ -13,7 +13,8 @@ class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHold
 
   private List<Map<String, String>> categoryList;
 
-  CategoryListArrayAdapter(Context contextParam, List<Map<String, String>> objects) {
+  CategoryListArrayAdapter(@SuppressWarnings("unused") Context contextParam,
+      List<Map<String, String>> objects) {
 
     if (objects == null) {
       categoryList = new ArrayList<>();

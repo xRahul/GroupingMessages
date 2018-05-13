@@ -19,7 +19,7 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
   private ArrayList<Map<String, String>> itemsPendingRemoval;
   private Handler handler = new Handler(); // hanlder for running delayed runnables
   private HashMap<Map<String, String>, Runnable> pendingRunnables = new HashMap<>();
-      // map of items to pending runnables, so we can cancel a removal if need be
+  // map of items to pending runnables, so we can cancel a removal if need be
 
   SmsListArrayAdapter(Context context, List<Map<String, String>> objects) {
 
@@ -44,7 +44,6 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
     final Map<String, String> data = smsList.get(position);
 
     if (itemsPendingRemoval.contains(data)) {
-      /** {show swipe layout} and {hide regular layout} */
       holder.regularLayout.setVisibility(View.GONE);
       holder.swipeLayout.setVisibility(View.VISIBLE);
       holder.undo.setOnClickListener(new View.OnClickListener() {
@@ -54,7 +53,6 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
         }
       });
     } else {
-      /** {show regular layout} and {hide swipe layout} */
       holder.regularLayout.setVisibility(View.VISIBLE);
       holder.swipeLayout.setVisibility(View.GONE);
       holder.bindSms(data);

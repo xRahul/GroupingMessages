@@ -357,7 +357,7 @@ class DatabaseBridge {
     return updateResult;
   }
 
-  private static long updateInSmsBySmsIdAndValues(Context context, long smsId,
+  private static void updateInSmsBySmsIdAndValues(Context context, long smsId,
       ContentValues values) {
 
     // Which row to update, based on the id
@@ -365,7 +365,7 @@ class DatabaseBridge {
     String[] selectionArgs = { String.valueOf(smsId) };
 
     initializeDb(context);
-    long updateResult = db.update(
+    db.update(
         DatabaseContract.Sms.TABLE_NAME,
         values,
         selection,
@@ -373,11 +373,9 @@ class DatabaseBridge {
     );
 
     unInitializeDb();
-
-    return updateResult;
   }
 
-  private static long updateInSmsByCategoryIdAndValues(Context context, long categoryId,
+  private static void updateInSmsByCategoryIdAndValues(Context context, long categoryId,
       ContentValues values) {
 
     // Which row to update, based on the id
@@ -385,7 +383,7 @@ class DatabaseBridge {
     String[] selectionArgs = { String.valueOf(categoryId) };
 
     initializeDb(context);
-    long updateResult = db.update(
+    db.update(
         DatabaseContract.Sms.TABLE_NAME,
         values,
         selection,
@@ -393,8 +391,6 @@ class DatabaseBridge {
     );
 
     unInitializeDb();
-
-    return updateResult;
   }
 
   private static long updateInCategory(Context context, Map<String, String> category) {
@@ -501,8 +497,7 @@ class DatabaseBridge {
     return numSmsStored;
   }
 
-  @NonNull
-  private static Boolean setConfig(Context context, String key, String value) {
+  private static void setConfig(Context context, String key, String value) {
 
     ContentValues values = new ContentValues();
     values.put(DatabaseContract.Config.KEY_NAME, key);
@@ -520,7 +515,6 @@ class DatabaseBridge {
     unInitializeDb();
 
     Log.i("GM/setConfig", "Result Id: " + resultId);
-    return resultId > 0;
   }
 
   static List<Map<String, String>> getCategoryIdsWithSmsCount(Context context) {
@@ -588,8 +582,8 @@ class DatabaseBridge {
     return insertIntoCategory(context, category) != -1;
   }
 
-  static Boolean updateSmsData(Context context, Map<String, String> sms) {
-    return updateInSms(context, sms) > 0;
+  static void updateSmsData(Context context, Map<String, String> sms) {
+    updateInSms(context, sms);
   }
 
   static long storeReTrainedSms(Context context, List<Map<String, String>> retrainedSmsList) {
@@ -606,7 +600,7 @@ class DatabaseBridge {
     return numSmsUpdated;
   }
 
-  static Boolean deleteModel(Context context) {
+  static void deleteModel(Context context) {
 
     ContentValues values = new ContentValues();
     values.put(DatabaseContract.Sms.KEY_CATEGORY_ID, 1);
@@ -614,18 +608,16 @@ class DatabaseBridge {
     values.put(DatabaseContract.Sms.KEY_SIM_SCORE, 0.0);
 
     initializeDb(context);
-    int count = db.update(
+    db.update(
         DatabaseContract.Sms.TABLE_NAME,
         values,
         null,
         null);
 
     unInitializeDb();
-
-    return count > 0;
   }
 
-  static Boolean deleteCategories(Context context) {
+  static void deleteCategories(Context context) {
     deleteModel(context);
 
     // Which row to update, based on the title
@@ -633,18 +625,16 @@ class DatabaseBridge {
     String[] selectionArgs = { String.valueOf(1) };
 
     initializeDb(context);
-    int count = db.delete(
+    db.delete(
         DatabaseContract.Category.TABLE_NAME,
         selection,
         selectionArgs
     );
 
     unInitializeDb();
-
-    return count > 0;
   }
 
-  static Boolean deleteCategory(Context context, long categoryId) {
+  static void deleteCategory(Context context, long categoryId) {
 
     deleteModelForCategory(context, categoryId);
 
@@ -656,7 +646,7 @@ class DatabaseBridge {
     values.put(DatabaseContract.Category.KEY_VISIBILITY, 0);
 
     initializeDb(context);
-    int count = db.update(
+    db.update(
         DatabaseContract.Category.TABLE_NAME,
         values,
         selection,
@@ -664,11 +654,9 @@ class DatabaseBridge {
     );
 
     unInitializeDb();
-
-    return count > 0;
   }
 
-  private static Boolean deleteModelForCategory(Context context, long categoryId) {
+  private static void deleteModelForCategory(Context context, long categoryId) {
 
     ContentValues values = new ContentValues();
     values.put(DatabaseContract.Sms.KEY_CATEGORY_ID, 1);
@@ -680,22 +668,20 @@ class DatabaseBridge {
     String[] selectionArgs = { String.valueOf(categoryId) };
 
     initializeDb(context);
-    int count = db.update(
+    db.update(
         DatabaseContract.Sms.TABLE_NAME,
         values,
         selection,
         selectionArgs);
 
     unInitializeDb();
-
-    return count > 0;
   }
 
   static Boolean updateCategory(Context context, Map<String, String> category) {
     return updateInCategory(context, category) > 0;
   }
 
-  static boolean importDB(Context context) {
+  static void importDB(Context context) {
 
     unInitializeDb();
 
@@ -712,22 +698,19 @@ class DatabaseBridge {
             dst.transferFrom(src, 0, src.size());
             src.close();
             dst.close();
-            fis.close();
-            fos.close();
           }
         }
         initializeDb(context);
-        return true;
+        return;
       }
     } catch (Exception e) {
       Log.e("GM/importDb", e.toString());
     }
 
     initializeDb(context);
-    return false;
   }
 
-  static Boolean exportDB(Context context) {
+  static void exportDB(Context context) {
 
     unInitializeDb();
 
@@ -745,37 +728,34 @@ class DatabaseBridge {
             dst.transferFrom(src, 0, src.size());
             src.close();
             dst.close();
-            fis.close();
-            fos.close();
           }
         }
         initializeDb(context);
-        return true;
+        return;
       }
     } catch (Exception e) {
       Log.e("GM/exportDb", e.toString());
     }
     initializeDb(context);
-    return false;
   }
 
-  static Boolean setSmsAsRead(Context context, String smsId) {
+  static void setSmsAsRead(Context context, String smsId) {
 
     initializeDb(context);
 
     ContentValues values = new ContentValues();
     values.put(DatabaseContract.Sms.KEY_READ, 1);
 
-    return updateInSmsBySmsIdAndValues(context, Long.parseLong(smsId), values) > 0;
+    updateInSmsBySmsIdAndValues(context, Long.parseLong(smsId), values);
   }
 
-  static Boolean setAllCategorySmsAsRead(Context context, String categoryId) {
+  static void setAllCategorySmsAsRead(Context context, String categoryId) {
     initializeDb(context);
 
     ContentValues values = new ContentValues();
     values.put(DatabaseContract.Sms.KEY_READ, 1);
 
-    return updateInSmsByCategoryIdAndValues(context, Long.parseLong(categoryId), values) > 0;
+    updateInSmsByCategoryIdAndValues(context, Long.parseLong(categoryId), values);
   }
 
   static void deleteSmsByMap(Context context, Map<String, String> data) {
@@ -821,32 +801,30 @@ class DatabaseBridge {
     updateInSmsByCategoryIdAndValues(context, categoryId, values);
   }
 
-  private static Boolean deleteSms(Context context, Map<String, String> data) {
+  private static void deleteSms(Context context, Map<String, String> data) {
 
     // Which row to update, based on the title
     String selection = DatabaseContract.Sms._ID + EQUALS_QUESTION;
     String[] selectionArgs = { data.get(DatabaseContract.Sms._ID) };
 
     initializeDb(context);
-    int count = db.delete(
+    db.delete(
         DatabaseContract.Sms.TABLE_NAME,
         selection,
         selectionArgs
     );
 
     unInitializeDb();
-
-    return count > 0;
   }
 
-  private static Boolean hideSms(Context context, Map<String, String> data) {
+  private static void hideSms(Context context, Map<String, String> data) {
     initializeDb(context);
 
     ContentValues values = new ContentValues();
     values.put(DatabaseContract.Sms.KEY_VISIBILITY, 0);
     long smsId = Long.parseLong(data.get(DatabaseContract.Sms._ID));
 
-    return updateInSmsBySmsIdAndValues(context, smsId, values) > 0;
+    updateInSmsBySmsIdAndValues(context, smsId, values);
   }
 
   static List<Map<String, String>> getAllVisibleCategories(Context context) {

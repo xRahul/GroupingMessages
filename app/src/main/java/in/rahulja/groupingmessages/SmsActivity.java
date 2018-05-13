@@ -169,9 +169,9 @@ public class SmsActivity extends AppCompatActivity {
     mItemTouchHelper.attachToRecyclerView(listView);
 
     //set swipe label
-    swipeHelper.setLeftSwipeLable("Delete");
+    swipeHelper.setLeftSwipeLabel("Delete");
     //set swipe background-Color
-    swipeHelper.setLeftcolorCode(ContextCompat.getColor(this, android.R.color.holo_red_dark));
+    swipeHelper.setLeftColorCode(ContextCompat.getColor(this, android.R.color.holo_red_dark));
   }
 
   private void getCategorySmsData() {
@@ -230,7 +230,9 @@ public class SmsActivity extends AppCompatActivity {
       final int smsListPosition = Integer.parseInt(
           receivedIntent.getStringExtra("sms_list_position")
       );
-      Log.d("GM/choseCat", receivedIntent.getExtras().toString());
+      if (receivedIntent.getExtras() != null) {
+        Log.d("GM/choseCat", receivedIntent.getExtras().toString());
+      }
 
       final Map<String, String> trainedSms = smsList.get(smsListPosition);
       trainedSms.put(
