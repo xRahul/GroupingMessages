@@ -11,6 +11,7 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2992e38a8bce453aa521cc02ddc030eb)](https://www.codacy.com/app/xRahul/GroupingMessages)
 [![CodeClimate Maintainability](https://api.codeclimate.com/v1/badges/6bd1a1cf9510c749cdbf/maintainability)](https://codeclimate.com/github/xRahul/GroupingMessages/maintainability)
 [![CodeFactor](https://www.codefactor.io/repository/github/xrahul/groupingmessages/badge)](https://www.codefactor.io/repository/github/xrahul/groupingmessages)
+[![codebeat badge](https://codebeat.co/badges/eb2766d0-2b94-4475-b3d9-9b8fedf27886)](https://codebeat.co/projects/github-com-xrahul-groupingmessages-master)
 
 [![SonarCloud Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=GroupingMessages%3Aapp&metric=alert_status)](https://sonarcloud.io/dashboard?id=GroupingMessages%3Aapp)
 [![SonarCloud Bugs](https://sonarcloud.io/api/project_badges/measure?project=GroupingMessages%3Aapp&metric=bugs)](https://sonarcloud.io/dashboard?id=GroupingMessages%3Aapp)
