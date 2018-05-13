@@ -2,30 +2,47 @@ language: android
 sudo: false
 jdk: oraclejdk8
 
+addons:
+  sonarcloud:
+    organization: "xrahul-github" # the key of the org you chose at step #3
+    token:
+      secure: "J5bngE3+ijfapd3V5Va1LcyKFzrKPgZMJgvTBnpF+d13d3zOGQYSRoDHY3sJQj5dqaQUfuek/m9dqwj5/Cmt7hiEp8tsiAqRluGgo3x3uw3bXVUlJG4zFkZ2Y8qMSJ/eT2xyGQCg9KGSW5z4bRpQu0IzxwZCghJncBWr8CCUa4qvCqhCztQgH+O5QMqlyMrnah+RyS6OQvmD6PaX7m+BY6GuIaEduUsQGVpfhqNREN/QeumvTzqS8RdSgFyMnxAqmkiEW71dLXejVDE2tV/MHDlsCyvNg24ArQS6HhzLPikFcttimee1PlY7CUKJrabLqOVuTT2m72Jhdqy+t8oVORus8DQb6peVXBiw4nOi4nr0gfMvcb1IpSOPL1B3YbHzKqy0yUymnuZEQFN2beEUXJ/lpglT8dedzk9L6t+duHfh2anWX5xokDEphXDEPw0hAGFUNan/RDqyowoYdDgvYIdcjPoJqzb7oOl3hxE8InZPBBqrW5QwU+zvMJHMJRMjyZt1/F0RdGWWIDVIC1dSwSY+G7doyJN6ukZMWvRt12S/VoNv5vHGqrbpaVWLl7osOEwsns6vFZMSf0C2IopjzKiN3ZhDjBg8MoKjzmAtBgamkqMgL5wKmKVIrvqvSCUs79E3F8+XtRKBZqYLvUVl4z2Cttx3SRQxi6jTEcq2fFw="
+
 android:
   components:
+# Uncomment the lines below if you want to
+# use the latest revision of Android SDK Tools
     - tools
     - platform-tools
     - tools
+
+#    The BuildTools version used by your project
     - build-tools-25.0.2
+
+#    The SDK version used to compile your project
     - android-25
+
+
     - extra
+    - extra-google-google_play_services
     - extra-google-m2repository
     - extra-android-m2repository
     - addon-google_apis-google-25
     - addon-google_apis-google-24
     - add-on
     - addon
-    - sys-img-arm64-v8a-google_apis-25
-    - sys-img-armeabi-v7a-google_apis-25
-    - sys-img-x86_64-google_apis-25
-    - sys-img-x86-google_apis-25
+
+#     Specify at least one system image,
+#     if you need to run emulator(s) during your tests
+#    - sys-img-arm64-v8a-google_apis-25
+#    - sys-img-armeabi-v7a-google_apis-25
 
 before_install:
 - yes | sdkmanager "platforms;android-25"
 - chmod +x gradlew
 
 before_script:
+#  - cp app/google-services\ \(demo\).json app/google-services.json
 #  - android update sdk --no-ui --filter build-tools-25.0.2,android-25,extra-android-m2repository
 #  - echo no | android create avd --force -n test -t "android-25" --abi armeabi-v7a --tag google_apis
 #  - emulator -avd test -no-skin -no-audio -no-window &
@@ -36,5 +53,16 @@ script:
   - ./gradlew assemble
   - ./gradlew clean build
   - ./gradlew build check
-  
-  
+  - ./gradlew sonarqube
+
+cache:
+  directories:
+    - '$HOME/.m2/repository'
+    - '$HOME/.sonar/cache'
+    - '$HOME/.gradle'
+    - '.gradle'
+    - '$HOME/.android/build-cache'
+
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/

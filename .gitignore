@@ -7,3 +7,6 @@
 /build
 /captures
 .externalNativeBuild
+.idea/sonarlint/*
+.idea/sonarlint/issuestore/*
+.idea/caches/*
