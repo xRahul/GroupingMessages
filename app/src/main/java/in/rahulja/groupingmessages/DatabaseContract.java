@@ -4,8 +4,8 @@ import android.provider.BaseColumns;
 
 final class DatabaseContract {
 
-  static final int DATABASE_VERSION = 2;
-  static final String DATABASE_NAME = "groupMessage.db";
+  public static final int DATABASE_VERSION = 2;
+  public static final String DATABASE_NAME = "groupMessage.db";
   private static final String TEXT_TYPE = " TEXT";
   private static final String INTEGER_TYPE = " INTEGER";
   private static final String FLOAT_TYPE = " REAL";
@@ -29,30 +29,30 @@ final class DatabaseContract {
   }
 
   abstract static class Config implements BaseColumns {
-    static final String TABLE_NAME = "config";
-    static final String KEY_NAME = "name";
+    public static final String TABLE_NAME = "config";
+    public static final String KEY_NAME = "name";
     /**
      * The default sort order for this table
      */
-    static final String DEFAULT_SORT_ORDER = KEY_NAME + " ASC";
-    static final String KEY_VALUE = "value";
-    static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
-    static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
-    static final String CREATE_TABLE = CREATE_TABLE_PREFIX +
+    public static final String DEFAULT_SORT_ORDER = KEY_NAME + " ASC";
+    public static final String KEY_VALUE = "value";
+    private static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
+    private static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
+    public static final String CREATE_TABLE = CREATE_TABLE_PREFIX +
         TABLE_NAME + " (" +
         _ID + INTEGER_TYPE + PRIMARY_KEY + COMMA_SEP +
         KEY_NAME + TEXT_TYPE + " not null unique " + COMMA_SEP +
         KEY_VALUE + TEXT_TYPE + COMMA_SEP +
         KEY_CREATED_AT + TIME_TYPE + DEFAULT + CURRENT_TIMESTAMP + COMMA_SEP +
         KEY_UPDATED_AT + TIME_TYPE + DEFAULT + CURRENT_TIMESTAMP + " )";
-    static final String DELETE_TABLE = DROP_TABLE_IF_EXISTS + TABLE_NAME;
-    static final String UPDATE_AT_TRIGGER =
+    public static final String DELETE_TABLE = DROP_TABLE_IF_EXISTS + TABLE_NAME;
+    public static final String UPDATE_AT_TRIGGER =
         String.format(CREATE_TRIGGER_FORMAT, TABLE_NAME, TABLE_NAME, TABLE_NAME, KEY_UPDATED_AT,
             CURRENT_TIMESTAMP, _ID, _ID);
     /**
      * Array of all the columns. Makes for cleaner code
      */
-    static final String[] KEY_ARRAY = {
+    protected static final String[] KEY_ARRAY = {
         _ID,
         KEY_NAME,
         KEY_VALUE,
@@ -66,17 +66,17 @@ final class DatabaseContract {
   }
 
   abstract static class Category implements BaseColumns {
-    static final String TABLE_NAME = "category";
-    static final String KEY_NAME = "name";
-    static final String KEY_COLOR = "color";
-    static final String KEY_VISIBILITY = "visibility";
-    static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
-    static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
+    public static final String TABLE_NAME = "category";
+    public static final String KEY_NAME = "name";
+    public static final String KEY_COLOR = "color";
+    public static final String KEY_VISIBILITY = "visibility";
+    private static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
+    private static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
     /**
      * The default sort order for this table
      */
-    static final String DEFAULT_SORT_ORDER = KEY_NAME + " ASC";
-    static final String CREATE_TABLE = DatabaseContract.CREATE_TABLE_PREFIX +
+    public static final String DEFAULT_SORT_ORDER = KEY_NAME + " ASC";
+    public static final String CREATE_TABLE = DatabaseContract.CREATE_TABLE_PREFIX +
         TABLE_NAME + " (" +
         _ID + INTEGER_TYPE + PRIMARY_KEY + COMMA_SEP +
         KEY_NAME + TEXT_TYPE + COMMA_SEP +
@@ -84,14 +84,14 @@ final class DatabaseContract {
         KEY_VISIBILITY + INTEGER_TYPE + DEFAULT + " 1" + COMMA_SEP +
         KEY_CREATED_AT + TIME_TYPE + DEFAULT + CURRENT_TIMESTAMP + COMMA_SEP +
         KEY_UPDATED_AT + TIME_TYPE + DEFAULT + CURRENT_TIMESTAMP + " )";
-    static final String DELETE_TABLE = DROP_TABLE_IF_EXISTS + TABLE_NAME;
-    static final String UPDATE_AT_TRIGGER =
+    public static final String DELETE_TABLE = DROP_TABLE_IF_EXISTS + TABLE_NAME;
+    public static final String UPDATE_AT_TRIGGER =
         String.format(CREATE_TRIGGER_FORMAT, TABLE_NAME, TABLE_NAME, TABLE_NAME, KEY_UPDATED_AT,
             CURRENT_TIMESTAMP, _ID, _ID);
     /**
      * Array of all the columns. Makes for cleaner code
      */
-    static final String[] KEY_ARRAY = {
+    protected static final String[] KEY_ARRAY = {
         _ID,
         KEY_NAME,
         KEY_COLOR,
@@ -106,41 +106,41 @@ final class DatabaseContract {
   }
 
   abstract static class Sms implements BaseColumns {
-    static final String TABLE_NAME = "sms";
+    public static final String TABLE_NAME = "sms";
 
-    static final String KEY_DATE = "date";
-    static final String KEY_PERSON = "person";
-    static final String KEY_READ = "read";
-    static final String KEY_SEEN = "seen";
-    static final String KEY_SUBJECT = "subject";
-    static final String KEY_BODY = "body";
-    static final String KEY_ADDRESS = "address";
-    static final String KEY_CATEGORY_ID = "category_id";
-    static final String KEY_SIMILAR_TO = "similar_to";
-    static final String KEY_SIM_SCORE = "similarity_score";
-    static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
-    static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
-    static final String KEY_CLEANED_SMS = "cleaned_sms";
-    static final String KEY_VISIBILITY = "visibility";
-    static final int SENDER_CONTACT = 0;
-    static final int SENDER_NUMBER = 1;
-    static final int SENDER_COMPANY = 2;
+    public static final String KEY_DATE = "date";
+    public static final String KEY_PERSON = "person";
+    public static final String KEY_READ = "read";
+    public static final String KEY_SEEN = "seen";
+    public static final String KEY_SUBJECT = "subject";
+    public static final String KEY_BODY = "body";
+    public static final String KEY_ADDRESS = "address";
+    public static final String KEY_CATEGORY_ID = "category_id";
+    public static final String KEY_SIMILAR_TO = "similar_to";
+    public static final String KEY_SIM_SCORE = "similarity_score";
+    private static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
+    private static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
+    public static final String KEY_CLEANED_SMS = "cleaned_sms";
+    public static final String KEY_VISIBILITY = "visibility";
+    public static final int SENDER_CONTACT = 0;
+    public static final int SENDER_NUMBER = 1;
+    public static final int SENDER_COMPANY = 2;
     @SuppressWarnings("unused")
-    static final String[] SENDER_TYPES = new String[] { "contact", "number", "company" };
-    static final String KEY_SENDER_TYPE = "sender_type";
+    protected static final String[] SENDER_TYPES = new String[] { "contact", "number", "company" };
+    public static final String KEY_SENDER_TYPE = "sender_type";
 
-    static final String DEFAULT_SORT_ORDER = KEY_DATE + " DESC";
+    public static final String DEFAULT_SORT_ORDER = KEY_DATE + " DESC";
 
-    static final String DELETE_TABLE = DROP_TABLE_IF_EXISTS + TABLE_NAME;
+    public static final String DELETE_TABLE = DROP_TABLE_IF_EXISTS + TABLE_NAME;
 
-    static final String UPDATE_AT_TRIGGER =
+    public static final String UPDATE_AT_TRIGGER =
         String.format(CREATE_TRIGGER_FORMAT, TABLE_NAME, TABLE_NAME, TABLE_NAME, KEY_UPDATED_AT,
             CURRENT_TIMESTAMP, _ID, _ID);
 
     /**
      * Array of all the columns. Makes for cleaner code
      */
-    static final String[] KEY_ARRAY = {
+    protected static final String[] KEY_ARRAY = {
         _ID,
         KEY_DATE,
         KEY_PERSON,
@@ -159,7 +159,7 @@ final class DatabaseContract {
         KEY_UPDATED_AT
     };
 
-    static final String CREATE_TABLE = DatabaseContract.CREATE_TABLE_PREFIX +
+    public static final String CREATE_TABLE = DatabaseContract.CREATE_TABLE_PREFIX +
         TABLE_NAME + " (" +
         _ID + INTEGER_TYPE + PRIMARY_KEY + COMMA_SEP +
         KEY_DATE + INTEGER_TYPE + COMMA_SEP +
@@ -182,7 +182,7 @@ final class DatabaseContract {
         " FOREIGN KEY (" + KEY_SIMILAR_TO + ") REFERENCES "
         + TABLE_NAME + "(" + _ID + ")" + ");";
 
-    static final String[] CHANGES_V2 = {
+    protected static final String[] CHANGES_V2 = {
         String.format(ALTER_TABLE_ADD_COLUMN, TABLE_NAME, KEY_CLEANED_SMS, TEXT_TYPE, DEFAULT,
             "''"),
         String.format(ALTER_TABLE_ADD_COLUMN, TABLE_NAME, KEY_VISIBILITY, INTEGER_TYPE, DEFAULT,

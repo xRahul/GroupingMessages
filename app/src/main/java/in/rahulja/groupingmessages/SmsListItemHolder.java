@@ -23,9 +23,9 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
   private final TextView smsTimeTextView;
   private final Button smsCategoryButton;
   private final CardView listItemContent;
-  RelativeLayout regularLayout;
-  LinearLayout swipeLayout;
-  TextView undo;
+  public RelativeLayout regularLayout;
+  public LinearLayout swipeLayout;
+  public TextView undo;
 
   private Map<String, String> sms;
   private Context context;
@@ -64,7 +64,7 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
     ).toString();
   }
 
-  void bindSms(Map<String, String> smsTemp) {
+  public void bindSms(Map<String, String> smsTemp) {
     sms = smsTemp;
     // 4. Bind the data to the ViewHolder
     smsBodyTextView.setText(sms.get(DatabaseContract.Sms.KEY_BODY));

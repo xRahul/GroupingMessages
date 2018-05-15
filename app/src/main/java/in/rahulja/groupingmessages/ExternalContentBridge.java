@@ -22,7 +22,7 @@ class ExternalContentBridge {
     //empty constructor
   }
 
-  static List<Map<String, String>> getLatestSmsFromInbox(Context context) {
+  public static List<Map<String, String>> getLatestSmsFromInbox(Context context) {
 
     long lastSmsTime = Long.parseLong(DatabaseBridge.getConfig(context, LAST_SMS_TIME_CONFIG));
 
@@ -100,7 +100,7 @@ class ExternalContentBridge {
     return latestSms;
   }
 
-  static Map<String, String> getContactNames(Context context, Set<String> addressSet) {
+  public static Map<String, String> getContactNames(Context context, Set<String> addressSet) {
 
     Map<String, String> contactList = new HashMap<>();
 

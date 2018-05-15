@@ -47,7 +47,7 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
     itemView.setOnLongClickListener(this);
   }
 
-  void bindCategory(Map<String, String> category) {
+  public void bindCategory(Map<String, String> category) {
     categoryId = category.get(DatabaseContract.Category._ID);
     categoryName = category.get(DatabaseContract.Category.KEY_NAME);
     categoryColor = category.get(DatabaseContract.Category.KEY_COLOR);

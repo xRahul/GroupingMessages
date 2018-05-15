@@ -16,7 +16,7 @@ import android.widget.EditText;
 public class AddCategoryFragment extends DialogFragment {
 
   // Use this instance of the interface to deliver action events
-  AddCategoryDialogListener mListener;
+  private AddCategoryDialogListener mListener;
 
   // Override the Fragment.onAttach() method to instantiate the AddCategoryDialogListener
   @Override
