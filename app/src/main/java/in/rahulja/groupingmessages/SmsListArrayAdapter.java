@@ -75,7 +75,7 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
     return this.smsList.size();
   }
 
-  void pendingRemoval(int position) {
+  public void pendingRemoval(int position) {
 
     final Map<String, String> data = smsList.get(position);
     if (!itemsPendingRemoval.contains(data)) {
