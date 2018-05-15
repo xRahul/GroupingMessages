@@ -26,7 +26,7 @@ public class SmsActivity extends AppCompatActivity {
   public static final String KEY_FROM = "from";
   public static final String KEY_CATEGORY_NAME = "category_name";
   public static final String CATEGORY_ID = "category_id";
-  LinearLayoutManager llm = new LinearLayoutManager(this);
+  private LinearLayoutManager llm = new LinearLayoutManager(this);
   private List<Map<String, String>> smsList;
   private long categoryId;
   private Map<String, String> categories;

@@ -415,7 +415,7 @@ class DatabaseBridge {
   }
 
   @Nullable
-  static String getConfig(Context context, String configName) {
+  public static String getConfig(Context context, String configName) {
 
     String selection = DatabaseContract.Config.KEY_NAME + EQUALS_QUESTION;
     String[] selectionArgs = { configName };
@@ -429,11 +429,11 @@ class DatabaseBridge {
     return null;
   }
 
-  static List<Map<String, String>> getAllSms(Context context) {
+  public static List<Map<String, String>> getAllSms(Context context) {
     return getFromSms(context, null, null);
   }
 
-  static List<Map<String, String>> getSelfTrainedSms(Context context) {
+  public static List<Map<String, String>> getSelfTrainedSms(Context context) {
 
     String selection = DatabaseContract.Sms._ID +
         " = " +
@@ -448,7 +448,7 @@ class DatabaseBridge {
     return getFromSms(context, selection, selectionArgs);
   }
 
-  static List<Map<String, String>> getVisibleSmsFromCategory(Context context, long categoryId) {
+  public static List<Map<String, String>> getVisibleSmsFromCategory(Context context, long categoryId) {
 
     String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + EQUALS_QUESTION
         + " AND " + DatabaseContract.Sms.KEY_VISIBILITY + EQUALS_QUESTION;
@@ -457,7 +457,7 @@ class DatabaseBridge {
     return getFromSms(context, selection, selectionArgs);
   }
 
-  static long storeTrainedInboxSms(Context context, List<Map<String, String>> trainedInboxSms) {
+  public static long storeTrainedInboxSms(Context context, List<Map<String, String>> trainedInboxSms) {
 
     long lastSmsTime = Long.parseLong(DatabaseBridge.getConfig(context, LAST_SMS_TIME_CONFIG));
     Log.i(GM_STORE_TRAINED_INBOX_SMS, "before lastSmsTime: " + lastSmsTime);
@@ -517,7 +517,7 @@ class DatabaseBridge {
     Log.i("GM/setConfig", "Result Id: " + resultId);
   }
 
-  static List<Map<String, String>> getCategoryIdsWithSmsCount(Context context) {
+  public static List<Map<String, String>> getCategoryIdsWithSmsCount(Context context) {
 
     List<Map<String, String>> categoryIdsWithSmsCount = new ArrayList<>();
 
@@ -578,15 +578,15 @@ class DatabaseBridge {
   }
 
   @NonNull
-  static Boolean addCategory(Context context, Map<String, String> category) {
+  public static Boolean addCategory(Context context, Map<String, String> category) {
     return insertIntoCategory(context, category) != -1;
   }
 
-  static void updateSmsData(Context context, Map<String, String> sms) {
+  public static void updateSmsData(Context context, Map<String, String> sms) {
     updateInSms(context, sms);
   }
 
-  static long storeReTrainedSms(Context context, List<Map<String, String>> retrainedSmsList) {
+  public static long storeReTrainedSms(Context context, List<Map<String, String>> retrainedSmsList) {
 
     long numSmsUpdated = 0;
     for (Map<String, String> reTrainedSmsMap : retrainedSmsList) {
@@ -600,7 +600,7 @@ class DatabaseBridge {
     return numSmsUpdated;
   }
 
-  static void deleteModel(Context context) {
+  public static void deleteModel(Context context) {
 
     ContentValues values = new ContentValues();
     values.put(DatabaseContract.Sms.KEY_CATEGORY_ID, 1);
@@ -617,7 +617,7 @@ class DatabaseBridge {
     unInitializeDb();
   }
 
-  static void deleteCategories(Context context) {
+  public static void deleteCategories(Context context) {
     deleteModel(context);
 
     // Which row to update, based on the title
@@ -634,7 +634,7 @@ class DatabaseBridge {
     unInitializeDb();
   }
 
-  static void deleteCategory(Context context, long categoryId) {
+  public static void deleteCategory(Context context, long categoryId) {
 
     deleteModelForCategory(context, categoryId);
 
@@ -677,11 +677,11 @@ class DatabaseBridge {
     unInitializeDb();
   }
 
-  static Boolean updateCategory(Context context, Map<String, String> category) {
+  public static Boolean updateCategory(Context context, Map<String, String> category) {
     return updateInCategory(context, category) > 0;
   }
 
-  static void importDB(Context context) {
+  public static void importDB(Context context) {
 
     unInitializeDb();
 
@@ -710,7 +710,7 @@ class DatabaseBridge {
     initializeDb(context);
   }
 
-  static void exportDB(Context context) {
+  public static void exportDB(Context context) {
 
     unInitializeDb();
 
@@ -739,7 +739,7 @@ class DatabaseBridge {
     initializeDb(context);
   }
 
-  static void setSmsAsRead(Context context, String smsId) {
+  public static void setSmsAsRead(Context context, String smsId) {
 
     initializeDb(context);
 
@@ -749,7 +749,7 @@ class DatabaseBridge {
     updateInSmsBySmsIdAndValues(context, Long.parseLong(smsId), values);
   }
 
-  static void setAllCategorySmsAsRead(Context context, String categoryId) {
+  public static void setAllCategorySmsAsRead(Context context, String categoryId) {
     initializeDb(context);
 
     ContentValues values = new ContentValues();
@@ -758,7 +758,7 @@ class DatabaseBridge {
     updateInSmsByCategoryIdAndValues(context, Long.parseLong(categoryId), values);
   }
 
-  static void deleteSmsByMap(Context context, Map<String, String> data) {
+  public static void deleteSmsByMap(Context context, Map<String, String> data) {
 
     if (data.get(DatabaseContract.Sms._ID).equals(data.get(DatabaseContract.Sms.KEY_SIMILAR_TO))) {
       hideSms(context, data);
@@ -767,7 +767,7 @@ class DatabaseBridge {
     }
   }
 
-  static void deleteAllSmsOfCategoryById(Context context, long categoryId) {
+  public static void deleteAllSmsOfCategoryById(Context context, long categoryId) {
 
     // delete untrained sms first
     deleteSmsByCategoryId(context, categoryId);
@@ -827,7 +827,7 @@ class DatabaseBridge {
     updateInSmsBySmsIdAndValues(context, smsId, values);
   }
 
-  static List<Map<String, String>> getAllVisibleCategories(Context context) {
+  public static List<Map<String, String>> getAllVisibleCategories(Context context) {
 
     String selection = DatabaseContract.Category.KEY_VISIBILITY + EQUALS_QUESTION;
     String[] selectionArgs = { String.valueOf(1) };

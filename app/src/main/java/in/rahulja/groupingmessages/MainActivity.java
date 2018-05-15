@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity
   private ProgressBar pbCircle;
   private GridLayoutManager glm = new GridLayoutManager(getBaseContext(), 2);
 
-  static void addSenderTypeToListOfSms(List<Map<String, String>> listOfSms) {
+  public static void addSenderTypeToListOfSms(List<Map<String, String>> listOfSms) {
 
     for (int i = 0; i < listOfSms.size(); i++) {
       Map<String, String> tempSms = listOfSms.get(i);

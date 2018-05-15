@@ -82,6 +82,7 @@ class DatabaseHelper extends SQLiteOpenHelper {
         for (String query : DatabaseContract.Sms.CHANGES_V2) {
           db.execSQL(query);
         }
+        break;
       default:
         // do nothing
     }

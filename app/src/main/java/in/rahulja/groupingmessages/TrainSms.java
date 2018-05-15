@@ -62,7 +62,7 @@ class TrainSms {
     // empty constructor
   }
 
-  static List<Map<String, String>> getTrainedListOfSms(Context context,
+  public static List<Map<String, String>> getTrainedListOfSms(Context context,
       List<Map<String, String>> smsListToTrain, List<Map<String, String>> smsListToTrainAgainst) {
 
     List<Map<String, String>> trainedLatestSmsList = new ArrayList<>();
@@ -181,7 +181,7 @@ class TrainSms {
     return wordsList.toString();
   }
 
-  static List<Map<String, String>> retrainExistingSms(Context context,
+  public static List<Map<String, String>> retrainExistingSms(Context context,
       Map<String, String> trainedSms) {
 
     List<Map<String, String>> allSms = DatabaseBridge.getAllSms(context);
