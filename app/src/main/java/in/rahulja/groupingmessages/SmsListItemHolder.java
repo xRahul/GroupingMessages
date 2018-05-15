@@ -13,6 +13,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import java.util.Map;
+import lombok.Getter;
 
 class SmsListItemHolder extends RecyclerView.ViewHolder
     implements View.OnClickListener, View.OnLongClickListener {
@@ -23,9 +24,13 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
   private final TextView smsTimeTextView;
   private final Button smsCategoryButton;
   private final CardView listItemContent;
-  public RelativeLayout regularLayout;
-  public LinearLayout swipeLayout;
-  public TextView undo;
+
+  @Getter
+  private RelativeLayout regularLayout;
+  @Getter
+  private LinearLayout swipeLayout;
+  @Getter
+  private TextView undo;
 
   private Map<String, String> sms;
   private Context context;

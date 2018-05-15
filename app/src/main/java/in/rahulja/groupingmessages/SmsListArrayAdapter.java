@@ -44,17 +44,17 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
     final Map<String, String> data = smsList.get(position);
 
     if (itemsPendingRemoval.contains(data)) {
-      holder.regularLayout.setVisibility(View.GONE);
-      holder.swipeLayout.setVisibility(View.VISIBLE);
-      holder.undo.setOnClickListener(new View.OnClickListener() {
+      holder.getRegularLayout().setVisibility(View.GONE);
+      holder.getSwipeLayout().setVisibility(View.VISIBLE);
+      holder.getUndo().setOnClickListener(new View.OnClickListener() {
         @Override
         public void onClick(View v) {
           undoOpt(data);
         }
       });
     } else {
-      holder.regularLayout.setVisibility(View.VISIBLE);
-      holder.swipeLayout.setVisibility(View.GONE);
+      holder.getRegularLayout().setVisibility(View.VISIBLE);
+      holder.getSwipeLayout().setVisibility(View.GONE);
       holder.bindSms(data);
     }
   }
