@@ -43,7 +43,7 @@ dependencies {
   compile 'com.github.QuadFlask:colorpicker:0.0.13'
   compile 'com.github.mpkorstanje:simmetrics-core:4.1.1'
   compile 'com.pavelsikun:material-seekbar-preference:2.3.0'
-  provided "org.projectlombok:lombok:1.16.20"
+  provided "org.projectlombok:lombok:1.16.22"
   annotationProcessor 'org.projectlombok:lombok:1.16.20'
   testCompile 'junit:junit:4.12'
 }
