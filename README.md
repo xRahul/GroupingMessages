@@ -7,6 +7,7 @@
 [![GitHub forks](https://img.shields.io/github/forks/xRahul/GroupingMessages.svg)](https://github.com/xRahul/GroupingMessages/network)
 [![GitHub issues](https://img.shields.io/github/issues/xRahul/GroupingMessages.svg)](https://github.com/xRahul/GroupingMessages/issues)
 [![Releases](https://img.shields.io/github/release/xRahul/GroupingMessages.svg)](https://github.com/xRahul/GroupingMessages/releases/latest)
+[![libraries.io](https://img.shields.io/librariesio/github/xRahul/GroupingMessages.svg)](https://libraries.io/github/xRahul/GroupingMessages)
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2992e38a8bce453aa521cc02ddc030eb)](https://www.codacy.com/app/xRahul/GroupingMessages)
 [![CodeClimate Maintainability](https://api.codeclimate.com/v1/badges/6bd1a1cf9510c749cdbf/maintainability)](https://codeclimate.com/github/xRahul/GroupingMessages/maintainability)
