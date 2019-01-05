@@ -45,7 +45,7 @@ dependencies {
   implementation 'com.pavelsikun:material-seekbar-preference:2.3.0'
   implementation 'org.apache.commons:commons-collections4:4.2'
 
-  compileOnly 'org.projectlombok:lombok:1.18.2'
+  compileOnly 'org.projectlombok:lombok:1.18.4'
   annotationProcessor 'org.projectlombok:lombok:1.18.2'
 
   androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
