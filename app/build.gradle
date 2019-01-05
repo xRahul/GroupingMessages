@@ -27,6 +27,8 @@ android {
     }
     debug {
       debuggable true
+      shrinkResources false
+      minifyEnabled false
       proguardFile 'proguard-guava.pro'
       proguardFile getDefaultProguardFile('proguard-android-optimize.txt')
       proguardFile 'proguard-rules.pro'
