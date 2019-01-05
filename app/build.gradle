@@ -16,16 +16,22 @@ android {
   }
   buildTypes {
     release {
-      shrinkResources false
-      minifyEnabled false
-      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      shrinkResources true
+      minifyEnabled true
+      proguardFile 'proguard-guava.pro'
+      proguardFile getDefaultProguardFile('proguard-android-optimize.txt')
+      proguardFile 'proguard-rules.pro'
       debuggable false
       jniDebuggable false
       zipAlignEnabled true
     }
     debug {
       debuggable true
-      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      shrinkResources false
+      minifyEnabled false
+      proguardFile 'proguard-guava.pro'
+      proguardFile getDefaultProguardFile('proguard-android-optimize.txt')
+      proguardFile 'proguard-rules.pro'
     }
   }
   return void
@@ -45,8 +51,8 @@ dependencies {
   implementation 'com.pavelsikun:material-seekbar-preference:2.3.0'
   implementation 'org.apache.commons:commons-collections4:4.2'
 
-  compileOnly 'org.projectlombok:lombok:1.18.2'
-  annotationProcessor 'org.projectlombok:lombok:1.18.2'
+  compileOnly 'org.projectlombok:lombok:1.18.4'
+  annotationProcessor 'org.projectlombok:lombok:1.18.4'
 
   androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
   androidTestImplementation 'com.android.support.test:runner:1.0.2'
