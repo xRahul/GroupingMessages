@@ -19,3 +19,9 @@
 #-keep interface android.support.v4.app.** { *; }
 #-keep class android.support.v7.app.** { *; }
 #-keep interface android.support.v7.app.** { *; }
+-keep class com.flask.colorpicker.** { *; }
+-keep interface com.flask.colorpicker.** { *; }
+-keep class com.pavelsikun.seekbarpreference.** { *; }
+-keep interface com.pavelsikun.seekbarpreference.** { *; }
+
+-keepattributes *Annotation*
