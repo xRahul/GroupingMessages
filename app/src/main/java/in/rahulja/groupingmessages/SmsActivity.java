@@ -197,21 +197,19 @@ public class SmsActivity extends AppCompatActivity {
 
     Map<String, String> contactNames = ExternalContentBridge.getContactNames(this, addressSet);
 
-    if (CollectionUtils.isNotEmpty(smsList)) {
-      for (int i = 0; i < smsList.size(); i++) {
-        Map<String, String> tempSms = smsList.get(i);
-        String fromString = tempSms.get(DatabaseContract.Sms.KEY_ADDRESS);
-        if (!"0".equals(String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_PERSON)))) {
-          fromString = contactNames.get(fromString);
-        }
-
-        tempSms.put(KEY_FROM, fromString);
-        tempSms.put(KEY_CATEGORY_NAME, categories.get(
-            String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_CATEGORY_ID))
-        ));
-
-        smsList.set(i, tempSms);
+    for (int i = 0; i < CollectionUtils.size(smsList); i++) {
+      Map<String, String> tempSms = smsList.get(i);
+      String fromString = tempSms.get(DatabaseContract.Sms.KEY_ADDRESS);
+      if (!"0".equals(String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_PERSON)))) {
+        fromString = contactNames.get(fromString);
       }
+
+      tempSms.put(KEY_FROM, fromString);
+      tempSms.put(KEY_CATEGORY_NAME, categories.get(
+          String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_CATEGORY_ID))
+      ));
+
+      smsList.set(i, tempSms);
     }
   }
 

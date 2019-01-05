@@ -330,16 +330,20 @@ import java.util.Map;
         currentTrial++;
         Log.e("GM/insertIntoSms",
             "Some error occurred while inserting sms. Try is " + currentTrial, e);
-        try {
-          Thread.sleep(10);
-        } catch (Exception e1) {
-          Log.e("GM/insertIntoSms", "Thread Sleep Interrupted.");
-        }
+        sleepTenMillis();
       } finally {
         unInitializeDb();
       }
     }
     return insertResult;
+  }
+
+  private static void sleepTenMillis() {
+    try {
+      Thread.sleep(10);
+    } catch (Exception e1) {
+      Log.e("GM/insertIntoSms", "Thread Sleep Interrupted.");
+    }
   }
 
   private static long insertIntoCategory(Context context, Map<String, String> category) {
