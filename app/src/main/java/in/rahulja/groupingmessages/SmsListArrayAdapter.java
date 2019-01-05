@@ -2,6 +2,7 @@ package in.rahulja.groupingmessages;
 
 import android.content.Context;
 import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,7 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
+@SuppressWarnings("WeakerAccess") class SmsListArrayAdapter
+    extends RecyclerView.Adapter<SmsListItemHolder> {
 
   private static final int PENDING_REMOVAL_TIMEOUT = 3000; // 3sec
   private Context context;
@@ -29,8 +31,9 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
   }
 
   // 2. Override the onCreateViewHolder method
+  @NonNull
   @Override
-  public SmsListItemHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+  public SmsListItemHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     // 3. Inflate the view and return the new ViewHolder
     View view =
         LayoutInflater.from(parent.getContext()).inflate(R.layout.sms_list_item, parent, false);
@@ -39,7 +42,7 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
 
   // 4. Override the onBindViewHolder method
   @Override
-  public void onBindViewHolder(SmsListItemHolder holder, int position) {
+  public void onBindViewHolder(@NonNull SmsListItemHolder holder, int position) {
 
     final Map<String, String> data = smsList.get(position);
 
@@ -96,9 +99,7 @@ class SmsListArrayAdapter extends RecyclerView.Adapter<SmsListItemHolder> {
 
   private void remove(int position) {
     Map<String, String> data = smsList.get(position);
-    if (itemsPendingRemoval.contains(data)) {
-      itemsPendingRemoval.remove(data);
-    }
+    itemsPendingRemoval.remove(data);
     if (smsList.contains(data)) {
       smsList.remove(position);
       notifyItemRemoved(position);

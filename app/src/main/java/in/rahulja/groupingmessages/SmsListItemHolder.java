@@ -15,7 +15,7 @@ import android.widget.TextView;
 import java.util.Map;
 import lombok.Getter;
 
-class SmsListItemHolder extends RecyclerView.ViewHolder
+@SuppressWarnings("WeakerAccess") class SmsListItemHolder extends RecyclerView.ViewHolder
     implements View.OnClickListener, View.OnLongClickListener {
 
   private static final String KEY_FROM = "from";
@@ -42,15 +42,15 @@ class SmsListItemHolder extends RecyclerView.ViewHolder
     context = contextTemp;
 
     // 2. Set up the UI widgets of the holder
-    smsBodyTextView = (TextView) itemView.findViewById(R.id.sms_body_textview);
-    smsFromTextView = (TextView) itemView.findViewById(R.id.sms_from_textview);
-    smsTimeTextView = (TextView) itemView.findViewById(R.id.sms_time_textview);
-    smsCategoryButton = (Button) itemView.findViewById(R.id.bucket_button);
-    listItemContent = (CardView) itemView.findViewById(R.id.sms_list_item_content);
+    smsBodyTextView = itemView.findViewById(R.id.sms_body_textview);
+    smsFromTextView = itemView.findViewById(R.id.sms_from_textview);
+    smsTimeTextView = itemView.findViewById(R.id.sms_time_textview);
+    smsCategoryButton = itemView.findViewById(R.id.bucket_button);
+    listItemContent = itemView.findViewById(R.id.sms_list_item_content);
 
-    regularLayout = (RelativeLayout) itemView.findViewById(R.id.regularLayout);
-    swipeLayout = (LinearLayout) itemView.findViewById(R.id.swipeLayout);
-    undo = (TextView) itemView.findViewById(R.id.undo);
+    regularLayout = itemView.findViewById(R.id.regularLayout);
+    swipeLayout = itemView.findViewById(R.id.swipeLayout);
+    undo = itemView.findViewById(R.id.undo);
 
     // 3. Set the "onClick" listener of the holder
     itemView.setOnClickListener(this);

@@ -15,7 +15,7 @@ import java.util.Set;
 import org.simmetrics.StringMetric;
 import org.simmetrics.metrics.StringMetrics;
 
-class TrainSms {
+@SuppressWarnings("WeakerAccess") class TrainSms {
 
   private static final String CLEAN_SMS = DatabaseContract.Sms.KEY_CLEANED_SMS;
   private static final int LIMIT_SIM_SCORE = 80;

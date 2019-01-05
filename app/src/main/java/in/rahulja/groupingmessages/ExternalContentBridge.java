@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-class ExternalContentBridge {
+@SuppressWarnings("WeakerAccess") class ExternalContentBridge {
 
   private static final String LAST_SMS_TIME_CONFIG = "lastSmsTime";
   private static final String SMS_URI_INBOX = "content://sms/inbox";

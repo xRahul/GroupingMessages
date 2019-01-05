@@ -2,6 +2,7 @@ package in.rahulja.groupingmessages;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -20,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.collections4.CollectionUtils;
 
 public class SmsActivity extends AppCompatActivity {
 
@@ -39,7 +41,7 @@ public class SmsActivity extends AppCompatActivity {
     setContentView(R.layout.activity_sms);
     setupActionBar();
 
-    pbCircle = (ProgressBar) findViewById(R.id.progressBarCircle);
+    pbCircle = findViewById(R.id.progressBarCircle);
 
     categoryId = Long.parseLong(getIntent().getStringExtra(CATEGORY_ID));
     smsList = new ArrayList<>();
@@ -58,7 +60,7 @@ public class SmsActivity extends AppCompatActivity {
 
   private void setupActionBar() {
     // set custom toolbar
-    Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+    Toolbar toolbar = findViewById(R.id.toolbar);
     setSupportActionBar(toolbar);
   }
 
@@ -132,7 +134,7 @@ public class SmsActivity extends AppCompatActivity {
   private void drawUi() {
     int positionIndex = llm.findFirstVisibleItemPosition();
     SmsListArrayAdapter smsItemsAdapter = new SmsListArrayAdapter(this, smsList);
-    listView = (RecyclerView) findViewById(R.id.sms_list_view);
+    listView = findViewById(R.id.sms_list_view);
     listView.setLayoutManager(llm);
     listView.setHasFixedSize(true);
     listView.setAdapter(smsItemsAdapter);
@@ -148,17 +150,20 @@ public class SmsActivity extends AppCompatActivity {
 
     SwipeUtil swipeHelper = new SwipeUtil(0, ItemTouchHelper.LEFT, this) {
       @Override
-      public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+      public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
         int swipedPosition = viewHolder.getAdapterPosition();
         SmsListArrayAdapter adapter = (SmsListArrayAdapter) listView.getAdapter();
-        adapter.pendingRemoval(swipedPosition);
+        if (adapter != null) {
+          adapter.pendingRemoval(swipedPosition);
+        }
       }
 
       @Override
-      public int getSwipeDirs(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+      public int getSwipeDirs(@NonNull RecyclerView recyclerView,
+          RecyclerView.ViewHolder viewHolder) {
         int position = viewHolder.getAdapterPosition();
         SmsListArrayAdapter adapter = (SmsListArrayAdapter) listView.getAdapter();
-        if (adapter.isPendingRemoval(position)) {
+        if (adapter != null && adapter.isPendingRemoval(position)) {
           return 0;
         }
         return super.getSwipeDirs(recyclerView, viewHolder);
@@ -192,19 +197,21 @@ public class SmsActivity extends AppCompatActivity {
 
     Map<String, String> contactNames = ExternalContentBridge.getContactNames(this, addressSet);
 
-    for (int i = 0; i < smsList.size(); i++) {
-      Map<String, String> tempSms = smsList.get(i);
-      String fromString = tempSms.get(DatabaseContract.Sms.KEY_ADDRESS);
-      if (!"0".equals(String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_PERSON)))) {
-        fromString = contactNames.get(fromString);
+    if (CollectionUtils.isNotEmpty(smsList)) {
+      for (int i = 0; i < smsList.size(); i++) {
+        Map<String, String> tempSms = smsList.get(i);
+        String fromString = tempSms.get(DatabaseContract.Sms.KEY_ADDRESS);
+        if (!"0".equals(String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_PERSON)))) {
+          fromString = contactNames.get(fromString);
+        }
+
+        tempSms.put(KEY_FROM, fromString);
+        tempSms.put(KEY_CATEGORY_NAME, categories.get(
+            String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_CATEGORY_ID))
+        ));
+
+        smsList.set(i, tempSms);
       }
-
-      tempSms.put(KEY_FROM, fromString);
-      tempSms.put(KEY_CATEGORY_NAME, categories.get(
-          String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_CATEGORY_ID))
-      ));
-
-      smsList.set(i, tempSms);
     }
   }
 

@@ -9,6 +9,7 @@ import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.view.View;
 import android.widget.EditText;
+import java.util.Objects;
 
 /**
  * A simple {@link DialogFragment} subclass.
@@ -36,20 +37,20 @@ public class AddCategoryFragment extends DialogFragment {
   @NonNull
   @Override
   public Dialog onCreateDialog(Bundle savedInstanceState) {
-    AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+    AlertDialog.Builder builder = new AlertDialog.Builder(Objects.requireNonNull(getActivity()));
 
     View categoryDialogView = View.inflate(getContext(), R.layout.dialog_add_category, null);
 
     final Bundle mArgs = getArguments();
     int positiveButton = R.string.add;
-    if ("EDIT".equals(mArgs.getString("ACTION"))) {
+    if (mArgs != null && "EDIT".equals(mArgs.getString("ACTION"))) {
       String categoryNameArg = mArgs.getString(DatabaseContract.Category.KEY_NAME);
       int categoryColorArg = mArgs.getInt(DatabaseContract.Category.KEY_COLOR);
       EditText editTextCategoryName =
-          (EditText) categoryDialogView.findViewById(R.id.editTextAddCategory);
+          categoryDialogView.findViewById(R.id.editTextAddCategory);
       editTextCategoryName.setText(categoryNameArg);
       com.flask.colorpicker.ColorPickerView colorPickerView =
-          (com.flask.colorpicker.ColorPickerView) categoryDialogView.findViewById(
+          categoryDialogView.findViewById(
               R.id.pick_category_color);
       colorPickerView.setColor(categoryColorArg, true);
       positiveButton = R.string.edit;

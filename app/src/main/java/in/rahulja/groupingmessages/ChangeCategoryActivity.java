@@ -30,7 +30,7 @@ public class ChangeCategoryActivity extends AppCompatActivity {
 
     categories = DatabaseBridge.getAllVisibleCategories(this);
 
-    categoryListView = (ListView) findViewById(R.id.activity_choose_category_list_view);
+    categoryListView = findViewById(R.id.activity_choose_category_list_view);
 
     setCategoryListView();
 

@@ -13,11 +13,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-class DatabaseBridge {
+@SuppressWarnings("WeakerAccess") class DatabaseBridge {
 
   private static final String LAST_SMS_TIME_CONFIG = "lastSmsTime";
   private static final String SMS_COUNT = "sms_count";
@@ -224,7 +225,8 @@ class DatabaseBridge {
         cursor.moveToNext();
       }
     } else {
-      Log.e(GM_CURSOR, CURSOR_IS_NULL + "getFromSms");
+      Log.e(GM_CURSOR, CURSOR_IS_NULL + "getFromSms: " + Arrays.toString(
+          Thread.currentThread().getStackTrace()));
     }
 
     if (cursor != null && !cursor.isClosed()) {
@@ -316,12 +318,27 @@ class DatabaseBridge {
   private static long insertIntoSms(Context context, Map<String, String> sms) {
 
     ContentValues values = getContentValuesFromSmsMap(sms);
-
-    initializeDb(context);
-    long insertResult = db.insert(DatabaseContract.Sms.TABLE_NAME, null, values);
-
-    unInitializeDb();
-
+    int currentTrial = 0;
+    int maxTries = 10;
+    long insertResult = -1;
+    while (currentTrial < maxTries) {
+      try {
+        initializeDb(context);
+        insertResult = db.insert(DatabaseContract.Sms.TABLE_NAME, null, values);
+        break;
+      } catch (Exception e) {
+        currentTrial++;
+        Log.e("GM/insertIntoSms",
+            "Some error occurred while inserting sms. Try is " + currentTrial, e);
+        try {
+          Thread.sleep(10);
+        } catch (Exception e1) {
+          Log.e("GM/insertIntoSms", "Thread Sleep Interrupted.");
+        }
+      } finally {
+        unInitializeDb();
+      }
+    }
     return insertResult;
   }
 
@@ -448,7 +465,8 @@ class DatabaseBridge {
     return getFromSms(context, selection, selectionArgs);
   }
 
-  public static List<Map<String, String>> getVisibleSmsFromCategory(Context context, long categoryId) {
+  public static List<Map<String, String>> getVisibleSmsFromCategory(Context context,
+      long categoryId) {
 
     String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + EQUALS_QUESTION
         + " AND " + DatabaseContract.Sms.KEY_VISIBILITY + EQUALS_QUESTION;
@@ -457,10 +475,12 @@ class DatabaseBridge {
     return getFromSms(context, selection, selectionArgs);
   }
 
-  public static long storeTrainedInboxSms(Context context, List<Map<String, String>> trainedInboxSms) {
+  public static long storeTrainedInboxSms(Context context,
+      List<Map<String, String>> trainedInboxSms) {
 
     long lastSmsTime = Long.parseLong(DatabaseBridge.getConfig(context, LAST_SMS_TIME_CONFIG));
     Log.i(GM_STORE_TRAINED_INBOX_SMS, "before lastSmsTime: " + lastSmsTime);
+    initializeDb(context);
 
     long numSmsStored = 0;
     long numSmsError = 0;
@@ -497,7 +517,8 @@ class DatabaseBridge {
     return numSmsStored;
   }
 
-  private static void setConfig(Context context, String key, String value) {
+  private static void setConfig(Context context, @SuppressWarnings("SameParameterValue") String key,
+      String value) {
 
     ContentValues values = new ContentValues();
     values.put(DatabaseContract.Config.KEY_NAME, key);
@@ -586,7 +607,8 @@ class DatabaseBridge {
     updateInSms(context, sms);
   }
 
-  public static long storeReTrainedSms(Context context, List<Map<String, String>> retrainedSmsList) {
+  public static long storeReTrainedSms(Context context,
+      List<Map<String, String>> retrainedSmsList) {
 
     long numSmsUpdated = 0;
     for (Map<String, String> reTrainedSmsMap : retrainedSmsList) {
