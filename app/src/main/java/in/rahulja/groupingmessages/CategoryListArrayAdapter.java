@@ -1,6 +1,7 @@
 package in.rahulja.groupingmessages;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,8 +14,7 @@ class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHold
 
   private List<Map<String, String>> categoryList;
 
-  CategoryListArrayAdapter(@SuppressWarnings("unused") Context contextParam,
-      List<Map<String, String>> objects) {
+  CategoryListArrayAdapter(Context contextParam, List<Map<String, String>> objects) {
 
     if (objects == null) {
       categoryList = new ArrayList<>();
@@ -23,15 +23,15 @@ class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHold
     }
   }
 
-  @Override
-  public CategoryListItemHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+  @NonNull @Override
+  public CategoryListItemHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     View view = LayoutInflater.from(parent.getContext())
         .inflate(R.layout.category_list_item, parent, false);
     return new CategoryListItemHolder(view);
   }
 
   @Override
-  public void onBindViewHolder(CategoryListItemHolder holder, int position) {
+  public void onBindViewHolder(@NonNull CategoryListItemHolder holder, int position) {
     holder.bindCategory(this.categoryList.get(position));
     holder.itemView.setLongClickable(true);
   }

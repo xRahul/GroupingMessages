@@ -73,14 +73,14 @@ public class MainActivity extends AppCompatActivity
     setContentView(R.layout.activity_main);
     setupActionBar();
 
-    pbCircle = (ProgressBar) findViewById(R.id.progressBarCircle);
+    pbCircle = findViewById(R.id.progressBarCircle);
 
     createAddCategoryButton();
   }
 
   private void setupActionBar() {
     // set custom toolbar
-    Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+    Toolbar toolbar = findViewById(R.id.toolbar);
     setSupportActionBar(toolbar);
   }
 
@@ -172,7 +172,7 @@ public class MainActivity extends AppCompatActivity
               public void onClick(DialogInterface dialog, int which) {
                 ActivityCompat.requestPermissions(
                     MainActivity.this,
-                    permissionsList.toArray(new String[permissionsList.size()]),
+                    permissionsList.toArray(new String[0]),
                     REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS
                 );
               }
@@ -182,7 +182,7 @@ public class MainActivity extends AppCompatActivity
       }
       ActivityCompat.requestPermissions(
           this,
-          permissionsList.toArray(new String[permissionsList.size()]),
+          permissionsList.toArray(new String[0]),
           REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS
       );
       return;
@@ -271,7 +271,7 @@ public class MainActivity extends AppCompatActivity
 
   private void createAddCategoryButton() {
     FloatingActionButton fabAddCategory =
-        (FloatingActionButton) findViewById(R.id.fab_add_category);
+        findViewById(R.id.fab_add_category);
     fabAddCategory.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
@@ -330,9 +330,9 @@ public class MainActivity extends AppCompatActivity
     // User touched the dialog's positive button
     Log.i(GM_ADD_CAT, "User touched the add category dialog's add button");
 
-    EditText categoryName = (EditText) dialog.getDialog().findViewById(R.id.editTextAddCategory);
+    EditText categoryName = dialog.getDialog().findViewById(R.id.editTextAddCategory);
     ColorPickerView cpView =
-        (ColorPickerView) dialog.getDialog().findViewById(R.id.pick_category_color);
+        dialog.getDialog().findViewById(R.id.pick_category_color);
 
     if (categoryName.getText().toString().isEmpty()) {
       Toast.makeText(this, "Need Category Name", Toast.LENGTH_SHORT).show();
@@ -372,7 +372,7 @@ public class MainActivity extends AppCompatActivity
     int positionIndex = glm.findFirstVisibleItemPosition();
     CategoryListArrayAdapter categoryItemsAdapter =
         new CategoryListArrayAdapter(getBaseContext(), categoryList);
-    RecyclerView listView = (RecyclerView) findViewById(R.id.category_list_view);
+    RecyclerView listView = findViewById(R.id.category_list_view);
     listView.setLayoutManager(glm);
     listView.setHasFixedSize(true);
     listView.setAdapter(categoryItemsAdapter);

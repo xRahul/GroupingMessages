@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Color;
 import android.util.Log;
 
-class DatabaseHelper extends SQLiteOpenHelper {
+@SuppressWarnings("WeakerAccess") class DatabaseHelper extends SQLiteOpenHelper {
 
   private static DatabaseHelper sInstance;
 
@@ -77,14 +77,10 @@ class DatabaseHelper extends SQLiteOpenHelper {
   // Method is called during an upgrade of the database
   @Override
   public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-    switch (oldVersion) {
-      case 1:
-        for (String query : DatabaseContract.Sms.CHANGES_V2) {
-          db.execSQL(query);
-        }
-        break;
-      default:
-        // do nothing
+    if (oldVersion == 1) {
+      for (String query : DatabaseContract.Sms.CHANGES_V2) {
+        db.execSQL(query);
+      }
     }
   }
 

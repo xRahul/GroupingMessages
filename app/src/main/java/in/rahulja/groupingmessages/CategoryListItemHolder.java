@@ -37,16 +37,16 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
 
     context = itemView.getContext();
 
-    categoryNameTextView = (TextView) itemView.findViewById(R.id.category_name_textview);
-    categoryUnreadCountTextView =
-        (TextView) itemView.findViewById(R.id.category_unread_count_textview);
-    categoryReadCountTextView = (TextView) itemView.findViewById(R.id.category_read_count_textview);
-    categoryListViewParent = (RelativeLayout) itemView.findViewById(R.id.category_list_parent);
+    categoryNameTextView = itemView.findViewById(R.id.category_name_textview);
+    categoryUnreadCountTextView = itemView.findViewById(R.id.category_unread_count_textview);
+    categoryReadCountTextView = itemView.findViewById(R.id.category_read_count_textview);
+    categoryListViewParent = itemView.findViewById(R.id.category_list_parent);
 
     itemView.setOnClickListener(this);
     itemView.setOnLongClickListener(this);
   }
 
+  @SuppressWarnings("WeakerAccess")
   public void bindCategory(Map<String, String> category) {
     categoryId = category.get(DatabaseContract.Category._ID);
     categoryName = category.get(DatabaseContract.Category.KEY_NAME);

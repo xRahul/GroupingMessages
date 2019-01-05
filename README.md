@@ -21,7 +21,7 @@
 [![SonarCloud Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=GroupingMessages%3Aapp&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=GroupingMessages%3Aapp)
 
 
-This is an android app that automatically categorizes your sms into various categories of your choice.
+This is an android app that automatically categorizes your sms into various categories of your choice. Target Android 28 (Pie)
 
 Every trained model will be user specific, so each user can categorize their sms according to their needs. 
 It requires some learning at the beginning, 

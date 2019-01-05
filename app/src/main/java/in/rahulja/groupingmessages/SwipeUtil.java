@@ -4,11 +4,13 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
+import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.View;
 
+@SuppressWarnings("WeakerAccess")
 public abstract class SwipeUtil extends ItemTouchHelper.SimpleCallback {
 
   private Drawable deleteIcon;
@@ -33,16 +35,18 @@ public abstract class SwipeUtil extends ItemTouchHelper.SimpleCallback {
   }
 
   @Override
-  public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder,
-      RecyclerView.ViewHolder target) {
+  public boolean onMove(@NonNull RecyclerView recyclerView,
+      @NonNull RecyclerView.ViewHolder viewHolder,
+      @NonNull RecyclerView.ViewHolder target) {
     return false;
   }
 
   @Override
-  public abstract void onSwiped(RecyclerView.ViewHolder viewHolder, int direction);
+  public abstract void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction);
 
   @Override
-  public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder,
+  public void onChildDraw(@NonNull Canvas canvas, @NonNull RecyclerView recyclerView, @NonNull
+      RecyclerView.ViewHolder viewHolder,
       float dX, float dY, int actionState, boolean isCurrentlyActive) {
 
     View itemView = viewHolder.itemView;
@@ -63,9 +67,9 @@ public abstract class SwipeUtil extends ItemTouchHelper.SimpleCallback {
     //Setting Swipe Icon
     deleteIcon.setBounds(xMarkLeft - 20, xMarkTop - 10, xMarkRight, xMarkBottom + 10);
     deleteIcon.setColorFilter(getLeftColorCode(), PorterDuff.Mode.DST);
-    deleteIcon.draw(c);
+    deleteIcon.draw(canvas);
 
-    super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+    super.onChildDraw(canvas, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
   }
 
   @SuppressWarnings("unused")
