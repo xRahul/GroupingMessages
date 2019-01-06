@@ -39,7 +39,7 @@ ext {
   minSdkVersion = 23
   targetSdkVersion = 28
   jUnitVersion = "4.12"
-  applicationId = "in.rahulja.ficsavemiddleware"
-  versionCode = 14
-  versionName = "1.4"
+  applicationId = "in.rahulja.groupingmessages"
+  versionCode = 15
+  versionName = "1.5"
 }
