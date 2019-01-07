@@ -25,3 +25,5 @@
 -keep interface com.pavelsikun.seekbarpreference.** { *; }
 
 -keepattributes *Annotation*
+
+-dontnote org.apache.commons.codec.**
