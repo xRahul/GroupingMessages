@@ -49,7 +49,7 @@ dependencies {
   implementation 'com.github.QuadFlask:colorpicker:0.0.13'
   implementation 'com.github.mpkorstanje:simmetrics-core:4.1.1'
   implementation 'com.pavelsikun:material-seekbar-preference:2.3.0'
-  implementation 'org.apache.commons:commons-collections4:4.2'
+  implementation 'org.apache.commons:commons-collections4:4.3'
 
   compileOnly 'org.projectlombok:lombok:1.18.4'
   annotationProcessor 'org.projectlombok:lombok:1.18.4'
