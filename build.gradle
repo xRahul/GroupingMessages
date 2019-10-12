@@ -31,13 +31,13 @@ task clean(type: Delete) {
 // modules in the project.
 ext {
   // The following are only a few examples of the types of properties you can define.
-  compileSdkVersion = 28
+  compileSdkVersion = 29
   // You can also create properties to specify versions for dependencies.
   // Having consistent versions between modules can avoid conflicts with behavior.
   supportLibVersion = '28.0.0'
   gmsFirebaseVersion = '16.0.6'
   minSdkVersion = 23
-  targetSdkVersion = 28
+  targetSdkVersion = 29
   jUnitVersion = '4.12'
   applicationId = 'in.rahulja.groupingmessages'
   versionCode = 16
