@@ -15,6 +15,14 @@ android {
     return void
   }
   buildTypes {
+    debug {
+      debuggable true
+      shrinkResources false
+      minifyEnabled false
+      proguardFile 'proguard-guava.pro'
+      proguardFile getDefaultProguardFile('proguard-android-optimize.txt')
+      proguardFile 'proguard-rules.pro'
+    }
     release {
       shrinkResources true
       minifyEnabled true
@@ -25,20 +33,13 @@ android {
       jniDebuggable false
       zipAlignEnabled true
     }
-    debug {
-      debuggable true
-      shrinkResources false
-      minifyEnabled false
-      proguardFile 'proguard-guava.pro'
-      proguardFile getDefaultProguardFile('proguard-android-optimize.txt')
-      proguardFile 'proguard-rules.pro'
-    }
   }
   return void
 }
 
 dependencies {
   implementation fileTree(include: ['*.jar'], dir: 'libs')
+
   implementation "com.android.support:appcompat-v7:${rootProject.ext.supportLibVersion}"
   implementation "com.android.support:preference-v7:${rootProject.ext.supportLibVersion}"
   implementation "com.android.support:design:${rootProject.ext.supportLibVersion}"
