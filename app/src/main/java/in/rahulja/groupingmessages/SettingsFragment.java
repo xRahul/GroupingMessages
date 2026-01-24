@@ -1,13 +1,13 @@
 package in.rahulja.groupingmessages;
 
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.preference.Preference;
-import android.preference.PreferenceFragment;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceFragmentCompat;
 import android.util.Log;
 import android.widget.Toast;
 import java.io.File;
@@ -16,7 +16,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
 
-public class SettingsFragment extends PreferenceFragment {
+public class SettingsFragment extends PreferenceFragmentCompat {
 
   public static final String PREF_VERSION = "key_version";
   public static final String PREF_DEVELOPER = "key_developer";
@@ -36,10 +36,8 @@ public class SettingsFragment extends PreferenceFragment {
   private Preference importDbPref;
 
   @Override
-  public void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-
-    addPreferencesFromResource(R.xml.preferences);
+  public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+    setPreferencesFromResource(R.xml.preferences, rootKey);
     initPreferenceView();
     checkLatestAppVersion();
     updatePreferenceView();
@@ -55,12 +53,11 @@ public class SettingsFragment extends PreferenceFragment {
   }
 
   private void updatePreferenceView() {
-
-    getPreferenceScreen().removeAll();
-    addPreferencesFromResource(R.xml.preferences);
-
+    // Re-finding is safe
     versionPref = findPreference(PREF_VERSION);
-    versionPref.setSummary(versionSummary);
+    if (versionSummary != null) {
+        versionPref.setSummary(versionSummary);
+    }
     developerPref = findPreference(PREF_DEVELOPER);
     resetModelPref = findPreference(PREF_RESET_MODEL);
     deleteCatPref = findPreference(PREF_DELETE_CAT);
@@ -103,13 +100,15 @@ public class SettingsFragment extends PreferenceFragment {
         getActivity().runOnUiThread(new Runnable() {
           @Override
           public void run() {
-            versionPref.setSummary(versionSummary);
+            if (versionPref != null) {
+                versionPref.setSummary(versionSummary);
+            }
             Log.d("GM/versionChecked", versionSummary);
           }
         });
       }
     } catch (IOException e) {
-      Log.e("GM/SSFragment", Arrays.toString(e.getStackTrace()));
+      // Log.e("GM/SSFragment", Arrays.toString(e.getStackTrace()));
     }
   }
 
@@ -439,4 +438,3 @@ public class SettingsFragment extends PreferenceFragment {
     });
   }
 }
-

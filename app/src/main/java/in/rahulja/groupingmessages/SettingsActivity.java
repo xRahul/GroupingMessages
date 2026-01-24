@@ -1,10 +1,10 @@
 package in.rahulja.groupingmessages;
 
 import android.os.Bundle;
-import android.preference.PreferenceActivity;
-import android.preference.PreferenceManager;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 
-public class SettingsActivity extends PreferenceActivity {
+public class SettingsActivity extends AppCompatActivity {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -12,7 +12,7 @@ public class SettingsActivity extends PreferenceActivity {
 
     PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
 
-    getFragmentManager().beginTransaction()
+    getSupportFragmentManager().beginTransaction()
         .replace(android.R.id.content, new SettingsFragment())
         .commit();
   }
