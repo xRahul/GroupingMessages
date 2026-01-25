@@ -23,6 +23,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/fab_margin"
+        android:contentDescription="@string/add_category_dialog_title"
         android:foreground="?android:attr/selectableItemBackground"
         app:srcCompat="@drawable/float_add"
         app:layout_anchorGravity="center_vertical|center_horizontal"
