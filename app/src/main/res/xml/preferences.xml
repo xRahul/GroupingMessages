@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:sample="http://schemas.android.com/apk/res-auto">
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory android:title="Advanced Settings">
-        <ListPreference
+    <androidx.preference.PreferenceCategory android:title="Advanced Settings">
+        <androidx.preference.ListPreference
             android:defaultValue="levenshtein"
             android:entries="@array/SimilarityAlgorithms"
             android:entryValues="@array/SimilarityAlgorithmsAlias"
@@ -11,48 +11,46 @@
             android:summary="%s"
             android:title="String Similarity Algorithm" />
 
-        <com.pavelsikun.seekbarpreference.SeekBarPreference
+        <androidx.preference.SeekBarPreference
             android:defaultValue="60"
             android:enabled="true"
             android:key="key_similarity_score"
             android:summary="Select minimum considerable similarity %age for string comparison"
             android:title="Base String Similarity"
+            android:max="100"
+            app:min="0"
+            app:seekBarIncrement="1"
+            app:showSeekBarValue="true" />
+    </androidx.preference.PreferenceCategory>
 
-            sample:msbp_dialogEnabled="true"
-            sample:msbp_interval="1"
-            sample:msbp_maxValue="100"
-            sample:msbp_measurementUnit="%"
-            sample:msbp_minValue="0" />
-    </PreferenceCategory>
-
-    <PreferenceCategory android:title="Data Settings">
-        <PreferenceScreen
+    <androidx.preference.PreferenceCategory android:title="Data Settings">
+        <androidx.preference.Preference
             android:key="key_reset_model"
             android:summary=""
             android:title="Reset trained Model" />
-        <PreferenceScreen
+        <androidx.preference.Preference
             android:key="key_reset_model_delete_cat"
             android:summary=""
             android:title="Reset Model &amp; Delete Categories" />
-        <PreferenceScreen
+        <androidx.preference.Preference
             android:key="key_export_db"
             android:summary=""
             android:title="Export database" />
-        <PreferenceScreen
+        <androidx.preference.Preference
             android:key="key_import_db"
             android:summary=""
             android:title="Import Database" />
 
-    </PreferenceCategory>
-    <PreferenceCategory android:title="About">
-        <PreferenceScreen
+    </androidx.preference.PreferenceCategory>
+    <androidx.preference.PreferenceCategory android:title="About">
+        <androidx.preference.Preference
             android:key="key_developer"
             android:summary="@string/developer_name"
             android:title="Developer" />
-        <PreferenceScreen
+        <androidx.preference.Preference
             android:key="key_version"
             android:summary=""
             android:title="Version" />
-    </PreferenceCategory>
+    </androidx.preference.PreferenceCategory>
 
-</PreferenceScreen>
+</androidx.preference.PreferenceScreen>
