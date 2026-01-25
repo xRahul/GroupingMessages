@@ -164,21 +164,57 @@ import org.simmetrics.metrics.StringMetrics;
     return sms;
   }
 
+  /**
+   * Cleans the SMS string by removing punctuation, converting digits to '1',
+   * and filtering stop words.
+   * Optimized to use single-pass character iteration to avoid Regex overhead
+   * and reduce garbage collection.
+   */
   private static String cleanString(String s) {
-    String[] words = s.replaceAll("[\\p{P}]", " ")
-        .replaceAll("\\s+", " ")
-        .replaceAll("\\d", "1")
-        .toLowerCase()
-        .split(" ");
-    StringBuilder wordsList = new StringBuilder();
+    if (s == null || s.isEmpty()) {
+      return "";
+    }
 
-    for (String word : words) {
-      if (!stopWordsSet.contains(word)) {
-        wordsList.append(" ").append(word);
+    StringBuilder sb = new StringBuilder(s.length());
+    StringBuilder currentWord = new StringBuilder();
+
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+
+      if (Character.isDigit(c)) {
+        currentWord.append('1');
+      } else if (isPunctuation(c) || Character.isWhitespace(c)) {
+        if (currentWord.length() > 0) {
+          String word = currentWord.toString();
+          if (!stopWordsSet.contains(word)) {
+            sb.append(" ").append(word);
+          }
+          currentWord.setLength(0);
+        }
+      } else {
+        currentWord.append(Character.toLowerCase(c));
       }
     }
 
-    return wordsList.toString();
+    if (currentWord.length() > 0) {
+      String word = currentWord.toString();
+      if (!stopWordsSet.contains(word)) {
+        sb.append(" ").append(word);
+      }
+    }
+
+    return sb.toString();
+  }
+
+  private static boolean isPunctuation(char c) {
+    int type = Character.getType(c);
+    return type == Character.START_PUNCTUATION ||
+        type == Character.END_PUNCTUATION ||
+        type == Character.OTHER_PUNCTUATION ||
+        type == Character.CONNECTOR_PUNCTUATION ||
+        type == Character.DASH_PUNCTUATION ||
+        type == Character.INITIAL_QUOTE_PUNCTUATION ||
+        type == Character.FINAL_QUOTE_PUNCTUATION;
   }
 
   public static List<Map<String, String>> retrainExistingSms(Context context,
