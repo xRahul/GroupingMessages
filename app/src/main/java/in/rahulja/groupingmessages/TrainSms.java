@@ -231,7 +231,7 @@ import org.simmetrics.metrics.StringMetrics;
       StringMetric m = (StringMetric) method.invoke(null);
       return m.compare(sms1, sms2);
     } catch (IllegalAccessException | InvocationTargetException | SecurityException | NoSuchMethodException e) {
-      Log.e("GM/simError", e.toString());
+      Log.e("GM/simError", "Error calculating similarity: " + e.getMessage());
       return 0.0;
     }
   }

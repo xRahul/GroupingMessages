@@ -225,8 +225,7 @@ import java.util.Map;
         cursor.moveToNext();
       }
     } else {
-      Log.e(GM_CURSOR, CURSOR_IS_NULL + "getFromSms: " + Arrays.toString(
-          Thread.currentThread().getStackTrace()));
+      Log.e(GM_CURSOR, CURSOR_IS_NULL + "getFromSms");
     }
 
     if (cursor != null && !cursor.isClosed()) {
@@ -329,7 +328,7 @@ import java.util.Map;
       } catch (Exception e) {
         currentTrial++;
         Log.e("GM/insertIntoSms",
-            "Some error occurred while inserting sms. Try is " + currentTrial, e);
+            "Some error occurred while inserting sms. Try is " + currentTrial + ": " + e.getMessage());
         sleepTenMillis();
       } finally {
         unInitializeDb();
@@ -502,7 +501,7 @@ import java.util.Map;
         numSmsError += 1;
         Log.e(
             "GM/insertSms",
-            "Some error occured while inserting sms- " + trainedSmsMap.toString()
+            "Some error occured while inserting sms"
         );
       }
     }
@@ -730,7 +729,7 @@ import java.util.Map;
         return;
       }
     } catch (Exception e) {
-      Log.e("GM/importDb", e.toString());
+      Log.e("GM/importDb", "Import failed: " + e.getMessage());
     }
 
     initializeDb(context);
@@ -760,7 +759,7 @@ import java.util.Map;
         return;
       }
     } catch (Exception e) {
-      Log.e("GM/exportDb", e.toString());
+      Log.e("GM/exportDb", "Export failed: " + e.getMessage());
     }
     initializeDb(context);
   }

@@ -109,7 +109,7 @@ public class SettingsFragment extends PreferenceFragment {
         });
       }
     } catch (IOException e) {
-      Log.e("GM/SSFragment", Arrays.toString(e.getStackTrace()));
+      Log.e("GM/SSFragment", "Error checking latest version: " + e.getMessage());
     }
   }
 

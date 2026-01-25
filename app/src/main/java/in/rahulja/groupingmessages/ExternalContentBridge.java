@@ -93,9 +93,6 @@ import java.util.Set;
     }
 
     Log.i("GM/inboxSmsCount", String.valueOf(latestSms.size()));
-    if (!latestSms.isEmpty()) {
-      Log.i("GM/anInboxSms", latestSms.get(0).toString());
-    }
 
     return latestSms;
   }
