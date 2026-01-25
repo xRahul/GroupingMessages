@@ -37,7 +37,7 @@ public class AddCategoryFragment extends DialogFragment {
   @NonNull
   @Override
   public Dialog onCreateDialog(Bundle savedInstanceState) {
-    AlertDialog.Builder builder = new AlertDialog.Builder(Objects.requireNonNull(getActivity()));
+    AlertDialog.Builder builder = new AlertDialog.Builder(requireActivity());
 
     View categoryDialogView = View.inflate(getContext(), R.layout.dialog_add_category, null);
 

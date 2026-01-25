@@ -121,8 +121,10 @@ import java.util.Set;
       return contactName;
     }
     if (cursor.moveToFirst()) {
-      contactName = cursor.getString(cursor
-          .getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME));
+      int columnIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME);
+      if (columnIndex >= 0) {
+        contactName = cursor.getString(columnIndex);
+      }
     }
     if (!cursor.isClosed()) {
       cursor.close();
