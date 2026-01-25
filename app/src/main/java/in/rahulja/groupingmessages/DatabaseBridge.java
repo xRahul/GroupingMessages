@@ -4,7 +4,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.Environment;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import android.util.Log;
@@ -717,8 +716,8 @@ import java.util.Map;
     unInitializeDb();
 
     try {
-      File sd = Environment.getExternalStorageDirectory();
-      if (sd.canWrite()) {
+      File sd = context.getExternalFilesDir(null);
+      if (sd != null && sd.canWrite()) {
         File backupDB = new File(sd, BACKUP_DB_PATH);
         File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
 
@@ -746,9 +745,9 @@ import java.util.Map;
     unInitializeDb();
 
     try {
-      File sd = Environment.getExternalStorageDirectory();
+      File sd = context.getExternalFilesDir(null);
 
-      if (sd.canWrite()) {
+      if (sd != null && sd.canWrite()) {
         File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
         File backupDB = new File(sd, BACKUP_DB_PATH);
 

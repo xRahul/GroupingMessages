@@ -5,7 +5,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import android.util.Log;
@@ -152,7 +151,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     builder.setMessage(
         "Import & Overwrite existing db with one at \n" +
             new File(
-                Environment.getExternalStorageDirectory(),
+                getActivity().getExternalFilesDir(null),
                 BACKUP_DB_PATH
             ).getAbsolutePath()
     );
@@ -214,7 +213,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     builder.setMessage(
         "Export application db & overwrite if old backup exist at \n" +
             new File(
-                Environment.getExternalStorageDirectory(),
+                getActivity().getExternalFilesDir(null),
                 BACKUP_DB_PATH
             ).getAbsolutePath()
     );
@@ -272,7 +271,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
           public void onClick(DialogInterface dialog,
               int which) {
             Uri dbUri = Uri.fromFile(new File(
-                Environment.getExternalStorageDirectory(),
+                getActivity().getExternalFilesDir(null),
                 BACKUP_DB_PATH
             ));
             Intent shareIntent = new Intent();
