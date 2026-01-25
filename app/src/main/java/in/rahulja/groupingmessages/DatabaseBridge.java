@@ -315,7 +315,7 @@ import java.util.Map;
     return values;
   }
 
-  private static long insertIntoSms(Context context, Map<String, String> sms) {
+  private static long insertIntoSms(SQLiteDatabase db, Map<String, String> sms) {
 
     ContentValues values = getContentValuesFromSmsMap(sms);
     int currentTrial = 0;
@@ -323,7 +323,6 @@ import java.util.Map;
     long insertResult = -1;
     while (currentTrial < maxTries) {
       try {
-        initializeDb(context);
         insertResult = db.insert(DatabaseContract.Sms.TABLE_NAME, null, values);
         break;
       } catch (Exception e) {
@@ -331,8 +330,6 @@ import java.util.Map;
         Log.e("GM/insertIntoSms",
             "Some error occurred while inserting sms. Try is " + currentTrial, e);
         sleepTenMillis();
-      } finally {
-        unInitializeDb();
       }
     }
     return insertResult;
@@ -490,21 +487,29 @@ import java.util.Map;
     long numSmsError = 0;
     long tempLastSmsTime = lastSmsTime;
 
-    for (Map<String, String> trainedSmsMap : trainedInboxSms) {
+    SQLiteDatabase localDb = db;
+    localDb.beginTransaction();
+    try {
+      for (Map<String, String> trainedSmsMap : trainedInboxSms) {
 
-      long longDate = Long.parseLong(trainedSmsMap.get(DatabaseContract.Sms.KEY_DATE));
-      long insertResult = insertIntoSms(context, trainedSmsMap);
+        long longDate = Long.parseLong(trainedSmsMap.get(DatabaseContract.Sms.KEY_DATE));
+        long insertResult = insertIntoSms(localDb, trainedSmsMap);
 
-      if (insertResult != -1) {
-        numSmsStored += 1;
-        tempLastSmsTime = longDate;
-      } else {
-        numSmsError += 1;
-        Log.e(
-            "GM/insertSms",
-            "Some error occured while inserting sms- " + trainedSmsMap.toString()
-        );
+        if (insertResult != -1) {
+          numSmsStored += 1;
+          tempLastSmsTime = longDate;
+        } else {
+          numSmsError += 1;
+          Log.e(
+              "GM/insertSms",
+              "Some error occured while inserting sms- " + trainedSmsMap.toString()
+          );
+        }
       }
+      localDb.setTransactionSuccessful();
+    } finally {
+      localDb.endTransaction();
+      unInitializeDb();
     }
 
     if (tempLastSmsTime != lastSmsTime) {
