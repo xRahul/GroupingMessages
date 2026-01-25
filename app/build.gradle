@@ -2,61 +2,73 @@ apply plugin: 'com.android.application'
 apply plugin: "org.sonarqube"
 
 android {
-  compileSdkVersion rootProject.ext.compileSdkVersion
+  namespace 'in.rahulja.groupingmessages'
+  compileSdk rootProject.ext.compileSdkVersion
+
   defaultConfig {
     applicationId rootProject.ext.applicationId
-    minSdkVersion rootProject.ext.minSdkVersion
-    targetSdkVersion rootProject.ext.targetSdkVersion
+    minSdk rootProject.ext.minSdkVersion
+    targetSdk rootProject.ext.targetSdkVersion
     versionCode rootProject.ext.versionCode
     versionName rootProject.ext.versionName
-    testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     vectorDrawables.useSupportLibrary = true
     resConfigs 'en'
-    return void
   }
+
   buildTypes {
     debug {
       debuggable true
       shrinkResources false
       minifyEnabled false
-      proguardFile 'proguard-guava.pro'
-      proguardFile getDefaultProguardFile('proguard-android-optimize.txt')
-      proguardFile 'proguard-rules.pro'
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
     }
     release {
       shrinkResources true
       minifyEnabled true
-      proguardFile 'proguard-guava.pro'
-      proguardFile getDefaultProguardFile('proguard-android-optimize.txt')
-      proguardFile 'proguard-rules.pro'
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
       debuggable false
       jniDebuggable false
-      zipAlignEnabled true
     }
   }
-  return void
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+
+  buildFeatures {
+    buildConfig true
+  }
+
+  packagingOptions {
+    resources {
+      excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/license.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt', 'META-INF/notice.txt', 'META-INF/ASL2.0', 'META-INF/*.kotlin_module']
+    }
+  }
 }
 
 dependencies {
+  implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
   implementation fileTree(include: ['*.jar'], dir: 'libs')
 
-  implementation "com.android.support:appcompat-v7:${rootProject.ext.supportLibVersion}"
-  implementation "com.android.support:preference-v7:${rootProject.ext.supportLibVersion}"
-  implementation "com.android.support:design:${rootProject.ext.supportLibVersion}"
-  implementation "com.android.support:cardview-v7:${rootProject.ext.supportLibVersion}"
-  implementation "com.android.support:recyclerview-v7:${rootProject.ext.supportLibVersion}"
-  implementation "com.android.support:support-v4:${rootProject.ext.supportLibVersion}"
-  implementation "com.android.support:support-vector-drawable:${rootProject.ext.supportLibVersion}"
+  implementation 'androidx.appcompat:appcompat:1.6.1'
+  implementation 'androidx.preference:preference:1.2.1'
+  implementation 'com.google.android.material:material:1.11.0'
+  implementation 'androidx.cardview:cardview:1.0.0'
+  implementation 'androidx.recyclerview:recyclerview:1.3.2'
+  implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+  implementation 'androidx.vectordrawable:vectordrawable:1.1.0'
+
   implementation 'com.github.QuadFlask:colorpicker:0.0.13'
   implementation 'com.github.mpkorstanje:simmetrics-core:4.1.1'
-  implementation 'com.pavelsikun:material-seekbar-preference:2.3.0'
   implementation 'org.apache.commons:commons-collections4:4.4'
 
-  compileOnly 'org.projectlombok:lombok:1.18.10'
-  annotationProcessor 'org.projectlombok:lombok:1.18.10'
+  compileOnly 'org.projectlombok:lombok:1.18.30'
+  annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
-  androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
-  androidTestImplementation 'com.android.support.test:runner:1.0.2'
-  androidTestImplementation 'com.android.support.test:rules:1.0.2'
+  androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+  androidTestImplementation 'androidx.test:runner:1.5.2'
+  androidTestImplementation 'androidx.test:rules:1.5.0'
   testImplementation "junit:junit:${rootProject.ext.jUnitVersion}"
 }
