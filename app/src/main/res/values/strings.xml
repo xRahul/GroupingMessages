@@ -99,4 +99,13 @@
     <string name="deleted">Deleted</string>
     <string name="undo">Undo</string>
     <string name="delete_all_sms">Delete all SMS</string>
+
+    <plurals name="unread_messages_count">
+        <item quantity="one">%d unread message</item>
+        <item quantity="other">%d unread messages</item>
+    </plurals>
+    <plurals name="read_messages_count">
+        <item quantity="one">%d read message</item>
+        <item quantity="other">%d read messages</item>
+    </plurals>
 </resources>

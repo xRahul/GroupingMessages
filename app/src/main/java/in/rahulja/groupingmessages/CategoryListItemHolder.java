@@ -52,8 +52,29 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
     categoryName = category.get(DatabaseContract.Category.KEY_NAME);
     categoryColor = category.get(DatabaseContract.Category.KEY_COLOR);
     categoryNameTextView.setText(category.get(DatabaseContract.Category.KEY_NAME));
-    categoryUnreadCountTextView.setText(category.get(COUNT_UNREAD));
-    categoryReadCountTextView.setText(category.get(COUNT_READ));
+
+    String unreadCountStr = category.get(COUNT_UNREAD);
+    categoryUnreadCountTextView.setText(unreadCountStr);
+    try {
+      int unreadCount = Integer.parseInt(unreadCountStr);
+      String contentDescription = context.getResources().getQuantityString(
+          R.plurals.unread_messages_count, unreadCount, unreadCount);
+      categoryUnreadCountTextView.setContentDescription(contentDescription);
+    } catch (NumberFormatException e) {
+      // ignore
+    }
+
+    String readCountStr = category.get(COUNT_READ);
+    categoryReadCountTextView.setText(readCountStr);
+    try {
+      int readCount = Integer.parseInt(readCountStr);
+      String contentDescription = context.getResources().getQuantityString(
+          R.plurals.read_messages_count, readCount, readCount);
+      categoryReadCountTextView.setContentDescription(contentDescription);
+    } catch (NumberFormatException e) {
+      // ignore
+    }
+
     if (category.get(DatabaseContract.Category.KEY_COLOR) != null) {
       categoryListViewParent.setBackgroundColor(
           Integer.parseInt(category.get(DatabaseContract.Category.KEY_COLOR))
