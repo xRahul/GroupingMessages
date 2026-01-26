@@ -72,6 +72,7 @@ import org.simmetrics.metrics.StringMetrics;
 
     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
     String simAlgo = prefs.getString("key_similarity_algorithm", "levenshtein");
+    StringMetric metric = getMetric(simAlgo);
     double limitSimScore = prefs.getInt("key_similarity_score", LIMIT_SIM_SCORE) / (double) 100;
 
     for (Map<String, String> toTrainSmsMap : cleanedSmsListToTrain) {
@@ -101,7 +102,7 @@ import org.simmetrics.metrics.StringMetrics;
       for (Map<String, String> toTrainAgainstSmsMap : cleanedSmsListToTrainAgainst) {
 
         double tempSimScore = getSmsSimilarityScore(
-            simAlgo,
+            metric,
             toTrainSmsMap.get(CLEAN_SMS),
             toTrainAgainstSmsMap.get(CLEAN_SMS)
         );
@@ -227,6 +228,7 @@ import org.simmetrics.metrics.StringMetrics;
 
     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
     String simAlgo = prefs.getString("key_similarity_algorithm", "levenshtein");
+    StringMetric metric = getMetric(simAlgo);
     double limitSimScore = prefs.getInt("key_similarity_score", LIMIT_SIM_SCORE) / (double) 100;
 
     for (Map<String, String> toTrainSmsMap : cleanedAllSms) {
@@ -235,7 +237,7 @@ import org.simmetrics.metrics.StringMetrics;
           Double.parseDouble(toTrainSmsMap.get(DatabaseContract.Sms.KEY_SIM_SCORE));
 
       double tempSimScore = getSmsSimilarityScore(
-          simAlgo,
+          metric,
           toTrainSmsMap.get(CLEAN_SMS),
           cleanedTrainedSms.get(CLEAN_SMS)
       );
@@ -260,15 +262,20 @@ import org.simmetrics.metrics.StringMetrics;
     return reTrainedSmsList;
   }
 
-  private static double getSmsSimilarityScore(String algo, String sms1, String sms2) {
-    Method method;
+  private static double getSmsSimilarityScore(StringMetric metric, String sms1, String sms2) {
+    if (metric == null) {
+      return 0.0;
+    }
+    return metric.compare(sms1, sms2);
+  }
+
+  private static StringMetric getMetric(String algo) {
     try {
-      method = StringMetrics.class.getMethod(algo);
-      StringMetric m = (StringMetric) method.invoke(null);
-      return m.compare(sms1, sms2);
+      Method method = StringMetrics.class.getMethod(algo);
+      return (StringMetric) method.invoke(null);
     } catch (IllegalAccessException | InvocationTargetException | SecurityException | NoSuchMethodException e) {
       Log.e("GM/simError", e.toString());
-      return 0.0;
+      return null;
     }
   }
 }
