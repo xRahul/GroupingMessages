@@ -44,12 +44,6 @@ import java.util.Map;
     }
   }
 
-  private static void unInitializeDb() {
-    if (db != null) {
-      db = null;
-      Log.d("GM/setDbNull", "Uninitialized");
-    }
-  }
 
   private static List<Map<String, String>> getFromConfigs(Context context, String selection,
       String[] selectArgs) {
@@ -94,7 +88,7 @@ import java.util.Map;
       cursor.close();
     }
 
-    unInitializeDb();
+
 
     return configs;
   }
@@ -147,7 +141,7 @@ import java.util.Map;
       cursor.close();
     }
 
-    unInitializeDb();
+
 
     Log.i("GM/getFromCategories", String.valueOf(categories.size()));
     return categories;
@@ -232,7 +226,7 @@ import java.util.Map;
       cursor.close();
     }
 
-    unInitializeDb();
+
 
     return smsList;
   }
@@ -349,7 +343,7 @@ import java.util.Map;
     initializeDb(context);
     long insertResult = db.insert(DatabaseContract.Category.TABLE_NAME, null, values);
 
-    unInitializeDb();
+
 
     return insertResult;
   }
@@ -369,7 +363,7 @@ import java.util.Map;
         selectionArgs
     );
 
-    unInitializeDb();
+
 
     return updateResult;
   }
@@ -389,7 +383,7 @@ import java.util.Map;
         selectionArgs
     );
 
-    unInitializeDb();
+
   }
 
   private static void updateInSmsByCategoryIdAndValues(Context context, long categoryId,
@@ -407,7 +401,7 @@ import java.util.Map;
         selectionArgs
     );
 
-    unInitializeDb();
+
   }
 
   private static long updateInCategory(Context context, Map<String, String> category) {
@@ -426,7 +420,7 @@ import java.util.Map;
         selectionArgs
     );
 
-    unInitializeDb();
+
 
     return updateResult;
   }
@@ -508,7 +502,7 @@ import java.util.Map;
       localDb.setTransactionSuccessful();
     } finally {
       localDb.endTransaction();
-      unInitializeDb();
+
     }
 
     if (tempLastSmsTime != lastSmsTime) {
@@ -541,7 +535,7 @@ import java.util.Map;
         SQLiteDatabase.CONFLICT_REPLACE
     );
 
-    unInitializeDb();
+
 
     Log.i("GM/setConfig", "Result Id: " + resultId);
   }
@@ -600,7 +594,7 @@ import java.util.Map;
       cursor.close();
     }
 
-    unInitializeDb();
+
 
     Log.i("GM/getCatsSmsCount", categoryIdsWithSmsCount.toString());
     return categoryIdsWithSmsCount;
@@ -644,7 +638,7 @@ import java.util.Map;
         null,
         null);
 
-    unInitializeDb();
+
   }
 
   public static void deleteCategories(Context context) {
@@ -661,7 +655,7 @@ import java.util.Map;
         selectionArgs
     );
 
-    unInitializeDb();
+
   }
 
   public static void deleteCategory(Context context, long categoryId) {
@@ -683,7 +677,7 @@ import java.util.Map;
         selectionArgs
     );
 
-    unInitializeDb();
+
   }
 
   private static void deleteModelForCategory(Context context, long categoryId) {
@@ -704,7 +698,7 @@ import java.util.Map;
         selection,
         selectionArgs);
 
-    unInitializeDb();
+
   }
 
   public static Boolean updateCategory(Context context, Map<String, String> category) {
@@ -713,7 +707,7 @@ import java.util.Map;
 
   public static void importDB(Context context) {
 
-    unInitializeDb();
+
 
     try {
       File sd = context.getExternalFilesDir(null);
@@ -742,7 +736,7 @@ import java.util.Map;
 
   public static void exportDB(Context context) {
 
-    unInitializeDb();
+
 
     try {
       File sd = context.getExternalFilesDir(null);
@@ -821,7 +815,7 @@ import java.util.Map;
         selectionArgs
     );
 
-    unInitializeDb();
+
   }
 
   private static void hideSmsByCategoryId(Context context, long categoryId) {
@@ -844,7 +838,7 @@ import java.util.Map;
         selectionArgs
     );
 
-    unInitializeDb();
+
   }
 
   private static void hideSms(Context context, Map<String, String> data) {
