@@ -317,29 +317,13 @@ import java.util.Map;
   private static long insertIntoSms(SQLiteDatabase db, Map<String, String> sms) {
 
     ContentValues values = getContentValuesFromSmsMap(sms);
-    int currentTrial = 0;
-    int maxTries = 10;
     long insertResult = -1;
-    while (currentTrial < maxTries) {
-      try {
-        insertResult = db.insert(DatabaseContract.Sms.TABLE_NAME, null, values);
-        break;
-      } catch (Exception e) {
-        currentTrial++;
-        Log.e("GM/insertIntoSms",
-            "Some error occurred while inserting sms. Try is " + currentTrial, e);
-        sleepTenMillis();
-      }
+    try {
+      insertResult = db.insert(DatabaseContract.Sms.TABLE_NAME, null, values);
+    } catch (Exception e) {
+      Log.e("GM/insertIntoSms", "Error occurred while inserting sms", e);
     }
     return insertResult;
-  }
-
-  private static void sleepTenMillis() {
-    try {
-      Thread.sleep(10);
-    } catch (Exception e1) {
-      Log.e("GM/insertIntoSms", "Thread Sleep Interrupted.");
-    }
   }
 
   private static long insertIntoCategory(Context context, Map<String, String> category) {
