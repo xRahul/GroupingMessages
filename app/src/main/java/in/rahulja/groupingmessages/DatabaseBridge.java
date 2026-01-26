@@ -356,22 +356,27 @@ import java.util.Map;
 
   private static long updateInSms(Context context, Map<String, String> sms) {
 
+    initializeDb(context);
+    long updateResult = updateInSms(db, sms);
+
+    unInitializeDb();
+
+    return updateResult;
+  }
+
+  private static long updateInSms(SQLiteDatabase db, Map<String, String> sms) {
+
     ContentValues values = getContentValuesFromSmsMap(sms);
 
     String selection = DatabaseContract.Sms._ID + EQUALS_QUESTION;
     String[] selectionArgs = { String.valueOf(Long.parseLong(sms.get(DatabaseContract.Sms._ID))) };
 
-    initializeDb(context);
-    long updateResult = db.update(
+    return db.update(
         DatabaseContract.Sms.TABLE_NAME,
         values,
         selection,
         selectionArgs
     );
-
-    unInitializeDb();
-
-    return updateResult;
   }
 
   private static void updateInSmsBySmsIdAndValues(Context context, long smsId,
@@ -618,15 +623,30 @@ import java.util.Map;
   public static long storeReTrainedSms(Context context,
       List<Map<String, String>> retrainedSmsList) {
 
+    initializeDb(context);
+
     long numSmsUpdated = 0;
-    for (Map<String, String> reTrainedSmsMap : retrainedSmsList) {
 
-      long updateSmsRowId = updateInSms(context, reTrainedSmsMap);
+    try {
+      SQLiteDatabase localDb = db;
+      localDb.beginTransaction();
+      try {
+        for (Map<String, String> reTrainedSmsMap : retrainedSmsList) {
 
-      if (updateSmsRowId > 0) {
-        numSmsUpdated += 1;
+          long updateSmsRowId = updateInSms(localDb, reTrainedSmsMap);
+
+          if (updateSmsRowId > 0) {
+            numSmsUpdated += 1;
+          }
+        }
+        localDb.setTransactionSuccessful();
+      } finally {
+        localDb.endTransaction();
       }
+    } finally {
+      unInitializeDb();
     }
+
     return numSmsUpdated;
   }
 
