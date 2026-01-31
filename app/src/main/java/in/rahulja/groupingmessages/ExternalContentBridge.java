@@ -101,34 +101,135 @@ import java.util.Set;
   }
 
   public static Map<String, String> getContactNames(Context context, Set<String> addressSet) {
-
     Map<String, String> contactList = new HashMap<>();
+    if (addressSet == null || addressSet.isEmpty()) {
+      return contactList;
+    }
+
+    // Initialize map with empty strings
+    Map<String, List<String>> normalizedToOriginals = new HashMap<>();
+    List<String> chunkOriginals = new ArrayList<>();
+    List<String> chunkNormalized = new ArrayList<>();
 
     for (String phoneNumber : addressSet) {
-      contactList.put(phoneNumber, getContactName(context, phoneNumber));
+      contactList.put(phoneNumber, "");
+      String normalized = android.telephony.PhoneNumberUtils.normalizeNumber(phoneNumber);
+      if (normalized != null && !normalized.isEmpty()) {
+        if (!normalizedToOriginals.containsKey(normalized)) {
+          normalizedToOriginals.put(normalized, new ArrayList<>());
+        }
+        normalizedToOriginals.get(normalized).add(phoneNumber);
+      }
+    }
+
+    List<String> allOriginals = new ArrayList<>(addressSet);
+    int batchSize = 50;
+
+    for (int i = 0; i < allOriginals.size(); i += batchSize) {
+      chunkOriginals.clear();
+      chunkNormalized.clear();
+
+      int end = Math.min(i + batchSize, allOriginals.size());
+      for (int j = i; j < end; j++) {
+        String original = allOriginals.get(j);
+        chunkOriginals.add(original);
+        String normalized = android.telephony.PhoneNumberUtils.normalizeNumber(original);
+        if (normalized != null && !normalized.isEmpty()) {
+          chunkNormalized.add(normalized);
+        }
+      }
+
+      queryContactsBatch(context, contactList, chunkOriginals, chunkNormalized,
+          normalizedToOriginals);
     }
 
     return contactList;
   }
 
-  private static String getContactName(Context context, String phoneNumber) {
-    String contactName = "";
-    Uri uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
-        Uri.encode(phoneNumber));
-    Cursor cursor = context.getContentResolver().query(uri,
-        new String[] { ContactsContract.PhoneLookup.DISPLAY_NAME }, null, null, null);
-    if (cursor == null) {
-      return contactName;
+  private static void queryContactsBatch(Context context, Map<String, String> contactList,
+      List<String> originals, List<String> normalized,
+      Map<String, List<String>> normalizedToOriginals) {
+
+    if (originals.isEmpty()) {
+      return;
     }
-    if (cursor.moveToFirst()) {
-      int columnIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME);
-      if (columnIndex >= 0) {
-        contactName = cursor.getString(columnIndex);
+
+    StringBuilder selection = new StringBuilder();
+    List<String> args = new ArrayList<>();
+
+    // data1 (NUMBER) IN (...)
+    selection.append(ContactsContract.CommonDataKinds.Phone.NUMBER).append(" IN (");
+    for (int k = 0; k < originals.size(); k++) {
+      selection.append("?");
+      if (k < originals.size() - 1) {
+        selection.append(",");
+      }
+      args.add(originals.get(k));
+    }
+    selection.append(")");
+
+    // OR data4 (NORMALIZED_NUMBER) IN (...)
+    if (!normalized.isEmpty()) {
+      selection.append(" OR ").append(ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER)
+          .append(" IN (");
+      for (int k = 0; k < normalized.size(); k++) {
+        selection.append("?");
+        if (k < normalized.size() - 1) {
+          selection.append(",");
+        }
+        args.add(normalized.get(k));
+      }
+      selection.append(")");
+    }
+
+    Cursor cursor = null;
+    try {
+      cursor = context.getContentResolver().query(
+          ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+          new String[] {
+              ContactsContract.CommonDataKinds.Phone.NUMBER,
+              ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER,
+              ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+          },
+          selection.toString(),
+          args.toArray(new String[0]),
+          null
+      );
+
+      if (cursor != null) {
+        int idxNumber = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
+        int idxNormalized = cursor.getColumnIndex(
+            ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER);
+        int idxName = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
+
+        while (cursor.moveToNext()) {
+          String name = cursor.getString(idxName);
+          String number = cursor.getString(idxNumber);
+          String norm = idxNormalized != -1 ? cursor.getString(idxNormalized) : null;
+
+          if (name == null || name.isEmpty()) {
+            continue;
+          }
+
+          // Check direct match
+          if (number != null && contactList.containsKey(number)) {
+            contactList.put(number, name);
+          }
+
+          // Check normalized match
+          if (norm != null && normalizedToOriginals.containsKey(norm)) {
+            for (String orig : normalizedToOriginals.get(norm)) {
+              contactList.put(orig, name);
+            }
+          }
+        }
+      }
+    } catch (Exception e) {
+      Log.e("GM/ExternalContent", "Error querying contacts", e);
+    } finally {
+      if (cursor != null && !cursor.isClosed()) {
+        cursor.close();
       }
     }
-    if (!cursor.isClosed()) {
-      cursor.close();
-    }
-    return contactName;
   }
 }
