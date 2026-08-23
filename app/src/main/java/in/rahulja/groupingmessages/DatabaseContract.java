@@ -4,7 +4,7 @@ import android.provider.BaseColumns;
 
 @SuppressWarnings("WeakerAccess") final class DatabaseContract {
 
-  public static final int DATABASE_VERSION = 2;
+  public static final int DATABASE_VERSION = 3;
   public static final String DATABASE_NAME = "groupMessage.db";
   private static final String TEXT_TYPE = " TEXT";
   private static final String INTEGER_TYPE = " INTEGER";

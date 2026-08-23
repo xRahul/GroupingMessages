@@ -7,7 +7,16 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Color;
 import android.util.Log;
 
-@SuppressWarnings("WeakerAccess") class DatabaseHelper extends SQLiteOpenHelper {
+@SuppressWarnings("WeakerAccess") public final class DatabaseHelper extends SQLiteOpenHelper {
+
+  private static final String[] SMS_INDEXES_V3 = {
+      "CREATE INDEX IF NOT EXISTS idx_sms_category ON "
+          + DatabaseContract.Sms.TABLE_NAME + "(" + DatabaseContract.Sms.KEY_CATEGORY_ID + ")",
+      "CREATE INDEX IF NOT EXISTS idx_sms_date ON "
+          + DatabaseContract.Sms.TABLE_NAME + "(" + DatabaseContract.Sms.KEY_DATE + ")",
+      "CREATE INDEX IF NOT EXISTS idx_sms_visibility ON "
+          + DatabaseContract.Sms.TABLE_NAME + "(" + DatabaseContract.Sms.KEY_VISIBILITY + ")",
+  };
 
   private static DatabaseHelper sInstance;
 
@@ -32,7 +41,14 @@ import android.util.Log;
     createConfigTable(db);
     createCategoryTable(db);
     createSmsTable(db);
+    createSmsIndexes(db);
     createTriggers(db);
+  }
+
+  private void createSmsIndexes(SQLiteDatabase db) {
+    for (String createIndex : SMS_INDEXES_V3) {
+      db.execSQL(createIndex);
+    }
   }
 
   private void createTriggers(SQLiteDatabase db) {
@@ -77,10 +93,13 @@ import android.util.Log;
   // Method is called during an upgrade of the database
   @Override
   public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-    if (oldVersion == 1) {
+    if (oldVersion < 2) {
       for (String query : DatabaseContract.Sms.CHANGES_V2) {
         db.execSQL(query);
       }
+    }
+    if (oldVersion < 3) {
+      createSmsIndexes(db);
     }
   }
 
