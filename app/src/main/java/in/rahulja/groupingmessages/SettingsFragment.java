@@ -15,6 +15,7 @@ import java.io.File;
 import in.rahulja.groupingmessages.db.CategoryDao;
 import in.rahulja.groupingmessages.db.DatabaseBackup;
 import in.rahulja.groupingmessages.db.SmsDao;
+import in.rahulja.groupingmessages.vm.AppExecutors;
 import in.rahulja.groupingmessages.vm.SettingsViewModel;
 
 public class SettingsFragment extends PreferenceFragmentCompat {
@@ -153,13 +154,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
           public void onClick(DialogInterface dialog,
               int which) {
 
-            Runnable runnable = new Runnable() {
-              @Override
-              public void run() {
-                asyncImportDb();
-              }
-            };
-            new Thread(runnable).start();
+            AppExecutors.disk(() -> asyncImportDb());
           }
         });
     builder.setNegativeButton("No",
@@ -177,7 +172,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
       DatabaseBackup.importDb(getActivity());
     } catch (Exception e) {
       Log.e("GM/importDb", Log.getStackTraceString(e));
-      getActivity().runOnUiThread(new Runnable() {
+      AppExecutors.main(new Runnable() {
         @Override
         public void run() {
           Toast.makeText(getActivity(), "Import failed!", Toast.LENGTH_SHORT).show();
@@ -185,7 +180,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
       });
       return;
     }
-    getActivity().runOnUiThread(new Runnable() {
+    AppExecutors.main(new Runnable() {
       @Override
       public void run() {
         Toast.makeText(
@@ -226,13 +221,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
           public void onClick(DialogInterface dialog,
               int which) {
 
-            Runnable runnable = new Runnable() {
-              @Override
-              public void run() {
-                asyncExportDb();
-              }
-            };
-            new Thread(runnable).start();
+            AppExecutors.disk(() -> asyncExportDb());
           }
         });
     builder.setNegativeButton("No",
@@ -250,7 +239,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
       DatabaseBackup.exportDb(getActivity());
     } catch (Exception e) {
       Log.e("GM/exportDb", Log.getStackTraceString(e));
-      getActivity().runOnUiThread(new Runnable() {
+      AppExecutors.main(new Runnable() {
         @Override
         public void run() {
           Toast.makeText(getActivity(), "Export failed!", Toast.LENGTH_SHORT).show();
@@ -259,7 +248,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
       return;
     }
 
-    getActivity().runOnUiThread(new Runnable() {
+    AppExecutors.main(new Runnable() {
       @Override
       public void run() {
         showShareExportedDbAlert();
