@@ -150,9 +150,6 @@ public class MainActivity extends AppCompatActivity
     if (!addPermission(permissionsList, Manifest.permission.READ_CONTACTS)) {
       permissionsNeeded.add("Read Contacts");
     }
-    if (!addPermission(permissionsList, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-      permissionsNeeded.add("Write to external storage");
-    }
 
     Log.d("GM/permNeed", permissionsNeeded.toString());
     Log.d("GM/permList", permissionsList.toString());
