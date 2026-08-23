@@ -228,6 +228,21 @@ public class SmsActivity extends AppCompatActivity {
 
     // re-read the full row instead of reusing the possibly stale displayed map
     Map<String, String> trainedSms = SmsDao.getById(getBaseContext(), smsId);
+    if (trainedSms == null) {
+      // row deleted while the change-category picker was open; nothing to retrain
+      AppExecutors.main(() -> {
+        if (isFinishing() || isDestroyed()) {
+          return;
+        }
+        Toast.makeText(
+            getBaseContext(),
+            getString(R.string.sms_not_found),
+            Toast.LENGTH_SHORT
+        ).show();
+        hideTitleProgressSpinner();
+      });
+      return;
+    }
     trainedSms.put(
         DatabaseContract.Sms.KEY_CATEGORY_ID,
         String.valueOf(newCategoryId)

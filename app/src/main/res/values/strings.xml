@@ -117,6 +117,7 @@
     <string name="permission_rationale_prefix" translatable="false">"You need to grant access to "</string>
     <string name="permission_rationale_separator" translatable="false">", "</string>
     <string name="some_permission_denied">Some Permission is Denied</string>
+    <string name="sms_not_found">SMS not found</string>
 
     <plurals name="unread_messages_count">
         <item quantity="one">%d unread message</item>
