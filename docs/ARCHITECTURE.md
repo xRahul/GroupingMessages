@@ -12,7 +12,7 @@ This document describes the actual code as of schema v3 / version 1.6.
 ├─────────────────────────────────────────────────────────────────────┤
 │ ViewModel (vm/)                                                     │
 │     CategoriesViewModel   SmsListViewModel   SettingsViewModel      │
-│     expose LiveData; all DB/provider work via AppExecutors          │
+│     expose LiveData; bulk/pipeline work via AppExecutors            │
 ├─────────────────────────────────────────────────────────────────────┤
 │ DAO (db/)                    Engine (classify/)                     │
 │     CategoryDao  SmsDao      TextVectorizer                         │
@@ -42,8 +42,12 @@ This document describes the actual code as of schema v3 / version 1.6.
 
 `AppExecutors` (vm/AppExecutors.java) provides:
 
-- `disk(Runnable)` — a single-threaded executor for all database, provider, and
-  network work. Serial execution means no concurrent access from ViewModels.
+- `disk(Runnable)` — a single-threaded executor serializing bulk/pipeline work
+  (inbox sync, training, backup/import). Serial execution means that pipelined
+  work never overlaps — but it does not cover everything: a few legacy
+  micro-queries still run on the UI thread (`MainActivity` rename dialog,
+  `SmsListItemHolder` tap-to-read, `CategoryListItemHolder` bulk mark-read,
+  `ChangeCategoryActivity` onCreate load).
 - `main(Runnable)` — posts to the main-looper handler so ViewModels can call
   `setValue(...)` on `LiveData`.
 
@@ -123,6 +127,10 @@ v2 added training columns (`cleaned_sms`, `sender_type`, `category_id`, `similar
   `cleaned_sms`, `visibility`, `sender_type`, `category_id` → category(`_id`),
   `similar_to` → sms(`_id`) (self-reference marking the exemplar a message was
   trained against), `sim_score` (default 0.0), timestamps.
+
+> SQLite foreign-key enforcement is **OFF** — `PRAGMA foreign_keys=ON` is never
+> issued anywhere in the codebase — so these `→` arrows document intent, not
+> enforced constraints.
 
 All three tables carry `created_at`/`updated_at` defaults plus `updated_at` triggers.
 

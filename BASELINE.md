@@ -150,7 +150,7 @@ Clusters: UnusedResources 29, GradleDependency 6, ObsoleteSdkInt 5, NewerVersion
 - Docs: README's `GroupMessagingBackupV3` mention mirrors the version-derived filename (`DatabaseBackup.java:28-29` builds `"GroupMessagingBackupV" + DATABASE_VERSION`, so V3 is current truth) — revisit wording only at schema v4 (T17); contact-name display divergence disclosure (T11, also ledgered above).
 - Repo hygiene / supply-chain: remove the 7 legacy signed APKs tracked at `app/apks/` (v1.0–v1.6, master-era commits ecf9a93/d2e9743; branch adds none) via `git rm` — POST-MERGE, can ride the F2 CI wave; optional history rewrite given signed artifacts embed build provenance.
 - CI: `setup-gradle@v3` straggler in `release.yml:22` (T16); `-PversionCode=0` falsy fallback nit (T16).
-- Classifier hardening: negative-IDF unguarded if corpusSize < maxDf; weak determinism test (insertion order only); tie-break favors later category; non-ASCII truncation ceiling (T19/T20).
+- Classifier hardening: weak determinism test (insertion order only); tie-break favors later category; non-ASCII truncation ceiling (T19/T20). Original negative-IDF claim withdrawn at HEAD: structurally impossible — `df` counts documents within the corpus, so `df ≤ corpusSize` and `idf = ln((N+1)/(df+1)) ≥ ln(1) = 0` always (TextVectorizer.java:54).
 - Test hygiene: `SchemaTest` closes singleton-held DB; `TrainSmsTest` reflection; `ModelLayerTest` tautological assertSame; per-column ContentValues rebuild; `CategoriesViewModelTest` reflection; `MigrationTest` reflection on private `sInstance`.
 - Cleanup: `SmsDao.updateMapInTransaction` misleading name; dead `cursor != null` DAO guards; `markRead(List<Long>)` has no production caller; sticky-redelivery window (single-live-event wrapper candidate); MainActivity onDestroy count-map fields not nulled; stale-count window in count observers (pre-existing parity).
 - UI polish: transient flash of in-flight-undo rows after swipe-commit refresh; `ChangeCategoryActivity` dialog-theme double-padding risk (verify on device/F3); redundant `setTitle` in `SettingsActivity`; holder getter placement style.
@@ -264,5 +264,6 @@ zero crashes. This exercises the same path as `MigrationTest`.
   version check ✓, export/import round-trip ✓. Remaining rider: category
   dialog padding check (visual-only).
 - **Tag recommendation `v1.7.0`: upheld** — all prior conditions verifiable
-  locally have now been verified; MUST-FIX-before-merge items (C1/C2) still gate
-  the tag as before.
+  locally have now been verified; both MUST-FIX-before-merge items landed at HEAD
+  (C1: `SmsActivity` `getById` null-guard added; C2: `release.yml` pinned to JDK
+  21), so neither gates the tag anymore.
