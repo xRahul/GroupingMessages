@@ -36,6 +36,7 @@ jobs:
         with:
           name: GroupingMessages-debug
           path: GroupingMessages-debug.apk
+          if-no-files-found: ignore
       - name: Publish Rolling Latest Release
         uses: softprops/action-gh-release@v2
         with:
