@@ -4,8 +4,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import androidx.preference.PreferenceManager;
 import android.util.Log;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -13,7 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.simmetrics.StringMetric;
-import org.simmetrics.metrics.StringMetrics;
+import org.simmetrics.metrics.JaroWinkler;
+import org.simmetrics.metrics.Levenshtein;
 
 @SuppressWarnings("WeakerAccess") class TrainSms {
 
@@ -22,12 +21,12 @@ import org.simmetrics.metrics.StringMetrics;
   private static String[] stopWordsofwordnet = {
       "without", "see", "unless", "due", "also", "must", "might", "like", "will", "may", "can",
       "much", "every", "the", "in", "other", "this", "the", "many", "any", "an", "or", "for", "in",
-      "an", "an ", "is", "a", "about", "above", "after", "again", "against", "all", "am", "an",
+      "an", "is", "a", "about", "above", "after", "again", "against", "all", "am", "an",
       "and", "any", "are", "arent", "as", "at", "be", "because", "been", "before", "being", "below",
       "between", "both", "but", "by", "cant", "cannot", "could", "couldnt", "did", "didnt", "do",
       "does", "doesnt", "doing", "dont", "down", "during", "each", "few", "for", "from", "further",
       "had", "hadnt", "has", "hasnt", "have", "havent", "having", "he", "hed", "hell", "hes", "her",
-      "here", "heres", "hers", "herself", "him", "himself", "his", "how", "hows", "i ", " i", "id",
+      "here", "heres", "hers", "herself", "him", "himself", "his", "how", "hows", "id",
       "ill", "im", "ive", "if", "in", "into", "is", "isnt", "it", "its", "its", "itself", "lets",
       "me", "more", "most", "mustnt", "my", "myself", "no", "nor", "not", "of", "off", "on", "once",
       "only", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "shant", "she",
@@ -37,24 +36,7 @@ import org.simmetrics.metrics.StringMetrics;
       "very", "was", "wasnt", "we", "wed", "well", "were", "weve", "were", "werent", "what",
       "whats", "when", "whens", "where", "wheres", "which", "while", "who", "whos", "whom", "why",
       "whys", "with", "wont", "would", "wouldnt", "you", "youd", "youll", "youre", "youve", "your",
-      "yours", "yourself", "yourselves", "without", "see", "unless", "due", "also", "must", "might",
-      "like", "will", "may", "can", "much", "every", "the", "in", "other", "this", "the", "many",
-      "any", "an", "or", "for", "in", "an", "an ", "is", "a", "about", "above", "after", "again",
-      "against", "all", "am", "an", "and", "any", "are", "arent", "as", "at", "be", "because",
-      "been", "before", "being", "below", "between", "both", "but", "by", "cant", "cannot", "could",
-      "couldnt", "did", "didnt", "do", "does", "doesnt", "doing", "dont", "down", "during", "each",
-      "few", "for", "from", "further", "had", "hadnt", "has", "hasnt", "have", "havent", "having",
-      "he", "hed", "hell", "hes", "her", "here", "heres", "hers", "herself", "him", "himself",
-      "his", "how", "hows", "i ", " i", "id", "ill", "im", "ive", "if", "in", "into", "is", "isnt",
-      "it", "its", "its", "itself", "lets", "me", "more", "most", "mustnt", "my", "myself", "no",
-      "nor", "not", "of", "off", "on", "once", "only", "ought", "our", "ours", "ourselves", "out",
-      "over", "own", "same", "shant", "she", "shed", "shell", "shes", "should", "shouldnt", "so",
-      "some", "such", "than", "that", "thats", "their", "theirs", "them", "themselves", "then",
-      "there", "theres", "these", "they", "theyd", "theyll", "theyre", "theyve", "this", "those",
-      "through", "to", "too", "under", "until", "up", "very", "was", "wasnt", "we", "wed", "well",
-      "were", "weve", "were", "werent", "what", "whats", "when", "whens", "where", "wheres",
-      "which", "while", "who", "whos", "whom", "why", "whys", "with", "wont", "would", "wouldnt",
-      "you", "youd", "youll", "youre", "youve", "your", "yours", "yourself", "yourselves"
+      "yours", "yourself", "yourselves"
   };
   private static final Set<String> stopWordsSet = new HashSet<>(Arrays.asList(stopWordsofwordnet));
 
@@ -269,13 +251,16 @@ import org.simmetrics.metrics.StringMetrics;
     return metric.compare(sms1, sms2);
   }
 
-  private static StringMetric getMetric(String algo) {
-    try {
-      Method method = StringMetrics.class.getMethod(algo);
-      return (StringMetric) method.invoke(null);
-    } catch (IllegalAccessException | InvocationTargetException | SecurityException | NoSuchMethodException e) {
-      Log.e("GM/simError", e.toString());
-      return null;
+  private static StringMetric getMetric(String prefName) {
+    if (prefName == null) {
+      return new Levenshtein();
+    }
+    switch (prefName) {
+      case "jaroWinkler":
+        return new JaroWinkler();
+      case "levenshtein":
+      default:
+        return new Levenshtein();
     }
   }
 }
