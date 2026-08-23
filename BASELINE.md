@@ -161,3 +161,108 @@ Clusters: UnusedResources 29, GradleDependency 6, ObsoleteSdkInt 5, NewerVersion
 ### Tag Recommendation
 
 **Recommend `v1.7.0`** (current 1.6). Minor bump fits scope: major internal revitalization (MVVM layering, hybrid TF-IDF classifier, DB v3 + indexes, WAL-aware backup, modernized CI) with user-facing feature set preserved; migrations and pref mapping keep upgrades non-breaking; disclosed behavior changes are parameter-level, not feature removals. Conditions before tagging: land the two MUST-FIX-BEFORE-MERGE items (F-wave), and given local emulator-blocked smoke, run the device-QA rider list on hardware or CI instrumented before public rollout.
+
+## Final Verification (F-phase)
+
+Executed 2026-08-23 against `revitalize/mvvm` @ `ced0fa1`, emulator AVD `fcmtest`
+(API 35 google_apis), full evidence in
+`.superpowers/sdd/2026-08-23-revitalization-mvvm/final-verification-report.md`.
+
+### Step 1 — Build matrix: PASS
+
+- `./gradlew clean lint testDebugUnitTest assembleDebug` → exit 0 (`BUILD SUCCESSFUL in 1m 47s`).
+- `assembleRelease` without keystore → FAIL at `validateSigningRelease`
+  ("Keystore file app/keystore.jks not found"; config is env-driven for CI).
+  Re-run with throwaway keystore via `STORE_FILE`/`KEY_STORE_PASSWORD`/`KEY_ALIAS`/
+  `KEY_PASSWORD` env vars → `BUILD SUCCESSFUL in 1m 4s`. Keystore lived in
+  `/tmp/opencode`, shredded after use; never inside the repo.
+- Lint: **0 errors / 50 warnings** (`app/build/reports/lint-results-debug.txt`).
+- Unit tests XML: **95 tests / 0 failed / 0 skipped**.
+- APK sizes: debug **7,478,786 B**, release (R8 minified+shrunk) **1,364,965 B**.
+
+### Step 2 — Anti-flake x3: PASS (with honest cache accounting)
+
+Runs #2–#4 came back as Gradle `UP-TO-DATE`/cache hits (5s/4s/4s) — recorded as
+non-executions, not passes. Two forced genuine re-executions
+(`./gradlew :app:testDebugUnitTest --rerun`, task actually executed, fresh XML
+mtimes) both returned identical **95/95 pass / 0 failed / 0 skipped**. Genuine
+executed runs total **3**, all identical.
+
+### Step 3 — Emulator: PASS (environment caveat)
+
+A pre-existing `fcmtest` instance was already running on `emulator-5554`
+(snapshot boot); my duplicate launch FATAL'd on the multi-emulator guard and was
+discarded. All testing used the live instance; `sys.boot_completed=1`, API 35.
+Note: this shared emulator carries unrelated third-party apps (e.g. a FicHub
+middleware) that surfaced in early UI dumps.
+
+### Step 4 — Fresh-install smoke
+
+- (a,b) `adb install -r app-debug.apk` → Success; `READ_SMS` + `READ_CONTACTS`
+  runtime-granted (`granted=true`). **PASS**
+- (c) MainActivity renders: title, **Unknown card (0 unread / 0 read)**,
+  Settings + Add New Category actions. **PASS**. (uiautomator occasionally
+  returns `null root node` right after launch — retry loop used.)
+- (d) Categorization accuracy smoke. **PASS**, with two disclosed false starts:
+  - Seeding via pull→sqlite3→push worked (`run-as` fine on debug build); real
+    schema column is `similarity_score REAL` (docs say `sim_score`). Category
+    `color` must be a **decimal int string** (Unknown seeds `-1`); my first two
+    seeds (`#4CAF50`, then `FF5722`) crashed the app with
+    `NumberFormatException` at `CategoriesViewModel.java:169` — verification-induced,
+    fixed by seeding `5025872`/`16750592`; no crash since.
+  - Exemplars seeded per category (self-referencing `similar_to`, score 1.0).
+    `adb emu sms send` messages were consumed by Bugle (default SMS app); GM has
+    **no manifest receiver** — it inbox-syncs via `syncLatestSms()`
+    (`MainActivity.java:169`). First check showed nothing because `am start` hit
+    the top-most instance (no onResume resync). HOME→relaunch triggered sync:
+    meeting-text SMS → `category_id=2 Meetings`, `similar_to=100`,
+    score **0.324**; sale-text SMS → `category_id=3 Offers`, `similar_to=101`,
+    score **0.305**. UI showed 1 unread under each expected category.
+- (e) Offline version check. **PASS**: `svc wifi/data disable` (Active default
+  network: none); SettingsActivity is not exported (direct `am start` →
+  SecurityException) so navigated via UI tap; Version pref tap offline → no
+  crash, summary stays `1.6`; network re-enabled, tap online → stays `1.6`
+  (up-to-date), no crash.
+- (f) Export/import round-trip via SettingsFragment dialogs. **FULL PASS**:
+  export confirm → `GroupMessagingBackupV3` (40,960 B) created in external files
+  dir; md5(backup) == md5(live DB) (`2e431f03…`); share dialog dismissed;
+  import confirm → DB restored md5-identical, `user_version=3`, all categories/
+  sms/indexes intact. (Cosmetic: dialog string typo "Export Apllication db".)
+- (g) Session logcat verdict: **zero `FATAL EXCEPTION`** in the final session
+  buffer; the only crashes all session were the two documented seed-color NFEs above.
+
+### Step 5 — Upgrade path: PASS (simulated v2-shape; literal over-install impossible locally)
+
+Legacy `GroupingMessages 1.6.apk` **installs and launches clean on API 35**
+(real evidence). Its release signature blocks `run-as` ("package not debuggable"),
+so the real v1.6 database could not be extracted, and debug-vs-release signature
+mismatch makes a literal over-install impossible without the dev keystore.
+Followed the prescribed simulation: fresh debug install → pulled DB, dropped
+`idx_sms_*`, set `PRAGMA user_version=2` → relaunch → DatabaseHelper upgrade ran:
+`user_version==3`, `idx_sms_category/date/visibility` recreated, data intact,
+zero crashes. This exercises the same path as `MigrationTest`.
+
+### Step 6 — Security sweep: PASS
+
+- `aapt2 dump badging`: debug **and** release declare exactly `READ_SMS`,
+  `READ_CONTACTS`, `INTERNET`, plus AGP's auto-generated signature-level
+  `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (benign build artifact).
+- `dumpsys package` flags: `[ DEBUGGABLE … ]` on the installed debug build only;
+  legacy release APK behavior confirmed non-debuggable via run-as denial.
+- Diff master..HEAD: **30 commits**, 71 stat lines.
+- Secret scan (`keystore|password|token|secret`, case-insensitive): 30 hits,
+  all benign — `${{ secrets.* }}` CI references, step names, prose notes.
+  Zero literal credential values. No keystores/binaries added by branch.
+
+### Disposition & tag status
+
+- Deferred-minor follow-ups remain tracked as recorded in F1 triage +
+  `progress.md`: DEFER-TO-ISSUE bundle, **I3 executor-migration debt**,
+  **I4 network-on-disk-executor**. Unchanged by this phase.
+- Device-QA riders previously emulator-blocked now cleared by this run:
+  fresh-install permission flow ✓, categorization accuracy smoke ✓, offline
+  version check ✓, export/import round-trip ✓. Remaining rider: category
+  dialog padding check (visual-only).
+- **Tag recommendation `v1.7.0`: upheld** — all prior conditions verifiable
+  locally have now been verified; MUST-FIX-before-merge items (C1/C2) still gate
+  the tag as before.
