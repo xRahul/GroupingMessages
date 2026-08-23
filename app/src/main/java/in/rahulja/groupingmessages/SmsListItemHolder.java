@@ -12,13 +12,12 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import java.util.Map;
 import in.rahulja.groupingmessages.db.SmsDao;
+import in.rahulja.groupingmessages.model.Sms;
 
 @SuppressWarnings("WeakerAccess") class SmsListItemHolder extends RecyclerView.ViewHolder
     implements View.OnClickListener, View.OnLongClickListener {
 
-  private static final String KEY_FROM = "from";
   private final TextView smsBodyTextView;
   private final TextView smsFromTextView;
   private final TextView smsTimeTextView;
@@ -41,7 +40,7 @@ import in.rahulja.groupingmessages.db.SmsDao;
     return undo;
   }
 
-  private Map<String, String> sms;
+  private Sms sms;
   private Context context;
 
   SmsListItemHolder(Context contextTemp, View itemView) {
@@ -78,19 +77,21 @@ import in.rahulja.groupingmessages.db.SmsDao;
     ).toString();
   }
 
-  public void bindSms(Map<String, String> smsTemp) {
+  public void bindSms(Sms smsTemp, String fromDisplay, String categoryName) {
     sms = smsTemp;
     // 4. Bind the data to the ViewHolder
-    smsBodyTextView.setText(sms.get(DatabaseContract.Sms.KEY_BODY));
+    smsBodyTextView.setText(sms.getBody());
 
-    if (Integer.parseInt(sms.get(DatabaseContract.Sms.KEY_READ)) == 0) {
+    if (sms.getRead() == 0) {
       listItemContent.setCardBackgroundColor(Color.LTGRAY);
+    } else {
+      listItemContent.setCardBackgroundColor(Color.WHITE);
     }
 
-    smsFromTextView.setText(sms.get(KEY_FROM));
-    smsTimeTextView.setText(getDate(Long.parseLong(sms.get(DatabaseContract.Sms.KEY_DATE))));
+    smsFromTextView.setText(fromDisplay);
+    smsTimeTextView.setText(getDate(sms.getDate()));
     smsCategoryButton.setText(
-        String.format("Change Category - %s", sms.get("category_name"))
+        context.getString(R.string.change_category_with_name, categoryName)
     );
 
     smsCategoryButton.setOnClickListener(this);
@@ -100,12 +101,12 @@ import in.rahulja.groupingmessages.db.SmsDao;
   public void onClick(View v) {
     if (v.getId() == smsCategoryButton.getId()) {
       Intent i = new Intent(context, ChangeCategoryActivity.class);
-      i.putExtra("sms_id", Long.parseLong(sms.get(DatabaseContract.Sms._ID)));
+      i.putExtra("sms_id", sms.getId());
       i.putExtra("sms_list_position", getAdapterPosition());
 
       ((AppCompatActivity) context).startActivityForResult(i, 111);
     } else if (v.getId() == listItemContent.getId() || v.getId() == smsBodyTextView.getId()) {
-      SmsDao.setSmsAsRead(context, sms.get(DatabaseContract.Sms._ID));
+      SmsDao.setSmsAsRead(context, String.valueOf(sms.getId()));
       listItemContent.setCardBackgroundColor(Color.WHITE);
     }
   }

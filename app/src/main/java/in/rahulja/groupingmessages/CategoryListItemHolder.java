@@ -14,24 +14,21 @@ import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.util.Map;
 import in.rahulja.groupingmessages.db.SmsDao;
+import in.rahulja.groupingmessages.model.Category;
 
 class CategoryListItemHolder extends RecyclerView.ViewHolder
     implements View.OnClickListener, View.OnLongClickListener {
 
-  private static final String COUNT_UNREAD = "count_unread";
-  private static final String COUNT_READ = "count_read";
   private static final String CATEGORY_ID = "category_id";
+  private static final long UNKNOWN_CATEGORY_ID = 1L;
   private static final String EDIT_CATEGORY_TAG = "EDIT_CATEGORY_TAG";
   private final Context context;
   private final TextView categoryNameTextView;
   private final TextView categoryUnreadCountTextView;
   private final TextView categoryReadCountTextView;
   private final RelativeLayout categoryListViewParent;
-  private String categoryId;
-  private String categoryName;
-  private String categoryColor;
+  private Category category;
 
   CategoryListItemHolder(View itemView) {
     super(itemView);
@@ -48,13 +45,10 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
   }
 
   @SuppressWarnings("WeakerAccess")
-  public void bindCategory(Map<String, String> category) {
-    categoryId = category.get(DatabaseContract.Category._ID);
-    categoryName = category.get(DatabaseContract.Category.KEY_NAME);
-    categoryColor = category.get(DatabaseContract.Category.KEY_COLOR);
-    categoryNameTextView.setText(category.get(DatabaseContract.Category.KEY_NAME));
+  public void bindCategory(Category category, String unreadCountStr, String readCountStr) {
+    this.category = category;
+    categoryNameTextView.setText(category.getName());
 
-    String unreadCountStr = category.get(COUNT_UNREAD);
     categoryUnreadCountTextView.setText(unreadCountStr);
     try {
       int unreadCount = Integer.parseInt(unreadCountStr);
@@ -65,7 +59,6 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
       // ignore
     }
 
-    String readCountStr = category.get(COUNT_READ);
     categoryReadCountTextView.setText(readCountStr);
     try {
       int readCount = Integer.parseInt(readCountStr);
@@ -76,18 +69,14 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
       // ignore
     }
 
-    if (category.get(DatabaseContract.Category.KEY_COLOR) != null) {
-      categoryListViewParent.setBackgroundColor(
-          Integer.parseInt(category.get(DatabaseContract.Category.KEY_COLOR))
-      );
-    }
+    categoryListViewParent.setBackgroundColor(category.getColor());
   }
 
   @Override
   public void onClick(View v) {
     final Intent intent;
     intent = new Intent(context, SmsActivity.class);
-    intent.putExtra(CATEGORY_ID, categoryId);
+    intent.putExtra(CATEGORY_ID, String.valueOf(category.getId()));
     context.startActivity(intent);
   }
 
@@ -113,29 +102,28 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
 
       Bundle args = new Bundle();
       args.putString("ACTION", "EDIT");
-      args.putLong(DatabaseContract.Category._ID, Long.parseLong(categoryId));
-      args.putString(DatabaseContract.Category.KEY_NAME, categoryName);
-      args.putInt(DatabaseContract.Category.KEY_COLOR, Integer.parseInt(categoryColor));
+      args.putLong(DatabaseContract.Category._ID, category.getId());
+      args.putString(DatabaseContract.Category.KEY_NAME, category.getName());
+      args.putInt(DatabaseContract.Category.KEY_COLOR, category.getColor());
 
       newFragment.setArguments(args);
       newFragment.show(((MainActivity) context).getSupportFragmentManager(), EDIT_CATEGORY_TAG);
-    } else if (id == R.id.category_popup_delete_item && !"1".equals(categoryId)) {
-      ((MainActivity) context).requestDeleteCategory(Long.parseLong(categoryId));
-    } else if (id == R.id.category_popup_delete_item && "1".equals(categoryId)) {
-      Toast.makeText(context, "Cannot Delete Unknown Category", Toast.LENGTH_SHORT).show();
+    } else if (id == R.id.category_popup_delete_item && category.getId() != UNKNOWN_CATEGORY_ID) {
+      ((MainActivity) context).requestDeleteCategory(category.getId());
+    } else if (id == R.id.category_popup_delete_item) {
+      Toast.makeText(context,
+          context.getString(R.string.cannot_delete_unknown_category),
+          Toast.LENGTH_SHORT).show();
     } else if (id == R.id.category_popup_all_read_item) {
-      SmsDao.setAllCategorySmsAsRead(context, categoryId);
+      SmsDao.setAllCategorySmsAsRead(context, String.valueOf(category.getId()));
       ((MainActivity) context).onPostResume();
     } else if (id == R.id.category_popup_delete_all_sms) {
       AlertDialog.Builder builder = new AlertDialog.Builder(context);
 
-      builder.setTitle("Delete All Sms in " + categoryName + "?");
-      builder.setMessage(
-          "All sms from this category " +
-              "will be deleted from this application's database. " +
-              "Real SMS are not affected"
-      );
-      builder.setPositiveButton("Yes",
+      builder.setTitle(
+          context.getString(R.string.delete_all_sms_in_category_title, category.getName()));
+      builder.setMessage(R.string.delete_all_sms_warning);
+      builder.setPositiveButton(R.string.yes,
           new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog,
                 int which) {
@@ -143,7 +131,7 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
               Runnable runnable = new Runnable() {
                 @Override
                 public void run() {
-                  SmsDao.deleteAllSmsOfCategoryById(context, Long.parseLong(categoryId));
+                  SmsDao.deleteAllSmsOfCategoryById(context, category.getId());
                   ((MainActivity) context).runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -155,7 +143,7 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
               new Thread(runnable).start();
             }
           });
-      builder.setNegativeButton("No",
+      builder.setNegativeButton(R.string.no,
           new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog,
                 int which) {

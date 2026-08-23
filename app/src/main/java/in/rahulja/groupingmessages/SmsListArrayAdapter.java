@@ -2,39 +2,63 @@ package in.rahulja.groupingmessages;
 
 import android.content.Context;
 import android.os.Handler;
-import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import java.util.ArrayList;
+import androidx.annotation.NonNull;
+import in.rahulja.groupingmessages.model.Sms;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("WeakerAccess") class SmsListArrayAdapter
-    extends RecyclerView.Adapter<SmsListItemHolder> {
+    extends ListAdapter<Sms, SmsListItemHolder> {
 
   interface OnSmsRemovedListener {
-    void onSmsRemoved(Map<String, String> data);
+    void onSmsRemoved(Sms sms);
   }
 
   private static final int PENDING_REMOVAL_TIMEOUT = 3000; // 3sec
-  private Context context;
-  private List<Map<String, String>> smsList;
-  private ArrayList<Map<String, String>> itemsPendingRemoval;
+  private static final String ZERO = "0";
+
+  private final Context context;
   private final OnSmsRemovedListener onSmsRemovedListener;
-  private Handler handler = new Handler(); // hanlder for running delayed runnables
-  private HashMap<Map<String, String>, Runnable> pendingRunnables = new HashMap<>();
-  // map of items to pending runnables, so we can cancel a removal if need be
+  private final Set<Long> itemsPendingRemoval = new HashSet<>();
+  private final Map<Long, Runnable> pendingRunnables = new HashMap<>();
+  private final Handler handler = new Handler(); // hanlder for running delayed runnables
 
-  SmsListArrayAdapter(Context context, List<Map<String, String>> objects,
-      OnSmsRemovedListener listener) {
+  private Map<String, String> contactNamesByAddress = Collections.emptyMap();
+  private Map<Long, String> categoryNamesById = Collections.emptyMap();
 
+  SmsListArrayAdapter(Context context, OnSmsRemovedListener listener) {
+    super(new SmsDiffCallback());
     this.context = context;
-    this.smsList = objects;
-    this.itemsPendingRemoval = new ArrayList<>();
     this.onSmsRemovedListener = listener;
+  }
+
+  void submitSms(List<Sms> smsList, Map<String, String> contactNamesByAddress,
+      Map<Long, String> categoryNamesById) {
+
+    // resolved display names live outside the diffed item; when they change,
+    // rebind everything so rows never show a stale name/category label
+    boolean displayDataChanged =
+        !this.contactNamesByAddress.equals(contactNamesByAddress)
+            || !this.categoryNamesById.equals(categoryNamesById);
+    this.contactNamesByAddress = contactNamesByAddress != null
+        ? contactNamesByAddress : Collections.emptyMap();
+    this.categoryNamesById = categoryNamesById != null
+        ? categoryNamesById : Collections.emptyMap();
+
+    if (displayDataChanged) {
+      submitList(smsList, this::notifyDataSetChanged);
+    } else {
+      submitList(smsList);
+    }
   }
 
   // 2. Override the onCreateViewHolder method
@@ -51,9 +75,9 @@ import java.util.Map;
   @Override
   public void onBindViewHolder(@NonNull SmsListItemHolder holder, int position) {
 
-    final Map<String, String> data = smsList.get(position);
+    final Sms data = getItem(position);
 
-    if (itemsPendingRemoval.contains(data)) {
+    if (itemsPendingRemoval.contains(data.getId())) {
       holder.getRegularLayout().setVisibility(View.GONE);
       holder.getSwipeLayout().setVisibility(View.VISIBLE);
       holder.getUndo().setOnClickListener(new View.OnClickListener() {
@@ -65,57 +89,64 @@ import java.util.Map;
     } else {
       holder.getRegularLayout().setVisibility(View.VISIBLE);
       holder.getSwipeLayout().setVisibility(View.GONE);
-      holder.bindSms(data);
+      holder.bindSms(data,
+          displayNameFor(data),
+          categoryNamesById.getOrDefault(data.getCategoryId(), ""));
     }
   }
 
-  private void undoOpt(Map<String, String> smsItem) {
-    Runnable pendingRemovalRunnable = pendingRunnables.get(smsItem);
-    pendingRunnables.remove(smsItem);
+  private String displayNameFor(Sms sms) {
+    String contactName = contactNamesByAddress.get(sms.getAddress());
+    return contactName != null ? contactName : sms.getAddress();
+  }
+
+  private void undoOpt(Sms smsItem) {
+    Runnable pendingRemovalRunnable = pendingRunnables.remove(smsItem.getId());
     if (pendingRemovalRunnable != null) {
       handler.removeCallbacks(pendingRemovalRunnable);
     }
-    itemsPendingRemoval.remove(smsItem);
+    itemsPendingRemoval.remove(smsItem.getId());
     // this will rebind the row in "normal" state
-    notifyItemChanged(smsList.indexOf(smsItem));
-  }
-
-  @Override
-  public int getItemCount() {
-    return this.smsList.size();
+    notifyItemChanged(positionOf(smsItem.getId()));
   }
 
   public void pendingRemoval(int position) {
 
-    final Map<String, String> data = smsList.get(position);
-    if (!itemsPendingRemoval.contains(data)) {
-      itemsPendingRemoval.add(data);
+    final Sms data = getItem(position);
+    if (!itemsPendingRemoval.contains(data.getId())) {
+      itemsPendingRemoval.add(data.getId());
       // this will redraw row in "undo" state
       notifyItemChanged(position);
       // let's create, store and post a runnable to remove the data
       Runnable pendingRemovalRunnable = new Runnable() {
         @Override
         public void run() {
-          remove(smsList.indexOf(data));
+          remove(data);
         }
       };
       handler.postDelayed(pendingRemovalRunnable, PENDING_REMOVAL_TIMEOUT);
-      pendingRunnables.put(data, pendingRemovalRunnable);
+      pendingRunnables.put(data.getId(), pendingRemovalRunnable);
     }
   }
 
-  private void remove(int position) {
-    Map<String, String> data = smsList.get(position);
-    itemsPendingRemoval.remove(data);
-    if (smsList.contains(data)) {
-      smsList.remove(position);
-      notifyItemRemoved(position);
-      onSmsRemovedListener.onSmsRemoved(data);
-    }
+  private void remove(Sms data) {
+    itemsPendingRemoval.remove(data.getId());
+    pendingRunnables.remove(data.getId());
+    // the row disappears once the refreshed list lands via submitList
+    onSmsRemovedListener.onSmsRemoved(data);
   }
 
   public boolean isPendingRemoval(int position) {
-    Map<String, String> data = smsList.get(position);
-    return itemsPendingRemoval.contains(data);
+    return itemsPendingRemoval.contains(getItem(position).getId());
+  }
+
+  private int positionOf(long smsId) {
+    List<Sms> currentList = getCurrentList();
+    for (int i = 0; i < currentList.size(); i++) {
+      if (currentList.get(i).getId() == smsId) {
+        return i;
+      }
+    }
+    return RecyclerView.NO_POSITION;
   }
 }

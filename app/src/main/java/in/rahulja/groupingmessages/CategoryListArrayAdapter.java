@@ -1,41 +1,41 @@
 package in.rahulja.groupingmessages;
 
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.ListAdapter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import androidx.annotation.NonNull;
 import in.rahulja.groupingmessages.model.Category;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHolder> {
+class CategoryListArrayAdapter extends ListAdapter<Category, CategoryListItemHolder> {
 
-  private static final String COUNT_UNREAD = "count_unread";
-  private static final String COUNT_READ = "count_read";
+  private Map<Long, String> unreadCountsByCategoryId = Collections.emptyMap();
+  private Map<Long, String> readCountsByCategoryId = Collections.emptyMap();
 
-  private final List<Map<String, String>> categoryList;
+  CategoryListArrayAdapter() {
+    super(new CategoryDiffCallback());
+  }
 
-  CategoryListArrayAdapter(List<Category> categories,
+  void submitCategories(List<Category> categories,
       Map<Long, String> unreadCountsByCategoryId, Map<Long, String> readCountsByCategoryId) {
 
-    categoryList = new ArrayList<>();
-    if (categories == null) {
-      return;
-    }
+    // counts live outside the diffed item; when they change, rebind everything
+    // (same wholesale redraw as the pre-DiffUtil rebuild) so cards stay fresh
+    boolean countsChanged =
+        !this.unreadCountsByCategoryId.equals(unreadCountsByCategoryId)
+            || !this.readCountsByCategoryId.equals(readCountsByCategoryId);
+    this.unreadCountsByCategoryId = unreadCountsByCategoryId != null
+        ? unreadCountsByCategoryId : Collections.emptyMap();
+    this.readCountsByCategoryId = readCountsByCategoryId != null
+        ? readCountsByCategoryId : Collections.emptyMap();
 
-    for (Category category : categories) {
-      Map<String, String> categoryItem = new HashMap<>();
-      categoryItem.put(DatabaseContract.Category._ID, String.valueOf(category.getId()));
-      categoryItem.put(DatabaseContract.Category.KEY_NAME, category.getName());
-      categoryItem.put(DatabaseContract.Category.KEY_COLOR, String.valueOf(category.getColor()));
-      categoryItem.put(COUNT_UNREAD,
-          unreadCountsByCategoryId.getOrDefault(category.getId(), "0"));
-      categoryItem.put(COUNT_READ,
-          readCountsByCategoryId.getOrDefault(category.getId(), "0"));
-      categoryList.add(categoryItem);
+    if (countsChanged) {
+      submitList(categories, this::notifyDataSetChanged);
+    } else {
+      submitList(categories);
     }
   }
 
@@ -48,12 +48,10 @@ class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHold
 
   @Override
   public void onBindViewHolder(@NonNull CategoryListItemHolder holder, int position) {
-    holder.bindCategory(this.categoryList.get(position));
+    Category category = getItem(position);
+    holder.bindCategory(category,
+        unreadCountsByCategoryId.getOrDefault(category.getId(), "0"),
+        readCountsByCategoryId.getOrDefault(category.getId(), "0"));
     holder.itemView.setLongClickable(true);
-  }
-
-  @Override
-  public int getItemCount() {
-    return this.categoryList.size();
   }
 }

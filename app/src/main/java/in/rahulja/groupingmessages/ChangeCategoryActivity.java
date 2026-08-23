@@ -31,7 +31,7 @@ public class ChangeCategoryActivity extends AppCompatActivity {
     setContentView(R.layout.activity_choose_category);
     setupWindowInsets();
 
-    setTitle("Choose category");
+    setTitle(R.string.choose_category);
     oldIntent = getIntent();
 
     categories = CategoryDao.getAllVisibleCategories(this);

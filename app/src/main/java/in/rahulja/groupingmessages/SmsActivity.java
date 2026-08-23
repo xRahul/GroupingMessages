@@ -25,7 +25,6 @@ import in.rahulja.groupingmessages.db.SmsDao;
 import in.rahulja.groupingmessages.model.Sms;
 import in.rahulja.groupingmessages.vm.AppExecutors;
 import in.rahulja.groupingmessages.vm.SmsListViewModel;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,16 +33,15 @@ import java.util.Set;
 
 public class SmsActivity extends AppCompatActivity {
 
-  public static final String KEY_FROM = "from";
-  public static final String KEY_CATEGORY_NAME = "category_name";
   public static final String CATEGORY_ID = "category_id";
   private static final int CHANGE_CATEGORY_REQUEST_CODE = 111;
 
-  private LinearLayoutManager llm = new LinearLayoutManager(this);
+  private LinearLayoutManager llm;
   private ProgressBar pbCircle;
   private RecyclerView listView;
   private long categoryId;
-  private List<Map<String, String>> displaySms;
+  private List<Sms> currentSms;
+  private SmsListArrayAdapter smsItemsAdapter;
   private SmsListViewModel smsListViewModel;
 
   @Override
@@ -64,6 +62,13 @@ public class SmsActivity extends AppCompatActivity {
 
     categoryId = Long.parseLong(getIntent().getStringExtra(CATEGORY_ID));
 
+    llm = new LinearLayoutManager(this);
+    listView.setLayoutManager(llm);
+    listView.setHasFixedSize(true);
+    smsItemsAdapter = new SmsListArrayAdapter(this, this::onSmsRemovedByUser);
+    listView.setAdapter(smsItemsAdapter);
+    setSwipeForRecyclerView();
+
     smsListViewModel = new ViewModelProvider(this).get(SmsListViewModel.class);
     smsListViewModel.getSms(categoryId).observe(this, this::onSmsLoaded);
   }
@@ -81,76 +86,29 @@ public class SmsActivity extends AppCompatActivity {
     }
     AppExecutors.disk(() -> {
 
-      List<Map<String, String>> rows = buildDisplaySms(loadedSms);
+      Set<String> addressSet = new HashSet<>();
+      for (Sms sms : loadedSms) {
+        addressSet.add(sms.getAddress());
+      }
+
+      Map<String, String> contactNames = ExternalContentBridge.getContactNames(this, addressSet);
+
+      Map<Long, String> categories = new HashMap<>();
+      for (Map<String, String> category : CategoryDao.getAllVisibleCategories(this)) {
+        categories.put(
+            Long.parseLong(category.get(DatabaseContract.Category._ID)),
+            category.get(DatabaseContract.Category.KEY_NAME)
+        );
+      }
 
       AppExecutors.main(() -> {
         if (isFinishing() || isDestroyed()) {
           return;
         }
-        displaySms = rows;
-        drawUi(rows);
+        currentSms = loadedSms;
+        smsItemsAdapter.submitSms(loadedSms, contactNames, categories);
       });
     });
-  }
-
-  private List<Map<String, String>> buildDisplaySms(List<Sms> loadedSms) {
-
-    Set<String> addressSet = new HashSet<>();
-    for (Sms sms : loadedSms) {
-      addressSet.add(sms.getAddress());
-    }
-
-    Map<String, String> contactNames = ExternalContentBridge.getContactNames(this, addressSet);
-
-    Map<Long, String> categories = new HashMap<>();
-    for (Map<String, String> category : CategoryDao.getAllVisibleCategories(this)) {
-      categories.put(
-          Long.parseLong(category.get(DatabaseContract.Category._ID)),
-          category.get(DatabaseContract.Category.KEY_NAME)
-      );
-    }
-
-    List<Map<String, String>> rows = new ArrayList<>();
-    for (Sms sms : loadedSms) {
-
-      Map<String, String> row = new HashMap<>();
-      row.put(DatabaseContract.Sms._ID, String.valueOf(sms.getId()));
-      row.put(DatabaseContract.Sms.KEY_DATE, String.valueOf(sms.getDate()));
-      row.put(DatabaseContract.Sms.KEY_BODY, sms.getBody());
-      row.put(DatabaseContract.Sms.KEY_ADDRESS, sms.getAddress());
-      row.put(DatabaseContract.Sms.KEY_READ, String.valueOf(sms.getRead()));
-      row.put(DatabaseContract.Sms.KEY_VISIBILITY, String.valueOf(sms.getVisibility()));
-      row.put(DatabaseContract.Sms.KEY_SIMILAR_TO, String.valueOf(sms.getSimilarTo()));
-      row.put(DatabaseContract.Sms.KEY_CATEGORY_ID, String.valueOf(sms.getCategoryId()));
-
-      // legacy resolved contact names only when a person was linked; a failed
-      // lookup now falls back to the raw address instead of showing null
-      String fromString = sms.getAddress();
-      String contactName = contactNames.get(fromString);
-      if (contactName != null) {
-        fromString = contactName;
-      }
-      row.put(KEY_FROM, fromString);
-      row.put(KEY_CATEGORY_NAME, categories.get(sms.getCategoryId()));
-
-      rows.add(row);
-    }
-    return rows;
-  }
-
-  private void drawUi(List<Map<String, String>> smsRows) {
-    int positionIndex = llm.findFirstVisibleItemPosition();
-    SmsListArrayAdapter smsItemsAdapter =
-        new SmsListArrayAdapter(this, smsRows, this::onSmsRemovedByUser);
-    listView.setLayoutManager(llm);
-    listView.setHasFixedSize(true);
-    listView.setAdapter(smsItemsAdapter);
-    setSwipeForRecyclerView();
-    if (smsRows.size() > positionIndex) {
-      llm.scrollToPosition(positionIndex);
-    } else {
-      llm.scrollToPosition(smsRows.size() - 1);
-    }
   }
 
   private void setSwipeForRecyclerView() {
@@ -181,25 +139,13 @@ public class SmsActivity extends AppCompatActivity {
     mItemTouchHelper.attachToRecyclerView(listView);
 
     //set swipe label
-    swipeHelper.setLeftSwipeLabel("Delete");
+    swipeHelper.setLeftSwipeLabel(getString(R.string.delete));
     //set swipe background-Color
     swipeHelper.setLeftColorCode(ContextCompat.getColor(this, android.R.color.holo_red_dark));
   }
 
-  private void onSmsRemovedByUser(Map<String, String> data) {
-    smsListViewModel.swipeDelete(smsFromDisplayRow(data), categoryId);
-  }
-
-  private static Sms smsFromDisplayRow(Map<String, String> row) {
-    return new Sms(
-        Long.parseLong(row.get(DatabaseContract.Sms._ID)),
-        Long.parseLong(row.get(DatabaseContract.Sms.KEY_CATEGORY_ID)),
-        Long.parseLong(row.get(DatabaseContract.Sms.KEY_DATE)),
-        Integer.parseInt(row.get(DatabaseContract.Sms.KEY_VISIBILITY)),
-        Integer.parseInt(row.get(DatabaseContract.Sms.KEY_READ)),
-        row.get(DatabaseContract.Sms.KEY_ADDRESS),
-        row.get(DatabaseContract.Sms.KEY_BODY),
-        Long.parseLong(row.get(DatabaseContract.Sms.KEY_SIMILAR_TO)));
+  private void onSmsRemovedByUser(Sms sms) {
+    smsListViewModel.swipeDelete(sms, categoryId);
   }
 
   private void setupActionBar() {
@@ -268,12 +214,10 @@ public class SmsActivity extends AppCompatActivity {
         Log.d("GM/choseCat", receivedIntent.getExtras().toString());
       }
 
-      if (displaySms == null || smsListPosition >= displaySms.size()) {
+      if (currentSms == null || smsListPosition >= currentSms.size()) {
         return;
       }
-      final long smsId = Long.parseLong(
-          displaySms.get(smsListPosition).get(DatabaseContract.Sms._ID)
-      );
+      final long smsId = currentSms.get(smsListPosition).getId();
 
       showTitleProgressSpinner();
       AppExecutors.disk(() -> asyncRetrainAllSms(smsId, newCategoryId));
@@ -315,7 +259,7 @@ public class SmsActivity extends AppCompatActivity {
       }
       Toast.makeText(
           getBaseContext(),
-          "Trained " + numRetrainedSms + " Sms",
+          getString(R.string.trained_sms_count, numRetrainedSms),
           Toast.LENGTH_SHORT
       ).show();
       hideTitleProgressSpinner();
@@ -328,7 +272,8 @@ public class SmsActivity extends AppCompatActivity {
     llm = null;
     pbCircle = null;
     listView = null;
-    displaySms = null;
+    smsItemsAdapter = null;
+    currentSms = null;
     super.onDestroy();
   }
 }

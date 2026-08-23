@@ -99,6 +99,24 @@
     <string name="deleted">Deleted</string>
     <string name="undo">Undo</string>
     <string name="delete_all_sms">Delete all SMS</string>
+    <string name="ok">OK</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="choose_category">Choose category</string>
+    <string name="change_category_with_name">Change Category - %1$s</string>
+    <string name="need_category_name">Need Category Name</string>
+    <string name="successfully_added_category">Successfully added category: %1$s</string>
+    <string name="successfully_updated_category">Successfully updated category: %1$s</string>
+    <string name="cannot_delete_unknown_category">Cannot Delete Unknown Category</string>
+    <string name="delete_all_sms_in_category_title">Delete All Sms in %1$s?</string>
+    <string name="delete_all_sms_warning">All sms from this category will be deleted from this application\'s database. Real SMS are not affected</string>
+    <string name="new_sms_added_count">%1$d new sms added</string>
+    <string name="trained_sms_count">Trained %1$d Sms</string>
+    <string name="permission_read_sms_entry">Read SMS</string>
+    <string name="permission_read_contacts_entry">Read Contacts</string>
+    <string name="permission_rationale_prefix" translatable="false">"You need to grant access to "</string>
+    <string name="permission_rationale_separator" translatable="false">", "</string>
+    <string name="some_permission_denied">Some Permission is Denied</string>
 
     <plurals name="unread_messages_count">
         <item quantity="one">%d unread message</item>

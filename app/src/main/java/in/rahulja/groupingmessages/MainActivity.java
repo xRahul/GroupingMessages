@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity
   private CategoriesViewModel categoriesViewModel;
   private ProgressBar pbCircle;
   private GridLayoutManager glm;
+  private CategoryListArrayAdapter categoryItemsAdapter;
   private Map<Long, String> unreadCountsByCategoryId = new HashMap<>();
   private Map<Long, String> readCountsByCategoryId = new HashMap<>();
 
@@ -65,7 +66,15 @@ public class MainActivity extends AppCompatActivity
     });
 
     pbCircle = findViewById(R.id.progressBarCircle);
+
+    // fixed two-column grid is the current product behavior; kept as-is
     glm = new GridLayoutManager(this, 2);
+
+    RecyclerView listView = findViewById(R.id.category_list_view);
+    listView.setLayoutManager(glm);
+    listView.setHasFixedSize(true);
+    categoryItemsAdapter = new CategoryListArrayAdapter();
+    listView.setAdapter(categoryItemsAdapter);
 
     categoriesViewModel =
         new ViewModelProvider(this).get(CategoriesViewModel.class);
@@ -88,7 +97,8 @@ public class MainActivity extends AppCompatActivity
     if (isFinishing() || isDestroyed()) {
       return;
     }
-    drawUi(loadedCategories);
+    categoryItemsAdapter.submitCategories(loadedCategories,
+        unreadCountsByCategoryId, readCountsByCategoryId);
   }
 
   private void onSmsSyncFinished(Long newlyAddedSmsCount) {
@@ -98,7 +108,7 @@ public class MainActivity extends AppCompatActivity
     if (newlyAddedSmsCount > 0) {
       Toast.makeText(
           getBaseContext(),
-          String.valueOf(newlyAddedSmsCount) + " new sms added",
+          getString(R.string.new_sms_added_count, newlyAddedSmsCount.intValue()),
           Toast.LENGTH_SHORT
       ).show();
     }
@@ -110,9 +120,10 @@ public class MainActivity extends AppCompatActivity
     if (addedCategoryName == null) {
       return;
     }
-    Toast.makeText(this, "Successfully added category: " + addedCategoryName,
+    Toast.makeText(this, getString(R.string.successfully_added_category, addedCategoryName),
         Toast.LENGTH_SHORT).show();
-    Log.i(GM_ADD_CAT, "Successfully added category: " + addedCategoryName);
+    Log.i(GM_ADD_CAT,
+        "Successfully added category: " + addedCategoryName);
     categoriesViewModel.consumeAddedCategoryName();
   }
 
@@ -165,10 +176,10 @@ public class MainActivity extends AppCompatActivity
 
     final List<String> permissionsList = new ArrayList<>();
     if (!addPermission(permissionsList, Manifest.permission.READ_SMS)) {
-      permissionsNeeded.add("Read SMS");
+      permissionsNeeded.add(getString(R.string.permission_read_sms_entry));
     }
     if (!addPermission(permissionsList, Manifest.permission.READ_CONTACTS)) {
-      permissionsNeeded.add("Read Contacts");
+      permissionsNeeded.add(getString(R.string.permission_read_contacts_entry));
     }
 
     Log.d("GM/permNeed", permissionsNeeded.toString());
@@ -177,11 +188,13 @@ public class MainActivity extends AppCompatActivity
     if (!permissionsList.isEmpty()) {
       if (!permissionsNeeded.isEmpty()) {
 
-        StringBuilder message = new StringBuilder();
-        message.append("You need to grant access to ")
-            .append(permissionsNeeded.get(0));
-        for (int i = 1; i < permissionsNeeded.size(); i++)
-          message.append(", ").append(permissionsNeeded.get(i));
+        StringBuilder message = new StringBuilder(
+            getString(R.string.permission_rationale_prefix));
+        message.append(permissionsNeeded.get(0));
+        for (int i = 1; i < permissionsNeeded.size(); i++) {
+          message.append(getString(R.string.permission_rationale_separator))
+              .append(permissionsNeeded.get(i));
+        }
 
         showMessageOKCancel(message.toString(),
             new DialogInterface.OnClickListener() {
@@ -223,8 +236,8 @@ public class MainActivity extends AppCompatActivity
     Log.d("GM/showPermMessage", message);
     new AlertDialog.Builder(MainActivity.this)
         .setMessage(message)
-        .setPositiveButton("OK", okListener)
-        .setNegativeButton("Cancel", null)
+        .setPositiveButton(R.string.ok, okListener)
+        .setNegativeButton(R.string.cancel, null)
         .create()
         .show();
   }
@@ -283,7 +296,7 @@ public class MainActivity extends AppCompatActivity
         dialog.getDialog().findViewById(R.id.pick_category_color);
 
     if (categoryName.getText().toString().isEmpty()) {
-      Toast.makeText(this, "Need Category Name", Toast.LENGTH_SHORT).show();
+      Toast.makeText(this, R.string.need_category_name, Toast.LENGTH_SHORT).show();
       Log.e(GM_ADD_CAT, "Need Category Name");
       return;
     }
@@ -301,7 +314,8 @@ public class MainActivity extends AppCompatActivity
       );
       Boolean categoryUpdated = CategoryDao.updateCategory(this, updatedCategory);
       if (categoryUpdated) {
-        Toast.makeText(this, "Successfully updated category: " + categoryName.getText(),
+        Toast.makeText(this,
+            getString(R.string.successfully_updated_category, categoryName.getText().toString()),
             Toast.LENGTH_SHORT).show();
         Log.i(GM_ADD_CAT, "Successfully updated category: " + categoryName.getText());
       }
@@ -311,22 +325,6 @@ public class MainActivity extends AppCompatActivity
           categoryName.getText().toString(),
           cpView.getSelectedColor()
       );
-    }
-  }
-
-  private void drawUi(List<Category> categories) {
-    int positionIndex = glm.findFirstVisibleItemPosition();
-    CategoryListArrayAdapter categoryItemsAdapter =
-        new CategoryListArrayAdapter(categories, unreadCountsByCategoryId,
-            readCountsByCategoryId);
-    RecyclerView listView = findViewById(R.id.category_list_view);
-    listView.setLayoutManager(glm);
-    listView.setHasFixedSize(true);
-    listView.setAdapter(categoryItemsAdapter);
-    if (categories.size() > positionIndex) {
-      glm.scrollToPosition(positionIndex);
-    } else {
-      glm.scrollToPosition(categories.size() - 1);
     }
   }
 
@@ -351,7 +349,7 @@ public class MainActivity extends AppCompatActivity
         init();
       } else {
         // Permission Denied
-        Toast.makeText(MainActivity.this, "Some Permission is Denied", Toast.LENGTH_SHORT)
+        Toast.makeText(MainActivity.this, R.string.some_permission_denied, Toast.LENGTH_SHORT)
             .show();
       }
     } else {
