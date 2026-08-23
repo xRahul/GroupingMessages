@@ -3,15 +3,19 @@ buildscript {
   repositories {
     google()
     mavenCentral()
+    // SonarQube scanner plugin: newer versions live on the Gradle Plugin Portal.
+    gradlePluginPortal()
   }
   dependencies {
     classpath 'com.android.tools.build:gradle:9.3.1'
-    // classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8'
+    classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:7.4.0.8496'
 
     // NOTE: Do not place your application dependencies here; they belong
     // in the individual module build.gradle files
   }
 }
+
+apply plugin: 'org.sonarqube'
 
 allprojects {
   repositories {
@@ -38,4 +42,13 @@ ext {
   applicationId = 'in.rahulja.groupingmessages'
   versionCode = 16
   versionName = '1.6'
+}
+
+sonar {
+  properties {
+    property 'sonar.host.url', System.getenv('SONAR_HOST_URL') ?: 'https://sonarcloud.io'
+    property 'sonar.organization', System.getenv('SONAR_ORG') ?: 'xrahul-github'
+    property 'sonar.projectKey', System.getenv('SONAR_PROJECT_KEY') ?: 'GroupingMessages:app'
+    property 'sonar.sourceEncoding', 'UTF-8'
+  }
 }

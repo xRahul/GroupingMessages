@@ -10,8 +10,9 @@ android {
         applicationId rootProject.ext.applicationId
         minSdk rootProject.ext.minSdkVersion
         targetSdk rootProject.ext.targetSdkVersion
-        versionCode rootProject.ext.versionCode
-        versionName rootProject.ext.versionName
+        // CI overrides via -PversionCode= -PversionName= (release.yml); local defaults preserved.
+        versionCode ((project.findProperty('versionCode') as Integer) ?: rootProject.ext.versionCode)
+        versionName (project.findProperty('versionName') ?: rootProject.ext.versionName)
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

@@ -47,6 +47,14 @@ jobs:
           fi
           echo "Calculated version: $NEW_TAG"
           echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          # Version scheme: tag vX.Y.Z -> versionName=X.Y.Z,
+          # versionCode=X*10000+Y*100+Z (monotonic for any semver bump).
+          VERSION=${NEW_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          VERSION_NAME="$MAJOR.$MINOR.$PATCH"
+          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          echo "versionName=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "versionCode=$VERSION_CODE" >> $GITHUB_OUTPUT
 
       - name: Build Release APK
         env:
@@ -54,7 +62,7 @@ jobs:
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease -PversionCode=${{ steps.version.outputs.versionCode }} -PversionName=${{ steps.version.outputs.versionName }} --stacktrace
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
