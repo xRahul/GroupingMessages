@@ -1,25 +1,41 @@
 package in.rahulja.groupingmessages;
 
-import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import in.rahulja.groupingmessages.model.Category;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHolder> {
 
-  private List<Map<String, String>> categoryList;
+  private static final String COUNT_UNREAD = "count_unread";
+  private static final String COUNT_READ = "count_read";
 
-  CategoryListArrayAdapter(Context contextParam, List<Map<String, String>> objects) {
+  private final List<Map<String, String>> categoryList;
 
-    if (objects == null) {
-      categoryList = new ArrayList<>();
-    } else {
-      categoryList = objects;
+  CategoryListArrayAdapter(List<Category> categories,
+      Map<Long, String> unreadCountsByCategoryId, Map<Long, String> readCountsByCategoryId) {
+
+    categoryList = new ArrayList<>();
+    if (categories == null) {
+      return;
+    }
+
+    for (Category category : categories) {
+      Map<String, String> categoryItem = new HashMap<>();
+      categoryItem.put(DatabaseContract.Category._ID, String.valueOf(category.getId()));
+      categoryItem.put(DatabaseContract.Category.KEY_NAME, category.getName());
+      categoryItem.put(DatabaseContract.Category.KEY_COLOR, String.valueOf(category.getColor()));
+      categoryItem.put(COUNT_UNREAD,
+          unreadCountsByCategoryId.getOrDefault(category.getId(), "0"));
+      categoryItem.put(COUNT_READ,
+          readCountsByCategoryId.getOrDefault(category.getId(), "0"));
+      categoryList.add(categoryItem);
     }
   }
 
@@ -41,4 +57,3 @@ class CategoryListArrayAdapter extends RecyclerView.Adapter<CategoryListItemHold
     return this.categoryList.size();
   }
 }
-

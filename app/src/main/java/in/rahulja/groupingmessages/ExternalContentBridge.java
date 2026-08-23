@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import in.rahulja.groupingmessages.db.ConfigDao;
 
-@SuppressWarnings("WeakerAccess") class ExternalContentBridge {
+@SuppressWarnings("WeakerAccess") public class ExternalContentBridge {
 
   private static final String LAST_SMS_TIME_CONFIG = "lastSmsTime";
   private static final String SMS_URI_INBOX = "content://sms/inbox";

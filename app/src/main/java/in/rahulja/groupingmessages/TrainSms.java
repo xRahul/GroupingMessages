@@ -15,7 +15,7 @@ import org.simmetrics.metrics.JaroWinkler;
 import org.simmetrics.metrics.Levenshtein;
 import in.rahulja.groupingmessages.db.SmsDao;
 
-@SuppressWarnings("WeakerAccess") class TrainSms {
+@SuppressWarnings("WeakerAccess") public class TrainSms {
 
   private static final String CLEAN_SMS = DatabaseContract.Sms.KEY_CLEANED_SMS;
   private static final int LIMIT_SIM_SCORE = 80;

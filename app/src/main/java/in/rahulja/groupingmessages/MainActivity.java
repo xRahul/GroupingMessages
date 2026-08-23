@@ -6,17 +6,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.DialogFragment;
-import androidx.core.content.ContextCompat;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,50 +13,39 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.DialogFragment;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import com.flask.colorpicker.ColorPickerView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import in.rahulja.groupingmessages.db.CategoryDao;
+import in.rahulja.groupingmessages.model.Category;
+import in.rahulja.groupingmessages.vm.CategoriesViewModel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import in.rahulja.groupingmessages.db.CategoryDao;
-import in.rahulja.groupingmessages.db.SmsDao;
 
 public class MainActivity extends AppCompatActivity
     implements AddCategoryFragment.AddCategoryDialogListener {
 
   private static final String ADD_CATEGORY_TAG = "add_category_tag";
-  private static final String COUNT_UNREAD = "count_unread";
-  private static final String COUNT_READ = "count_read";
   private static final String GM_ADD_CAT = "GM/addCat";
-  private static final String SMS_COUNT = "sms_count";
 
   private static final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 124;
-  private long numRowsAddedToSms;
-  private List<Map<String, String>> categoryList = new ArrayList<>();
+  private CategoriesViewModel categoriesViewModel;
   private ProgressBar pbCircle;
-  private GridLayoutManager glm = new GridLayoutManager(getBaseContext(), 2);
-
-  public static void addSenderTypeToListOfSms(List<Map<String, String>> listOfSms) {
-
-    for (int i = 0; i < listOfSms.size(); i++) {
-      Map<String, String> tempSms = listOfSms.get(i);
-      String fromString = tempSms.get(DatabaseContract.Sms.KEY_ADDRESS);
-      int senderType = DatabaseContract.Sms.SENDER_CONTACT;
-      if ("0".equals(String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_PERSON)))) {
-        senderType = DatabaseContract.Sms.SENDER_COMPANY;
-        if (fromString.matches(".*[0-9]{10}.*") && !fromString.matches(".*[a-zA-Z]+.*")) {
-          senderType = DatabaseContract.Sms.SENDER_NUMBER;
-        }
-      }
-
-      tempSms.put(
-          DatabaseContract.Sms.KEY_SENDER_TYPE,
-          String.valueOf(senderType)
-      );
-
-      listOfSms.set(i, tempSms);
-    }
-  }
+  private GridLayoutManager glm;
+  private Map<Long, String> unreadCountsByCategoryId = new HashMap<>();
+  private Map<Long, String> readCountsByCategoryId = new HashMap<>();
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -76,8 +54,55 @@ public class MainActivity extends AppCompatActivity
     setupActionBar();
 
     pbCircle = findViewById(R.id.progressBarCircle);
+    glm = new GridLayoutManager(this, 2);
+
+    categoriesViewModel =
+        new ViewModelProvider(this).get(CategoriesViewModel.class);
+    observeCategoriesViewModel();
 
     createAddCategoryButton();
+  }
+
+  private void observeCategoriesViewModel() {
+    categoriesViewModel.getUnreadCounts().observe(this,
+        unreadCounts -> unreadCountsByCategoryId = unreadCounts);
+    categoriesViewModel.getReadCounts().observe(this,
+        readCounts -> readCountsByCategoryId = readCounts);
+    categoriesViewModel.getCategories().observe(this, this::onCategoriesLoaded);
+    categoriesViewModel.getNewlyAddedSmsCount().observe(this, this::onSmsSyncFinished);
+    categoriesViewModel.getAddedCategoryName().observe(this, this::onCategoryAdded);
+  }
+
+  private void onCategoriesLoaded(List<Category> loadedCategories) {
+    if (isFinishing() || isDestroyed()) {
+      return;
+    }
+    drawUi(loadedCategories);
+  }
+
+  private void onSmsSyncFinished(Long newlyAddedSmsCount) {
+    if (newlyAddedSmsCount == null) {
+      return;
+    }
+    if (newlyAddedSmsCount > 0) {
+      Toast.makeText(
+          getBaseContext(),
+          String.valueOf(newlyAddedSmsCount) + " new sms added",
+          Toast.LENGTH_SHORT
+      ).show();
+    }
+    hideTitleProgressSpinner();
+    categoriesViewModel.consumeNewlyAddedSmsCount();
+  }
+
+  private void onCategoryAdded(String addedCategoryName) {
+    if (addedCategoryName == null) {
+      return;
+    }
+    Toast.makeText(this, "Successfully added category: " + addedCategoryName,
+        Toast.LENGTH_SHORT).show();
+    Log.i(GM_ADD_CAT, "Successfully added category: " + addedCategoryName);
+    categoriesViewModel.consumeAddedCategoryName();
   }
 
   private void setupActionBar() {
@@ -118,27 +143,9 @@ public class MainActivity extends AppCompatActivity
   }
 
   private void init() {
-    getLatestSmsAndTrainThem();
-    getCategoryListData();
-    drawUi();
-  }
-
-  private void getCategoryListData() {
-    Runnable runnable = new Runnable() {
-      @Override
-      public void run() {
-        getAllCategoriesWithoutCount();
-        addSmsCountToCategories();
-
-        runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            drawUi();
-          }
-        });
-      }
-    };
-    new Thread(runnable).start();
+    showTitleProgressSpinner();
+    categoriesViewModel.syncLatestSms();
+    categoriesViewModel.refresh();
   }
 
   @RequiresApi(api = Build.VERSION_CODES.M)
@@ -225,49 +232,6 @@ public class MainActivity extends AppCompatActivity
     }
   }
 
-  private void getLatestSmsAndTrainThem() {
-
-    showTitleProgressSpinner();
-    Runnable runnable = new Runnable() {
-      @Override
-      public void run() {
-        asyncGetLatestSmsAndTrainThem();
-      }
-    };
-    new Thread(runnable).start();
-  }
-
-  private void asyncGetLatestSmsAndTrainThem() {
-
-    List<Map<String, String>> trainedLatestSmsFromInbox = TrainSms.getTrainedListOfSms(
-        getBaseContext(),
-        ExternalContentBridge.getLatestSmsFromInbox(getBaseContext()),
-        SmsDao.getSelfTrained(getBaseContext())
-    );
-
-    addSenderTypeToListOfSms(trainedLatestSmsFromInbox);
-
-    numRowsAddedToSms = SmsDao.storeTrainedInboxSms(
-        getBaseContext(),
-        trainedLatestSmsFromInbox
-    );
-
-    runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        if (numRowsAddedToSms > 0) {
-          Toast.makeText(
-              getBaseContext(),
-              String.valueOf(numRowsAddedToSms) + " new sms added",
-              Toast.LENGTH_SHORT
-          ).show();
-          getCategoryListData();
-        }
-        hideTitleProgressSpinner();
-      }
-    });
-  }
-
   private void createAddCategoryButton() {
     FloatingActionButton fabAddCategory =
         findViewById(R.id.fab_add_category);
@@ -294,34 +258,8 @@ public class MainActivity extends AppCompatActivity
     }
   }
 
-  private void addSmsCountToCategories() {
-
-    List<Map<String, String>> categoryIdsWithSmsCount =
-        SmsDao.getCategoryIdsWithSmsCount(this);
-
-    for (int i = 0; i < categoryList.size(); i++) {
-      Map<String, String> categoryListItem = categoryList.get(i);
-
-      for (int j = 0; j < categoryIdsWithSmsCount.size(); j++) {
-        if (categoryIdsWithSmsCount.get(j).get(DatabaseContract.Sms.KEY_CATEGORY_ID)
-            .equals(categoryListItem.get(DatabaseContract.Category._ID))) {
-
-          String countKey = COUNT_UNREAD;
-          if (Integer.parseInt(categoryIdsWithSmsCount.get(j).get(DatabaseContract.Sms.KEY_READ))
-              == 1) {
-            countKey = COUNT_READ;
-          }
-
-          categoryListItem.put(
-              countKey,
-              String.valueOf(categoryIdsWithSmsCount.get(j).get(SMS_COUNT))
-          );
-        }
-      }
-      categoryList.set(i, categoryListItem);
-    }
-
-    Log.i("GM/addCountToCategories", categoryList.toString());
+  void requestDeleteCategory(long categoryId) {
+    categoriesViewModel.deleteCategory(categoryId);
   }
 
   @Override
@@ -339,63 +277,45 @@ public class MainActivity extends AppCompatActivity
       return;
     }
 
-    Map<String, String> newCategory = new HashMap<>();
-
-    newCategory.put(DatabaseContract.Category.KEY_NAME, categoryName.getText().toString());
-    newCategory.put(DatabaseContract.Category.KEY_VISIBILITY, String.valueOf(1));
-    newCategory.put(DatabaseContract.Category.KEY_COLOR, String.valueOf(cpView.getSelectedColor()));
-
     if ("EDIT".equals(oldArgs.getString("ACTION"))) {
-      newCategory.put(
+      Map<String, String> updatedCategory = new HashMap<>();
+      updatedCategory.put(DatabaseContract.Category.KEY_NAME,
+          categoryName.getText().toString());
+      updatedCategory.put(DatabaseContract.Category.KEY_VISIBILITY, String.valueOf(1));
+      updatedCategory.put(DatabaseContract.Category.KEY_COLOR,
+          String.valueOf(cpView.getSelectedColor()));
+      updatedCategory.put(
           DatabaseContract.Category._ID,
           String.valueOf(oldArgs.getLong(DatabaseContract.Category._ID))
       );
-      Boolean categoryUpdated = CategoryDao.updateCategory(this, newCategory);
+      Boolean categoryUpdated = CategoryDao.updateCategory(this, updatedCategory);
       if (categoryUpdated) {
         Toast.makeText(this, "Successfully updated category: " + categoryName.getText(),
             Toast.LENGTH_SHORT).show();
         Log.i(GM_ADD_CAT, "Successfully updated category: " + categoryName.getText());
       }
+      categoriesViewModel.refresh();
     } else {
-      Boolean categoryAdded = CategoryDao.addCategory(this, newCategory);
-      if (categoryAdded) {
-        Toast.makeText(this, "Successfully added category: " + categoryName.getText(),
-            Toast.LENGTH_SHORT).show();
-        Log.i(GM_ADD_CAT, "Successfully added category: " + categoryName.getText());
-      }
+      categoriesViewModel.addCategory(
+          categoryName.getText().toString(),
+          cpView.getSelectedColor()
+      );
     }
-    getCategoryListData();
   }
 
-  private void drawUi() {
+  private void drawUi(List<Category> categories) {
     int positionIndex = glm.findFirstVisibleItemPosition();
     CategoryListArrayAdapter categoryItemsAdapter =
-        new CategoryListArrayAdapter(getBaseContext(), categoryList);
+        new CategoryListArrayAdapter(categories, unreadCountsByCategoryId,
+            readCountsByCategoryId);
     RecyclerView listView = findViewById(R.id.category_list_view);
     listView.setLayoutManager(glm);
     listView.setHasFixedSize(true);
     listView.setAdapter(categoryItemsAdapter);
-    if (categoryList.size() > positionIndex) {
+    if (categories.size() > positionIndex) {
       glm.scrollToPosition(positionIndex);
     } else {
-      glm.scrollToPosition(categoryList.size() - 1);
-    }
-  }
-
-  private void getAllCategoriesWithoutCount() {
-
-    List<Map<String, String>> allCategories = CategoryDao.getAllVisibleCategories(this);
-
-    if (categoryList == null) {
-      categoryList = new ArrayList<>();
-    } else {
-      categoryList.clear();
-    }
-
-    for (Map<String, String> category : allCategories) {
-      category.put(COUNT_UNREAD, "0");
-      category.put(COUNT_READ, "0");
-      categoryList.add(category);
+      glm.scrollToPosition(categories.size() - 1);
     }
   }
 
@@ -430,7 +350,6 @@ public class MainActivity extends AppCompatActivity
 
   @Override
   public void onDestroy() {
-    categoryList = null;
     pbCircle = null;
     glm = null;
     super.onDestroy();
