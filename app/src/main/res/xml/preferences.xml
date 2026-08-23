@@ -4,7 +4,7 @@
 
     <androidx.preference.PreferenceCategory android:title="Advanced Settings">
         <androidx.preference.ListPreference
-            android:defaultValue="levenshtein"
+            android:defaultValue="balanced"
             android:entries="@array/SimilarityAlgorithms"
             android:entryValues="@array/SimilarityAlgorithmsAlias"
             android:key="key_similarity_algorithm"
@@ -12,7 +12,7 @@
             android:title="String Similarity Algorithm" />
 
         <androidx.preference.SeekBarPreference
-            android:defaultValue="60"
+            android:defaultValue="25"
             android:enabled="true"
             android:key="key_similarity_score"
             android:summary="Select minimum considerable similarity %age for string comparison"

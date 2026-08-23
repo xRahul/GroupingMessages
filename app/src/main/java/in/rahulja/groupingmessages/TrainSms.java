@@ -10,15 +10,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.simmetrics.StringMetric;
-import org.simmetrics.metrics.JaroWinkler;
-import org.simmetrics.metrics.Levenshtein;
+import in.rahulja.groupingmessages.classify.SmsCategorizer;
 import in.rahulja.groupingmessages.db.SmsDao;
 
 @SuppressWarnings("WeakerAccess") public class TrainSms {
 
   private static final String CLEAN_SMS = DatabaseContract.Sms.KEY_CLEANED_SMS;
-  private static final int LIMIT_SIM_SCORE = 80;
   private static String[] stopWordsofwordnet = {
       "without", "see", "unless", "due", "also", "must", "might", "like", "will", "may", "can",
       "much", "every", "the", "in", "other", "this", "the", "many", "any", "an", "or", "for", "in",
@@ -54,13 +51,16 @@ import in.rahulja.groupingmessages.db.SmsDao;
     List<Map<String, String>> cleanedSmsListToTrainAgainst = cleanListOfSms(smsListToTrainAgainst);
 
     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-    String simAlgo = prefs.getString("key_similarity_algorithm", "levenshtein");
-    StringMetric metric = getMetric(simAlgo);
-    double limitSimScore = prefs.getInt("key_similarity_score", LIMIT_SIM_SCORE) / (double) 100;
+    String mode = SmsCategorizer.resolveMode(prefs.getString("key_similarity_algorithm", null));
+    double limitSimScore = prefs.getInt("key_similarity_score",
+        SmsCategorizer.defaultThresholdPercent(mode)) / (double) 100;
+
+    List<String> exemplarTexts = cleanedTextsOf(cleanedSmsListToTrainAgainst);
+    SmsCategorizer.Batch batch =
+        SmsCategorizer.Batch.build(exemplarTexts, new ArrayList<>(stopWordsSet), mode);
 
     for (Map<String, String> toTrainSmsMap : cleanedSmsListToTrain) {
 
-      double highestSimScore = 0.0;
       toTrainSmsMap.put(
           DatabaseContract.Sms.KEY_SIM_SCORE,
           String.valueOf(0.0)
@@ -82,15 +82,13 @@ import in.rahulja.groupingmessages.db.SmsDao;
           String.valueOf(-1)
       );
 
-      for (Map<String, String> toTrainAgainstSmsMap : cleanedSmsListToTrainAgainst) {
-
-        double tempSimScore = getSmsSimilarityScore(
-            metric,
-            toTrainSmsMap.get(CLEAN_SMS),
-            toTrainAgainstSmsMap.get(CLEAN_SMS)
-        );
-
-        if (tempSimScore >= limitSimScore && tempSimScore >= highestSimScore) {
+      // tie-break: first exemplar in pipeline order wins equal scores
+      int bestExemplarIndex = -1;
+      double highestSimScore = -1.0;
+      double[] scores = batch.scores(toTrainSmsMap.get(CLEAN_SMS));
+      for (int i = 0; i < scores.length; i++) {
+        double tempSimScore = scores[i];
+        if (tempSimScore >= limitSimScore && tempSimScore > highestSimScore) {
           Log.d("GM/SimNewSms", String.format(
               "%s %s %s %s",
               String.valueOf(tempSimScore),
@@ -98,20 +96,25 @@ import in.rahulja.groupingmessages.db.SmsDao;
               String.valueOf(highestSimScore),
               toTrainSmsMap.toString()
           ));
-          toTrainSmsMap.put(
-              DatabaseContract.Sms.KEY_SIM_SCORE,
-              String.valueOf(tempSimScore)
-          );
-          toTrainSmsMap.put(
-              DatabaseContract.Sms.KEY_CATEGORY_ID,
-              toTrainAgainstSmsMap.get(DatabaseContract.Sms.KEY_CATEGORY_ID)
-          );
-          toTrainSmsMap.put(
-              DatabaseContract.Sms.KEY_SIMILAR_TO,
-              toTrainAgainstSmsMap.get(DatabaseContract.Sms._ID)
-          );
+          bestExemplarIndex = i;
           highestSimScore = tempSimScore;
         }
+      }
+
+      if (bestExemplarIndex != -1) {
+        Map<String, String> exemplarMap = cleanedSmsListToTrainAgainst.get(bestExemplarIndex);
+        toTrainSmsMap.put(
+            DatabaseContract.Sms.KEY_SIM_SCORE,
+            String.valueOf(highestSimScore)
+        );
+        toTrainSmsMap.put(
+            DatabaseContract.Sms.KEY_CATEGORY_ID,
+            exemplarMap.get(DatabaseContract.Sms.KEY_CATEGORY_ID)
+        );
+        toTrainSmsMap.put(
+            DatabaseContract.Sms.KEY_SIMILAR_TO,
+            exemplarMap.get(DatabaseContract.Sms._ID)
+        );
       }
 
       trainedLatestSmsList.add(toTrainSmsMap);
@@ -210,20 +213,23 @@ import in.rahulja.groupingmessages.db.SmsDao;
     Map<String, String> cleanedTrainedSms = cleanSmsMap(trainedSms);
 
     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-    String simAlgo = prefs.getString("key_similarity_algorithm", "levenshtein");
-    StringMetric metric = getMetric(simAlgo);
-    double limitSimScore = prefs.getInt("key_similarity_score", LIMIT_SIM_SCORE) / (double) 100;
+    String mode = SmsCategorizer.resolveMode(prefs.getString("key_similarity_algorithm", null));
+    double limitSimScore = prefs.getInt("key_similarity_score",
+        SmsCategorizer.defaultThresholdPercent(mode)) / (double) 100;
 
-    for (Map<String, String> toTrainSmsMap : cleanedAllSms) {
+    List<String> candidateTexts = cleanedTextsOf(cleanedAllSms);
+    SmsCategorizer.Batch batch =
+        SmsCategorizer.Batch.build(candidateTexts, new ArrayList<>(stopWordsSet), mode);
+    double[] scores = batch.scores(cleanedTrainedSms.get(CLEAN_SMS));
+
+    for (int i = 0; i < cleanedAllSms.size(); i++) {
+
+      Map<String, String> toTrainSmsMap = cleanedAllSms.get(i);
 
       double highestSimScore =
           Double.parseDouble(toTrainSmsMap.get(DatabaseContract.Sms.KEY_SIM_SCORE));
 
-      double tempSimScore = getSmsSimilarityScore(
-          metric,
-          toTrainSmsMap.get(CLEAN_SMS),
-          cleanedTrainedSms.get(CLEAN_SMS)
-      );
+      double tempSimScore = scores[i];
 
       if (tempSimScore >= limitSimScore && tempSimScore >= highestSimScore) {
         toTrainSmsMap.put(
@@ -245,23 +251,11 @@ import in.rahulja.groupingmessages.db.SmsDao;
     return reTrainedSmsList;
   }
 
-  private static double getSmsSimilarityScore(StringMetric metric, String sms1, String sms2) {
-    if (metric == null) {
-      return 0.0;
+  private static List<String> cleanedTextsOf(List<Map<String, String>> smsList) {
+    List<String> texts = new ArrayList<>(smsList.size());
+    for (Map<String, String> smsMap : smsList) {
+      texts.add(smsMap.get(CLEAN_SMS));
     }
-    return metric.compare(sms1, sms2);
-  }
-
-  private static StringMetric getMetric(String prefName) {
-    if (prefName == null) {
-      return new Levenshtein();
-    }
-    switch (prefName) {
-      case "jaroWinkler":
-        return new JaroWinkler();
-      case "levenshtein":
-      default:
-        return new Levenshtein();
-    }
+    return texts;
   }
 }
