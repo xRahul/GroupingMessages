@@ -55,6 +55,10 @@ public final class DatabaseBackup {
         deleteIfExists(sidecar(currentDB, SHM_SUFFIX));
 
         copyFile(backupDB, tmpOf(currentDB));
+        // Re-verify inside the lock: the backup file can change between the
+        // pre-flight check and the copy above. Installing a non-SQLite file
+        // triggers the platform's silent delete-and-recreate on next open.
+        verifySqliteHeader(tmpOf(currentDB));
         rename(tmpOf(currentDB), currentDB);
       } catch (IOException e) {
         deleteIfExists(tmpOf(context.getDatabasePath(DatabaseContract.DATABASE_NAME)));
@@ -109,9 +113,15 @@ public final class DatabaseBackup {
   private static void verifySqliteHeader(File backupDB) throws IOException {
     try (FileInputStream in = new FileInputStream(backupDB)) {
       byte[] magic = new byte[SQLITE_HEADER.length()];
-      int read = in.read(magic);
-      String header = read == magic.length ? new String(magic, StandardCharsets.UTF_8) : "";
-      if (!SQLITE_HEADER.equals(header)) {
+      int offset = 0;
+      while (offset < magic.length) {
+        int read = in.read(magic, offset, magic.length - offset);
+        if (read < 0) {
+          throw new IOException("Not a valid SQLite database backup: " + backupDB.getAbsolutePath());
+        }
+        offset += read;
+      }
+      if (!SQLITE_HEADER.equals(new String(magic, StandardCharsets.UTF_8))) {
         throw new IOException("Not a valid SQLite database backup: " + backupDB.getAbsolutePath());
       }
     }
@@ -155,7 +165,11 @@ public final class DatabaseBackup {
       try (FileOutputStream fos = new FileOutputStream(target)) {
         FileChannel src = fis.getChannel();
         FileChannel dst = fos.getChannel();
-        dst.transferFrom(src, 0, src.size());
+        long size = src.size();
+        long position = 0;
+        while (position < size) {
+          position += dst.transferFrom(src, position, size - position);
+        }
         dst.force(true);
       }
     }
