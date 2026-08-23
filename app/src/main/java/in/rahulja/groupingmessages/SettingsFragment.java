@@ -2,6 +2,7 @@ package in.rahulja.groupingmessages;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -154,7 +155,9 @@ public class SettingsFragment extends PreferenceFragmentCompat {
           public void onClick(DialogInterface dialog,
               int which) {
 
-            AppExecutors.disk(() -> asyncImportDb());
+            Context appContext =
+                requireContext().getApplicationContext();
+            AppExecutors.disk(() -> asyncImportDb(appContext));
           }
         });
     builder.setNegativeButton("No",
@@ -167,15 +170,18 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     builder.show();
   }
 
-  private void asyncImportDb() {
+  private void asyncImportDb(Context appContext) {
     try {
-      DatabaseBackup.importDb(getActivity());
+      DatabaseBackup.importDb(appContext);
     } catch (Exception e) {
       Log.e("GM/importDb", Log.getStackTraceString(e));
       AppExecutors.main(new Runnable() {
         @Override
         public void run() {
-          Toast.makeText(getActivity(), "Import failed!", Toast.LENGTH_SHORT).show();
+          if (!isAdded()) {
+            return;
+          }
+          Toast.makeText(appContext, "Import failed!", Toast.LENGTH_SHORT).show();
         }
       });
       return;
@@ -183,8 +189,11 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     AppExecutors.main(new Runnable() {
       @Override
       public void run() {
+        if (!isAdded()) {
+          return;
+        }
         Toast.makeText(
-            getActivity(),
+            appContext,
             "Import completed!",
             Toast.LENGTH_SHORT
         ).show();
@@ -221,7 +230,9 @@ public class SettingsFragment extends PreferenceFragmentCompat {
           public void onClick(DialogInterface dialog,
               int which) {
 
-            AppExecutors.disk(() -> asyncExportDb());
+            Context appContext =
+                requireContext().getApplicationContext();
+            AppExecutors.disk(() -> asyncExportDb(appContext));
           }
         });
     builder.setNegativeButton("No",
@@ -234,15 +245,18 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     builder.show();
   }
 
-  private void asyncExportDb() {
+  private void asyncExportDb(Context appContext) {
     try {
-      DatabaseBackup.exportDb(getActivity());
+      DatabaseBackup.exportDb(appContext);
     } catch (Exception e) {
       Log.e("GM/exportDb", Log.getStackTraceString(e));
       AppExecutors.main(new Runnable() {
         @Override
         public void run() {
-          Toast.makeText(getActivity(), "Export failed!", Toast.LENGTH_SHORT).show();
+          if (!isAdded()) {
+            return;
+          }
+          Toast.makeText(appContext, "Export failed!", Toast.LENGTH_SHORT).show();
         }
       });
       return;
@@ -251,9 +265,12 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     AppExecutors.main(new Runnable() {
       @Override
       public void run() {
+        if (!isAdded()) {
+          return;
+        }
         showShareExportedDbAlert();
         Toast.makeText(
-            getActivity(),
+            appContext,
             "Export completed!",
             Toast.LENGTH_SHORT
         ).show();
@@ -326,13 +343,9 @@ public class SettingsFragment extends PreferenceFragmentCompat {
           public void onClick(DialogInterface dialog,
               int which) {
 
-            Runnable runnable = new Runnable() {
-              @Override
-              public void run() {
-                asyncDeleteCategories();
-              }
-            };
-            new Thread(runnable).start();
+            Context appContext =
+                requireContext().getApplicationContext();
+            AppExecutors.disk(() -> asyncDeleteCategories(appContext));
           }
         });
     builder.setNegativeButton("No",
@@ -345,15 +358,18 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     builder.show();
   }
 
-  private void asyncDeleteCategories() {
+  private void asyncDeleteCategories(Context appContext) {
     CategoryDao.deleteCategories(
-        getActivity()
+        appContext
     );
-    getActivity().runOnUiThread(new Runnable() {
+    AppExecutors.main(new Runnable() {
       @Override
       public void run() {
+        if (!isAdded()) {
+          return;
+        }
         Toast.makeText(
-            getActivity(),
+            appContext,
             "Model reset and categories' deletion complete!",
             Toast.LENGTH_SHORT
         ).show();
@@ -386,13 +402,9 @@ public class SettingsFragment extends PreferenceFragmentCompat {
           public void onClick(DialogInterface dialog,
               int which) {
 
-            Runnable runnable = new Runnable() {
-              @Override
-              public void run() {
-                asyncResetModel();
-              }
-            };
-            new Thread(runnable).start();
+            Context appContext =
+                requireContext().getApplicationContext();
+            AppExecutors.disk(() -> asyncResetModel(appContext));
           }
         });
     builder.setNegativeButton("No",
@@ -405,15 +417,18 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     builder.show();
   }
 
-  private void asyncResetModel() {
+  private void asyncResetModel(Context appContext) {
     SmsDao.deleteModel(
-        getActivity()
+        appContext
     );
-    getActivity().runOnUiThread(new Runnable() {
+    AppExecutors.main(new Runnable() {
       @Override
       public void run() {
+        if (!isAdded()) {
+          return;
+        }
         Toast.makeText(
-            getActivity(),
+            appContext,
             "Model reset complete!",
             Toast.LENGTH_SHORT
         ).show();

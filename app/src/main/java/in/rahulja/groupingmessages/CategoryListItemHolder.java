@@ -16,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import in.rahulja.groupingmessages.db.SmsDao;
 import in.rahulja.groupingmessages.model.Category;
+import in.rahulja.groupingmessages.vm.AppExecutors;
 
 class CategoryListItemHolder extends RecyclerView.ViewHolder
     implements View.OnClickListener, View.OnLongClickListener {
@@ -128,19 +129,11 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
             public void onClick(DialogInterface dialog,
                 int which) {
 
-              Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
-                  SmsDao.deleteAllSmsOfCategoryById(context, category.getId());
-                  ((MainActivity) context).runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                      ((MainActivity) context).onPostResume();
-                    }
-                  });
-                }
-              };
-              new Thread(runnable).start();
+              AppExecutors.disk(() -> {
+                SmsDao.deleteAllSmsOfCategoryById(context, category.getId());
+                AppExecutors.main(
+                    () -> ((MainActivity) context).onPostResume());
+              });
             }
           });
       builder.setNegativeButton(R.string.no,
