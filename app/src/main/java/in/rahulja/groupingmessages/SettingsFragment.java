@@ -1,6 +1,7 @@
 package in.rahulja.groupingmessages;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.FileProvider;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -284,14 +285,20 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         new DialogInterface.OnClickListener() {
           public void onClick(DialogInterface dialog,
               int which) {
-            Uri dbUri = Uri.fromFile(new File(
+            File dbFile = new File(
                 getActivity().getExternalFilesDir(null),
                 DatabaseBackup.BACKUP_DB_PATH
-            ));
+            );
+            Uri dbUri = FileProvider.getUriForFile(
+                requireContext(),
+                requireContext().getPackageName() + ".fileprovider",
+                dbFile
+            );
             Intent shareIntent = new Intent();
             shareIntent.setAction(Intent.ACTION_SEND);
             shareIntent.putExtra(Intent.EXTRA_STREAM, dbUri);
             shareIntent.setType("*/*");
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(Intent.createChooser(shareIntent, "Share database via"));
           }
         });
