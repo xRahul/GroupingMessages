@@ -11,24 +11,30 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import in.rahulja.groupingmessages.db.SmsDao;
 
 @SuppressWarnings("WeakerAccess") class SmsListArrayAdapter
     extends RecyclerView.Adapter<SmsListItemHolder> {
+
+  interface OnSmsRemovedListener {
+    void onSmsRemoved(Map<String, String> data);
+  }
 
   private static final int PENDING_REMOVAL_TIMEOUT = 3000; // 3sec
   private Context context;
   private List<Map<String, String>> smsList;
   private ArrayList<Map<String, String>> itemsPendingRemoval;
+  private final OnSmsRemovedListener onSmsRemovedListener;
   private Handler handler = new Handler(); // hanlder for running delayed runnables
   private HashMap<Map<String, String>, Runnable> pendingRunnables = new HashMap<>();
   // map of items to pending runnables, so we can cancel a removal if need be
 
-  SmsListArrayAdapter(Context context, List<Map<String, String>> objects) {
+  SmsListArrayAdapter(Context context, List<Map<String, String>> objects,
+      OnSmsRemovedListener listener) {
 
     this.context = context;
     this.smsList = objects;
     this.itemsPendingRemoval = new ArrayList<>();
+    this.onSmsRemovedListener = listener;
   }
 
   // 2. Override the onCreateViewHolder method
@@ -104,7 +110,7 @@ import in.rahulja.groupingmessages.db.SmsDao;
     if (smsList.contains(data)) {
       smsList.remove(position);
       notifyItemRemoved(position);
-      SmsDao.deleteSmsByMap(context, data);
+      onSmsRemovedListener.onSmsRemoved(data);
     }
   }
 

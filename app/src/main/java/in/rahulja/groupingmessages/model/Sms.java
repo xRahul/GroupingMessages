@@ -11,16 +11,21 @@ public final class Sms {
   private final long categoryId;
   private final long date;
   private final int visibility;
+  private final int read;
   private final String address;
   private final String body;
+  private final long similarTo;
 
-  public Sms(long id, long categoryId, long date, int visibility, String address, String body) {
+  public Sms(long id, long categoryId, long date, int visibility, int read, String address,
+      String body, long similarTo) {
     this.id = id;
     this.categoryId = categoryId;
     this.date = date;
     this.visibility = visibility;
+    this.read = read;
     this.address = address;
     this.body = body;
+    this.similarTo = similarTo;
   }
 
   public static Sms fromCursor(Cursor cursor) {
@@ -29,8 +34,10 @@ public final class Sms {
         cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_CATEGORY_ID)),
         cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_DATE)),
         cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_VISIBILITY)),
+        cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ)),
         cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_ADDRESS)),
-        cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_BODY)));
+        cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_BODY)),
+        cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SIMILAR_TO)));
   }
 
   public ContentValues toContentValues() {
@@ -59,11 +66,19 @@ public final class Sms {
     return visibility;
   }
 
+  public int getRead() {
+    return read;
+  }
+
   public String getAddress() {
     return address;
   }
 
   public String getBody() {
     return body;
+  }
+
+  public long getSimilarTo() {
+    return similarTo;
   }
 }

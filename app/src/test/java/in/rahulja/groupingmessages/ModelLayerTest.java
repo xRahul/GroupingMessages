@@ -29,8 +29,10 @@ public class ModelLayerTest {
       DatabaseContract.Sms.KEY_CATEGORY_ID,
       DatabaseContract.Sms.KEY_DATE,
       DatabaseContract.Sms.KEY_VISIBILITY,
+      DatabaseContract.Sms.KEY_READ,
       DatabaseContract.Sms.KEY_ADDRESS,
       DatabaseContract.Sms.KEY_BODY,
+      DatabaseContract.Sms.KEY_SIMILAR_TO,
   };
 
   private static final String[] CONFIG_COLUMNS = {
@@ -55,7 +57,7 @@ public class ModelLayerTest {
   @Test
   public void smsFromCursorMapsColumns() {
     MatrixCursor cursor = new MatrixCursor(SMS_COLUMNS);
-    cursor.addRow(new Object[] {42L, 3L, 1699999999999L, 1, "+91 98765 43210", "Hi there"});
+    cursor.addRow(new Object[] {42L, 3L, 1699999999999L, 1, 0, "+91 98765 43210", "Hi there", 0L});
     cursor.moveToFirst();
 
     Sms sms = Sms.fromCursor(cursor);
@@ -64,8 +66,10 @@ public class ModelLayerTest {
     assertEquals(3L, sms.getCategoryId());
     assertEquals(1699999999999L, sms.getDate());
     assertEquals(1, sms.getVisibility());
+    assertEquals(0, sms.getRead());
     assertEquals("+91 98765 43210", sms.getAddress());
     assertEquals("Hi there", sms.getBody());
+    assertEquals(0L, sms.getSimilarTo());
     assertFalse(cursor.isClosed());
   }
 
@@ -102,7 +106,8 @@ public class ModelLayerTest {
 
   @Test
   public void smsContentValuesRoundTrip() {
-    Sms original = new Sms(42L, 3L, 1699999999999L, 0, "+91 98765 43210", "Hi there");
+    Sms original =
+        new Sms(42L, 3L, 1699999999999L, 0, 1, "+91 98765 43210", "Hi there", 0L);
 
     MatrixCursor cursor = new MatrixCursor(SMS_COLUMNS);
     cursor.addRow(new Object[] {
@@ -110,8 +115,10 @@ public class ModelLayerTest {
         original.toContentValues().getAsLong(DatabaseContract.Sms.KEY_CATEGORY_ID),
         original.toContentValues().getAsLong(DatabaseContract.Sms.KEY_DATE),
         original.toContentValues().getAsInteger(DatabaseContract.Sms.KEY_VISIBILITY),
+        original.getRead(),
         original.toContentValues().getAsString(DatabaseContract.Sms.KEY_ADDRESS),
         original.toContentValues().getAsString(DatabaseContract.Sms.KEY_BODY),
+        original.getSimilarTo(),
     });
     cursor.moveToFirst();
     Sms parsed = Sms.fromCursor(cursor);
@@ -120,8 +127,10 @@ public class ModelLayerTest {
     assertEquals(original.getCategoryId(), parsed.getCategoryId());
     assertEquals(original.getDate(), parsed.getDate());
     assertEquals(original.getVisibility(), parsed.getVisibility());
+    assertEquals(original.getRead(), parsed.getRead());
     assertEquals(original.getAddress(), parsed.getAddress());
     assertEquals(original.getBody(), parsed.getBody());
+    assertEquals(original.getSimilarTo(), parsed.getSimilarTo());
   }
 
   @Test

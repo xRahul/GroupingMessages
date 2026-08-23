@@ -45,6 +45,30 @@ public final class SmsDao {
     return queryMaps(context, selection, selectionArgs);
   }
 
+  public static Map<String, String> getById(Context context, long smsId) {
+
+    Map<String, String> smsMap = null;
+
+    String selection = DatabaseContract.Sms._ID + EQUALS_QUESTION;
+    String[] selectionArgs = { String.valueOf(smsId) };
+
+    SQLiteDatabase db = AppDatabase.get(context);
+    try (Cursor cursor = db.query(
+        DatabaseContract.Sms.TABLE_NAME,
+        DatabaseContract.Sms.KEY_ARRAY,
+        selection,
+        selectionArgs,
+        null,
+        null,
+        null
+    )) {
+      if (cursor != null && cursor.moveToFirst()) {
+        smsMap = smsMapFromCursor(cursor);
+      }
+    }
+    return smsMap;
+  }
+
   public static List<Map<String, String>> getVisibleMapsByCategory(Context context,
       long categoryId) {
 

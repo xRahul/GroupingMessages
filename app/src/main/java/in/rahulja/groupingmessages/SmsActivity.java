@@ -2,40 +2,45 @@ package in.rahulja.groupingmessages;
 
 import android.content.Intent;
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.appcompat.widget.Toolbar;
-import androidx.recyclerview.widget.ItemTouchHelper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import in.rahulja.groupingmessages.db.CategoryDao;
+import in.rahulja.groupingmessages.db.SmsDao;
+import in.rahulja.groupingmessages.model.Sms;
+import in.rahulja.groupingmessages.vm.AppExecutors;
+import in.rahulja.groupingmessages.vm.SmsListViewModel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.collections4.CollectionUtils;
-import in.rahulja.groupingmessages.db.CategoryDao;
-import in.rahulja.groupingmessages.db.SmsDao;
 
 public class SmsActivity extends AppCompatActivity {
 
   public static final String KEY_FROM = "from";
   public static final String KEY_CATEGORY_NAME = "category_name";
   public static final String CATEGORY_ID = "category_id";
+  private static final int CHANGE_CATEGORY_REQUEST_CODE = 111;
+
   private LinearLayoutManager llm = new LinearLayoutManager(this);
-  private List<Map<String, String>> smsList;
-  private long categoryId;
-  private Map<String, String> categories;
   private ProgressBar pbCircle;
   private RecyclerView listView;
+  private long categoryId;
+  private List<Map<String, String>> displaySms;
+  private SmsListViewModel smsListViewModel;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -44,20 +49,146 @@ public class SmsActivity extends AppCompatActivity {
     setupActionBar();
 
     pbCircle = findViewById(R.id.progressBarCircle);
+    listView = findViewById(R.id.sms_list_view);
 
     categoryId = Long.parseLong(getIntent().getStringExtra(CATEGORY_ID));
-    smsList = new ArrayList<>();
+
+    smsListViewModel = new ViewModelProvider(this).get(SmsListViewModel.class);
+    smsListViewModel.getSms(categoryId).observe(this, this::onSmsLoaded);
   }
 
   @Override
   protected void onPostResume() {
     super.onPostResume();
-    init();
+    showTitleProgressSpinner();
+    smsListViewModel.refresh(categoryId);
   }
 
-  private void init() {
-    getDataInBackground();
-    drawUi();
+  private void onSmsLoaded(List<Sms> loadedSms) {
+    if (isFinishing() || isDestroyed()) {
+      return;
+    }
+    AppExecutors.disk(() -> {
+
+      List<Map<String, String>> rows = buildDisplaySms(loadedSms);
+
+      AppExecutors.main(() -> {
+        if (isFinishing() || isDestroyed()) {
+          return;
+        }
+        displaySms = rows;
+        drawUi(rows);
+      });
+    });
+  }
+
+  private List<Map<String, String>> buildDisplaySms(List<Sms> loadedSms) {
+
+    Set<String> addressSet = new HashSet<>();
+    for (Sms sms : loadedSms) {
+      addressSet.add(sms.getAddress());
+    }
+
+    Map<String, String> contactNames = ExternalContentBridge.getContactNames(this, addressSet);
+
+    Map<Long, String> categories = new HashMap<>();
+    for (Map<String, String> category : CategoryDao.getAllVisibleCategories(this)) {
+      categories.put(
+          Long.parseLong(category.get(DatabaseContract.Category._ID)),
+          category.get(DatabaseContract.Category.KEY_NAME)
+      );
+    }
+
+    List<Map<String, String>> rows = new ArrayList<>();
+    for (Sms sms : loadedSms) {
+
+      Map<String, String> row = new HashMap<>();
+      row.put(DatabaseContract.Sms._ID, String.valueOf(sms.getId()));
+      row.put(DatabaseContract.Sms.KEY_DATE, String.valueOf(sms.getDate()));
+      row.put(DatabaseContract.Sms.KEY_BODY, sms.getBody());
+      row.put(DatabaseContract.Sms.KEY_ADDRESS, sms.getAddress());
+      row.put(DatabaseContract.Sms.KEY_READ, String.valueOf(sms.getRead()));
+      row.put(DatabaseContract.Sms.KEY_VISIBILITY, String.valueOf(sms.getVisibility()));
+      row.put(DatabaseContract.Sms.KEY_SIMILAR_TO, String.valueOf(sms.getSimilarTo()));
+      row.put(DatabaseContract.Sms.KEY_CATEGORY_ID, String.valueOf(sms.getCategoryId()));
+
+      // legacy resolved contact names only when a person was linked; a failed
+      // lookup now falls back to the raw address instead of showing null
+      String fromString = sms.getAddress();
+      String contactName = contactNames.get(fromString);
+      if (contactName != null) {
+        fromString = contactName;
+      }
+      row.put(KEY_FROM, fromString);
+      row.put(KEY_CATEGORY_NAME, categories.get(sms.getCategoryId()));
+
+      rows.add(row);
+    }
+    return rows;
+  }
+
+  private void drawUi(List<Map<String, String>> smsRows) {
+    int positionIndex = llm.findFirstVisibleItemPosition();
+    SmsListArrayAdapter smsItemsAdapter =
+        new SmsListArrayAdapter(this, smsRows, this::onSmsRemovedByUser);
+    listView.setLayoutManager(llm);
+    listView.setHasFixedSize(true);
+    listView.setAdapter(smsItemsAdapter);
+    setSwipeForRecyclerView();
+    if (smsRows.size() > positionIndex) {
+      llm.scrollToPosition(positionIndex);
+    } else {
+      llm.scrollToPosition(smsRows.size() - 1);
+    }
+  }
+
+  private void setSwipeForRecyclerView() {
+
+    SwipeUtil swipeHelper = new SwipeUtil(0, ItemTouchHelper.LEFT, this) {
+      @Override
+      public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+        int swipedPosition = viewHolder.getAdapterPosition();
+        SmsListArrayAdapter adapter = (SmsListArrayAdapter) listView.getAdapter();
+        if (adapter != null) {
+          adapter.pendingRemoval(swipedPosition);
+        }
+      }
+
+      @Override
+      public int getSwipeDirs(@NonNull RecyclerView recyclerView,
+          RecyclerView.ViewHolder viewHolder) {
+        int position = viewHolder.getAdapterPosition();
+        SmsListArrayAdapter adapter = (SmsListArrayAdapter) listView.getAdapter();
+        if (adapter != null && adapter.isPendingRemoval(position)) {
+          return 0;
+        }
+        return super.getSwipeDirs(recyclerView, viewHolder);
+      }
+    };
+
+    ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(swipeHelper);
+    mItemTouchHelper.attachToRecyclerView(listView);
+
+    //set swipe label
+    swipeHelper.setLeftSwipeLabel("Delete");
+    //set swipe background-Color
+    swipeHelper.setLeftColorCode(ContextCompat.getColor(this, android.R.color.holo_red_dark));
+  }
+
+  private void onSmsRemovedByUser(Map<String, String> data) {
+    smsListViewModel.swipeDelete(smsFromDisplayRow(data), categoryId);
+  }
+
+  private static Sms smsFromDisplayRow(Map<String, String> row) {
+    return new Sms(
+        Long.parseLong(row.get(DatabaseContract.Sms._ID)),
+        Long.parseLong(row.get(DatabaseContract.Sms.KEY_CATEGORY_ID)),
+        Long.parseLong(row.get(DatabaseContract.Sms.KEY_DATE)),
+        Integer.parseInt(row.get(DatabaseContract.Sms.KEY_VISIBILITY)),
+        Integer.parseInt(row.get(DatabaseContract.Sms.KEY_READ)),
+        row.get(DatabaseContract.Sms.KEY_ADDRESS),
+        row.get(DatabaseContract.Sms.KEY_BODY),
+        Long.parseLong(row.get(DatabaseContract.Sms.KEY_SIMILAR_TO)));
   }
 
   private void setupActionBar() {
@@ -112,125 +243,10 @@ public class SmsActivity extends AppCompatActivity {
     }
   }
 
-  private void getDataInBackground() {
-    showTitleProgressSpinner();
-    Runnable runnable = new Runnable() {
-      @Override
-      public void run() {
-        loadAllCategories();
-        Log.d("GM/ChooseCatLoad", "categoriesLoaded" + categories.toString());
-        getCategorySmsData();
-
-        runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            drawUi();
-            hideTitleProgressSpinner();
-          }
-        });
-      }
-    };
-    new Thread(runnable).start();
-  }
-
-  private void drawUi() {
-    int positionIndex = llm.findFirstVisibleItemPosition();
-    SmsListArrayAdapter smsItemsAdapter = new SmsListArrayAdapter(this, smsList);
-    listView = findViewById(R.id.sms_list_view);
-    listView.setLayoutManager(llm);
-    listView.setHasFixedSize(true);
-    listView.setAdapter(smsItemsAdapter);
-    setSwipeForRecyclerView();
-    if (smsList.size() > positionIndex) {
-      llm.scrollToPosition(positionIndex);
-    } else {
-      llm.scrollToPosition(smsList.size() - 1);
-    }
-  }
-
-  private void setSwipeForRecyclerView() {
-
-    SwipeUtil swipeHelper = new SwipeUtil(0, ItemTouchHelper.LEFT, this) {
-      @Override
-      public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-        int swipedPosition = viewHolder.getAdapterPosition();
-        SmsListArrayAdapter adapter = (SmsListArrayAdapter) listView.getAdapter();
-        if (adapter != null) {
-          adapter.pendingRemoval(swipedPosition);
-        }
-      }
-
-      @Override
-      public int getSwipeDirs(@NonNull RecyclerView recyclerView,
-          RecyclerView.ViewHolder viewHolder) {
-        int position = viewHolder.getAdapterPosition();
-        SmsListArrayAdapter adapter = (SmsListArrayAdapter) listView.getAdapter();
-        if (adapter != null && adapter.isPendingRemoval(position)) {
-          return 0;
-        }
-        return super.getSwipeDirs(recyclerView, viewHolder);
-      }
-    };
-
-    ItemTouchHelper mItemTouchHelper = new ItemTouchHelper(swipeHelper);
-    mItemTouchHelper.attachToRecyclerView(listView);
-
-    //set swipe label
-    swipeHelper.setLeftSwipeLabel("Delete");
-    //set swipe background-Color
-    swipeHelper.setLeftColorCode(ContextCompat.getColor(this, android.R.color.holo_red_dark));
-  }
-
-  private void getCategorySmsData() {
-
-    smsList = SmsDao.getVisibleMapsByCategory(this, categoryId);
-
-    Log.d("GM/GotFilteredSMS", String.valueOf(smsList.size()));
-
-    Set<String> addressSet = new HashSet<>();
-
-    for (int i = 0; i < smsList.size(); i++) {
-      if (!"0".equals(String.valueOf(smsList.get(i).get(DatabaseContract.Sms.KEY_PERSON)))) {
-        addressSet.add(smsList.get(i).get(DatabaseContract.Sms.KEY_ADDRESS));
-      }
-    }
-
-    Log.d("GM/addressSet", addressSet.toString());
-
-    Map<String, String> contactNames = ExternalContentBridge.getContactNames(this, addressSet);
-
-    for (int i = 0; i < CollectionUtils.size(smsList); i++) {
-      Map<String, String> tempSms = smsList.get(i);
-      String fromString = tempSms.get(DatabaseContract.Sms.KEY_ADDRESS);
-      if (!"0".equals(String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_PERSON)))) {
-        fromString = contactNames.get(fromString);
-      }
-
-      tempSms.put(KEY_FROM, fromString);
-      tempSms.put(KEY_CATEGORY_NAME, categories.get(
-          String.valueOf(tempSms.get(DatabaseContract.Sms.KEY_CATEGORY_ID))
-      ));
-
-      smsList.set(i, tempSms);
-    }
-  }
-
-  private void loadAllCategories() {
-
-    List<Map<String, String>> allCategories = CategoryDao.getAllVisibleCategories(this);
-    categories = new HashMap<>();
-    for (Map<String, String> category : allCategories) {
-      categories.put(
-          category.get(DatabaseContract.Category._ID),
-          category.get(DatabaseContract.Category.KEY_NAME)
-      );
-    }
-  }
-
   @Override
   public void onActivityResult(int requestCode, int resultCode, Intent receivedIntent) {
     super.onActivityResult(requestCode, resultCode, receivedIntent);
-    if (requestCode == 111 && resultCode == RESULT_OK) {
+    if (requestCode == CHANGE_CATEGORY_REQUEST_CODE && resultCode == RESULT_OK) {
       final long newCategoryId = Long.parseLong(
           receivedIntent.getStringExtra(CATEGORY_ID)
       );
@@ -241,32 +257,35 @@ public class SmsActivity extends AppCompatActivity {
         Log.d("GM/choseCat", receivedIntent.getExtras().toString());
       }
 
-      final Map<String, String> trainedSms = smsList.get(smsListPosition);
-      trainedSms.put(
-          DatabaseContract.Sms.KEY_CATEGORY_ID,
-          String.valueOf(newCategoryId)
-      );
-      trainedSms.put(
-          DatabaseContract.Sms.KEY_SIMILAR_TO,
-          trainedSms.get(DatabaseContract.Sms._ID)
-      );
-      trainedSms.put(
-          DatabaseContract.Sms.KEY_SIM_SCORE,
-          String.valueOf(1.0)
+      if (displaySms == null || smsListPosition >= displaySms.size()) {
+        return;
+      }
+      final long smsId = Long.parseLong(
+          displaySms.get(smsListPosition).get(DatabaseContract.Sms._ID)
       );
 
       showTitleProgressSpinner();
-      Runnable runnable = new Runnable() {
-        @Override
-        public void run() {
-          asyncRetrainAllSms(trainedSms);
-        }
-      };
-      new Thread(runnable).start();
+      AppExecutors.disk(() -> asyncRetrainAllSms(smsId, newCategoryId));
     }
   }
 
-  private void asyncRetrainAllSms(Map<String, String> trainedSms) {
+  private void asyncRetrainAllSms(long smsId, long newCategoryId) {
+
+    // re-read the full row instead of reusing the possibly stale displayed map
+    Map<String, String> trainedSms = SmsDao.getById(getBaseContext(), smsId);
+    trainedSms.put(
+        DatabaseContract.Sms.KEY_CATEGORY_ID,
+        String.valueOf(newCategoryId)
+    );
+    trainedSms.put(
+        DatabaseContract.Sms.KEY_SIMILAR_TO,
+        trainedSms.get(DatabaseContract.Sms._ID)
+    );
+    trainedSms.put(
+        DatabaseContract.Sms.KEY_SIM_SCORE,
+        String.valueOf(1.0)
+    );
+
     SmsDao.updateSmsData(getBaseContext(), trainedSms);
 
     List<Map<String, String>> retrainedSmsList = TrainSms.retrainExistingSms(
@@ -279,27 +298,26 @@ public class SmsActivity extends AppCompatActivity {
         retrainedSmsList
     );
 
-    runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        Toast.makeText(
-            getBaseContext(),
-            "Trained " + numRetrainedSms + " Sms",
-            Toast.LENGTH_SHORT
-        ).show();
-        getDataInBackground();
-        hideTitleProgressSpinner();
+    AppExecutors.main(() -> {
+      if (isFinishing() || isDestroyed()) {
+        return;
       }
+      Toast.makeText(
+          getBaseContext(),
+          "Trained " + numRetrainedSms + " Sms",
+          Toast.LENGTH_SHORT
+      ).show();
+      hideTitleProgressSpinner();
+      smsListViewModel.refresh(categoryId);
     });
   }
 
   @Override
   public void onDestroy() {
     llm = null;
-    smsList = null;
-    categories = null;
     pbCircle = null;
     listView = null;
+    displaySms = null;
     super.onDestroy();
   }
 }
