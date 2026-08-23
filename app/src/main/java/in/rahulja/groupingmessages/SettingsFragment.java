@@ -26,8 +26,6 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   public static final String PREF_DELETE_CAT = "key_reset_model_delete_cat";
   public static final String PREF_EXPORT_DB = "key_export_db";
   public static final String PREF_IMPORT_DB = "key_import_db";
-  private static final String BACKUP_DB_PATH =
-      "GroupMessagingBackupV" + DatabaseContract.DATABASE_VERSION;
   private String versionSummary;
   private Preference versionPref;
   private String latestVersionUrl;
@@ -155,7 +153,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         "Import & Overwrite existing db with one at \n" +
             new File(
                 getActivity().getExternalFilesDir(null),
-                BACKUP_DB_PATH
+                DatabaseBackup.BACKUP_DB_PATH
             ).getAbsolutePath()
     );
     builder.setPositiveButton("Yes",
@@ -183,7 +181,18 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   }
 
   private void asyncImportDb() {
-    DatabaseBackup.importDb(getActivity());
+    try {
+      DatabaseBackup.importDb(getActivity());
+    } catch (Exception e) {
+      Log.e("GM/importDb", Log.getStackTraceString(e));
+      getActivity().runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          Toast.makeText(getActivity(), "Import failed!", Toast.LENGTH_SHORT).show();
+        }
+      });
+      return;
+    }
     getActivity().runOnUiThread(new Runnable() {
       @Override
       public void run() {
@@ -217,7 +226,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         "Export application db & overwrite if old backup exist at \n" +
             new File(
                 getActivity().getExternalFilesDir(null),
-                BACKUP_DB_PATH
+                DatabaseBackup.BACKUP_DB_PATH
             ).getAbsolutePath()
     );
     builder.setPositiveButton("Yes",
@@ -245,7 +254,18 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   }
 
   private void asyncExportDb() {
-    DatabaseBackup.exportDb(getActivity());
+    try {
+      DatabaseBackup.exportDb(getActivity());
+    } catch (Exception e) {
+      Log.e("GM/exportDb", Log.getStackTraceString(e));
+      getActivity().runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          Toast.makeText(getActivity(), "Export failed!", Toast.LENGTH_SHORT).show();
+        }
+      });
+      return;
+    }
 
     getActivity().runOnUiThread(new Runnable() {
       @Override
@@ -275,7 +295,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
               int which) {
             Uri dbUri = Uri.fromFile(new File(
                 getActivity().getExternalFilesDir(null),
-                BACKUP_DB_PATH
+                DatabaseBackup.BACKUP_DB_PATH
             ));
             Intent shareIntent = new Intent();
             shareIntent.setAction(Intent.ACTION_SEND);
