@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class EngineCoreTest {
@@ -97,6 +98,23 @@ public class EngineCoreTest {
       vector.put("t" + i, weights[i]);
     }
     return vector;
+  }
+
+  @Test
+  public void normalizationIsLocaleIndependent() {
+    Map<String, Double> referenceVector = vectorizer.tfIdfVector("LOGIN OTP IS 1234", null, 5);
+    Locale originalLocale = Locale.getDefault();
+    try {
+      Locale.setDefault(new Locale("tr", "TR"));
+      assertEquals("login otp is 1234", TextVectorizer.normalize("LOGIN OTP IS 1234"));
+      assertTrue(referenceVector.containsKey("login"));
+      assertTrue(referenceVector.containsKey("otp"));
+      assertFalse(referenceVector.containsKey("is"));
+      assertEquals(referenceVector,
+          vectorizer.tfIdfVector("LOGIN OTP IS 1234", null, 5));
+    } finally {
+      Locale.setDefault(originalLocale);
+    }
   }
 
   @Test

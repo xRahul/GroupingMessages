@@ -3,6 +3,7 @@ package in.rahulja.groupingmessages.classify;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -23,7 +24,7 @@ public final class TextVectorizer {
     if (raw == null || raw.isEmpty()) {
       return "";
     }
-    return NON_ALPHANUMERIC.matcher(raw.toLowerCase()).replaceAll(" ").trim();
+    return NON_ALPHANUMERIC.matcher(raw.toLowerCase(Locale.ROOT)).replaceAll(" ").trim();
   }
 
   public Map<String, Double> tfIdfVector(String text, Map<String, Integer> documentFrequency,
