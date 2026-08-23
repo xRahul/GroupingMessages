@@ -23,19 +23,25 @@ public class PerformanceBenchmarkTest {
         runOptimized(100);
 
         // Measure Baseline (Reflection inside loop)
-        long startTime = System.nanoTime();
-        runReflection(ITERATIONS);
-        long endTime = System.nanoTime();
-        long reflectionDuration = endTime - startTime;
-        System.out.println(String.format("Reflection approach (%d iterations): %d ms",
-            ITERATIONS, TimeUnit.NANOSECONDS.toMillis(reflectionDuration)));
+        long reflectionDuration = Long.MAX_VALUE;
+        long optimizedDuration = Long.MAX_VALUE;
 
-        // Measure Optimized (Instantiation outside loop)
-        startTime = System.nanoTime();
-        runOptimized(ITERATIONS);
-        endTime = System.nanoTime();
-        long optimizedDuration = endTime - startTime;
-        System.out.println(String.format("Optimized approach (%d iterations): %d ms",
+        // Best-of-3 rounds so JIT/GC noise cannot flip the comparison
+        for (int round = 0; round < 3; round++) {
+            long startTime = System.nanoTime();
+            runReflection(ITERATIONS);
+            long endTime = System.nanoTime();
+            reflectionDuration = Math.min(reflectionDuration, endTime - startTime);
+
+            startTime = System.nanoTime();
+            runOptimized(ITERATIONS);
+            endTime = System.nanoTime();
+            optimizedDuration = Math.min(optimizedDuration, endTime - startTime);
+        }
+
+        System.out.println(String.format("Best reflection approach (%d iterations): %d ms",
+            ITERATIONS, TimeUnit.NANOSECONDS.toMillis(reflectionDuration)));
+        System.out.println(String.format("Best optimized approach (%d iterations): %d ms",
             ITERATIONS, TimeUnit.NANOSECONDS.toMillis(optimizedDuration)));
 
         // Assert improvement (Optimized should be at least 2x faster, usually much more)

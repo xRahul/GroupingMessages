@@ -5,7 +5,7 @@ buildscript {
     mavenCentral()
   }
   dependencies {
-    classpath 'com.android.tools.build:gradle:8.2.0'
+    classpath 'com.android.tools.build:gradle:9.3.1'
     // classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8'
 
     // NOTE: Do not place your application dependencies here; they belong
@@ -29,11 +29,11 @@ task clean(type: Delete) {
 // modules in the project.
 ext {
   // The following are only a few examples of the types of properties you can define.
-  compileSdkVersion = 34
+  compileSdkVersion = 35
   // You can also create properties to specify versions for dependencies.
   // Having consistent versions between modules can avoid conflicts with behavior.
   minSdkVersion = 24
-  targetSdkVersion = 34
+  targetSdkVersion = 35
   jUnitVersion = '4.13.2'
   applicationId = 'in.rahulja.groupingmessages'
   versionCode = 16

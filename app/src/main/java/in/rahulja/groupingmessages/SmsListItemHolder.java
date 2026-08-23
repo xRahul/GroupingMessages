@@ -13,7 +13,6 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import java.util.Map;
-import lombok.Getter;
 import in.rahulja.groupingmessages.db.SmsDao;
 
 @SuppressWarnings("WeakerAccess") class SmsListItemHolder extends RecyclerView.ViewHolder
@@ -26,12 +25,21 @@ import in.rahulja.groupingmessages.db.SmsDao;
   private final Button smsCategoryButton;
   private final CardView listItemContent;
 
-  @Getter
   private RelativeLayout regularLayout;
-  @Getter
   private LinearLayout swipeLayout;
-  @Getter
   private TextView undo;
+
+  RelativeLayout getRegularLayout() {
+    return regularLayout;
+  }
+
+  LinearLayout getSwipeLayout() {
+    return swipeLayout;
+  }
+
+  TextView getUndo() {
+    return undo;
+  }
 
   private Map<String, String> sms;
   private Context context;

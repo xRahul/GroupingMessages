@@ -3,6 +3,10 @@ package in.rahulja.groupingmessages;
 import android.content.Intent;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -25,6 +29,7 @@ public class ChangeCategoryActivity extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_choose_category);
+    setupWindowInsets();
 
     setTitle("Choose category");
     oldIntent = getIntent();
@@ -36,6 +41,21 @@ public class ChangeCategoryActivity extends AppCompatActivity {
     setCategoryListView();
 
     setCategoryListViewClickListener();
+  }
+
+  private void setupWindowInsets() {
+    View root = findViewById(R.id.activity_choose_bucket);
+    final int baseLeft = root.getPaddingLeft();
+    final int baseTop = root.getPaddingTop();
+    final int baseRight = root.getPaddingRight();
+    final int baseBottom = root.getPaddingBottom();
+    WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+    ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+      Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+      v.setPadding(baseLeft + bars.left, baseTop + bars.top,
+          baseRight + bars.right, baseBottom + bars.bottom);
+      return WindowInsetsCompat.CONSUMED;
+    });
   }
 
   private void setCategoryListViewClickListener() {
