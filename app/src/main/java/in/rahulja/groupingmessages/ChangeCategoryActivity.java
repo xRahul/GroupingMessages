@@ -10,6 +10,7 @@ import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import java.util.List;
 import java.util.Map;
+import in.rahulja.groupingmessages.db.CategoryDao;
 
 public class ChangeCategoryActivity extends AppCompatActivity {
 
@@ -28,7 +29,7 @@ public class ChangeCategoryActivity extends AppCompatActivity {
     setTitle("Choose category");
     oldIntent = getIntent();
 
-    categories = DatabaseBridge.getAllVisibleCategories(this);
+    categories = CategoryDao.getAllVisibleCategories(this);
 
     categoryListView = findViewById(R.id.activity_choose_category_list_view);
 

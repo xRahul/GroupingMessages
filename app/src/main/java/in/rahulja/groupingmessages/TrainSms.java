@@ -13,6 +13,7 @@ import java.util.Set;
 import org.simmetrics.StringMetric;
 import org.simmetrics.metrics.JaroWinkler;
 import org.simmetrics.metrics.Levenshtein;
+import in.rahulja.groupingmessages.db.SmsDao;
 
 @SuppressWarnings("WeakerAccess") class TrainSms {
 
@@ -203,7 +204,7 @@ import org.simmetrics.metrics.Levenshtein;
   public static List<Map<String, String>> retrainExistingSms(Context context,
       Map<String, String> trainedSms) {
 
-    List<Map<String, String>> allSms = DatabaseBridge.getAllSms(context);
+    List<Map<String, String>> allSms = SmsDao.getAll(context);
     List<Map<String, String>> reTrainedSmsList = new ArrayList<>();
     List<Map<String, String>> cleanedAllSms = cleanListOfSms(allSms);
     Map<String, String> cleanedTrainedSms = cleanSmsMap(trainedSms);

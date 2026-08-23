@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.collections4.CollectionUtils;
+import in.rahulja.groupingmessages.db.CategoryDao;
+import in.rahulja.groupingmessages.db.SmsDao;
 
 public class SmsActivity extends AppCompatActivity {
 
@@ -181,7 +183,7 @@ public class SmsActivity extends AppCompatActivity {
 
   private void getCategorySmsData() {
 
-    smsList = DatabaseBridge.getVisibleSmsFromCategory(this, categoryId);
+    smsList = SmsDao.getVisibleMapsByCategory(this, categoryId);
 
     Log.d("GM/GotFilteredSMS", String.valueOf(smsList.size()));
 
@@ -215,7 +217,7 @@ public class SmsActivity extends AppCompatActivity {
 
   private void loadAllCategories() {
 
-    List<Map<String, String>> allCategories = DatabaseBridge.getAllVisibleCategories(this);
+    List<Map<String, String>> allCategories = CategoryDao.getAllVisibleCategories(this);
     categories = new HashMap<>();
     for (Map<String, String> category : allCategories) {
       categories.put(
@@ -265,14 +267,14 @@ public class SmsActivity extends AppCompatActivity {
   }
 
   private void asyncRetrainAllSms(Map<String, String> trainedSms) {
-    DatabaseBridge.updateSmsData(getBaseContext(), trainedSms);
+    SmsDao.updateSmsData(getBaseContext(), trainedSms);
 
     List<Map<String, String>> retrainedSmsList = TrainSms.retrainExistingSms(
         getBaseContext(),
         trainedSms
     );
 
-    final long numRetrainedSms = DatabaseBridge.storeReTrainedSms(
+    final long numRetrainedSms = SmsDao.storeReTrainedSms(
         getBaseContext(),
         retrainedSmsList
     );

@@ -1,11 +1,10 @@
 package in.rahulja.groupingmessages.model;
 
+import in.rahulja.groupingmessages.DatabaseContract;
+
 import android.database.Cursor;
 
 public final class ConfigEntry {
-
-  private static final String COL_NAME = "name";
-  private static final String COL_VALUE = "value";
 
   private final String key;
   private final String value;
@@ -17,8 +16,8 @@ public final class ConfigEntry {
 
   public static ConfigEntry fromCursor(Cursor cursor) {
     return new ConfigEntry(
-        cursor.getString(cursor.getColumnIndexOrThrow(COL_NAME)),
-        cursor.getString(cursor.getColumnIndexOrThrow(COL_VALUE)));
+        cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.Config.KEY_NAME)),
+        cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.Config.KEY_VALUE)));
   }
 
   public String getKey() {

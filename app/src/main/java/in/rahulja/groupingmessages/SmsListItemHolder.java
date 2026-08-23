@@ -14,6 +14,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import java.util.Map;
 import lombok.Getter;
+import in.rahulja.groupingmessages.db.SmsDao;
 
 @SuppressWarnings("WeakerAccess") class SmsListItemHolder extends RecyclerView.ViewHolder
     implements View.OnClickListener, View.OnLongClickListener {
@@ -96,7 +97,7 @@ import lombok.Getter;
 
       ((AppCompatActivity) context).startActivityForResult(i, 111);
     } else if (v.getId() == listItemContent.getId() || v.getId() == smsBodyTextView.getId()) {
-      DatabaseBridge.setSmsAsRead(context, sms.get(DatabaseContract.Sms._ID));
+      SmsDao.setSmsAsRead(context, sms.get(DatabaseContract.Sms._ID));
       listItemContent.setCardBackgroundColor(Color.WHITE);
     }
   }

@@ -15,6 +15,8 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.util.Map;
+import in.rahulja.groupingmessages.db.CategoryDao;
+import in.rahulja.groupingmessages.db.SmsDao;
 
 class CategoryListItemHolder extends RecyclerView.ViewHolder
     implements View.OnClickListener, View.OnLongClickListener {
@@ -119,12 +121,12 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
       newFragment.setArguments(args);
       newFragment.show(((MainActivity) context).getSupportFragmentManager(), EDIT_CATEGORY_TAG);
     } else if (id == R.id.category_popup_delete_item && !"1".equals(categoryId)) {
-      DatabaseBridge.deleteCategory(context, Long.parseLong(categoryId));
+      CategoryDao.deleteCategory(context, Long.parseLong(categoryId));
       ((MainActivity) context).onPostResume();
     } else if (id == R.id.category_popup_delete_item && "1".equals(categoryId)) {
       Toast.makeText(context, "Cannot Delete Unknown Category", Toast.LENGTH_SHORT).show();
     } else if (id == R.id.category_popup_all_read_item) {
-      DatabaseBridge.setAllCategorySmsAsRead(context, categoryId);
+      SmsDao.setAllCategorySmsAsRead(context, categoryId);
       ((MainActivity) context).onPostResume();
     } else if (id == R.id.category_popup_delete_all_sms) {
       AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -143,7 +145,7 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
               Runnable runnable = new Runnable() {
                 @Override
                 public void run() {
-                  DatabaseBridge.deleteAllSmsOfCategoryById(context, Long.parseLong(categoryId));
+                  SmsDao.deleteAllSmsOfCategoryById(context, Long.parseLong(categoryId));
                   ((MainActivity) context).runOnUiThread(new Runnable() {
                     @Override
                     public void run() {

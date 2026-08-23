@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import in.rahulja.groupingmessages.db.SmsDao;
 
 @SuppressWarnings("WeakerAccess") class SmsListArrayAdapter
     extends RecyclerView.Adapter<SmsListItemHolder> {
@@ -103,7 +104,7 @@ import java.util.Map;
     if (smsList.contains(data)) {
       smsList.remove(position);
       notifyItemRemoved(position);
-      DatabaseBridge.deleteSmsByMap(context, data);
+      SmsDao.deleteSmsByMap(context, data);
     }
   }
 

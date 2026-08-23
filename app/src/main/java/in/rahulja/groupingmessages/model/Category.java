@@ -1,13 +1,11 @@
 package in.rahulja.groupingmessages.model;
 
+import in.rahulja.groupingmessages.DatabaseContract;
+
 import android.content.ContentValues;
 import android.database.Cursor;
 
 public final class Category {
-
-  private static final String COL_ID = "_id";
-  private static final String COL_NAME = "name";
-  private static final String COL_COLOR = "color";
 
   private final long id;
   private final String name;
@@ -21,15 +19,15 @@ public final class Category {
 
   public static Category fromCursor(Cursor cursor) {
     return new Category(
-        cursor.getLong(cursor.getColumnIndexOrThrow(COL_ID)),
-        cursor.getString(cursor.getColumnIndexOrThrow(COL_NAME)),
-        cursor.getInt(cursor.getColumnIndexOrThrow(COL_COLOR)));
+        cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Category._ID)),
+        cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.Category.KEY_NAME)),
+        cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.Category.KEY_COLOR)));
   }
 
   public ContentValues toContentValues() {
     ContentValues values = new ContentValues();
-    values.put(COL_NAME, name);
-    values.put(COL_COLOR, color);
+    values.put(DatabaseContract.Category.KEY_NAME, name);
+    values.put(DatabaseContract.Category.KEY_COLOR, color);
     return values;
   }
 

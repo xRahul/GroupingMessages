@@ -1,5 +1,7 @@
 package in.rahulja.groupingmessages;
 
+import in.rahulja.groupingmessages.db.SmsDao;
+
 import android.content.Context;
 import androidx.test.platform.app.InstrumentationRegistry;
 import android.util.Log;
@@ -18,7 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(JUnit4.class)
-public class DatabaseBridgePerformanceTest {
+public class SmsDaoPerformanceTest {
 
     private Context context;
     private static final String TAG = "PerfTest";
@@ -54,10 +56,10 @@ public class DatabaseBridgePerformanceTest {
         }
 
         // Insert initial data
-        DatabaseBridge.storeTrainedInboxSms(context, initialSmsList);
+        SmsDao.storeTrainedInboxSms(context, initialSmsList);
 
         // Fetch inserted SMS to get their IDs and verify they exist
-        List<Map<String, String>> storedSms = DatabaseBridge.getAllSms(context);
+        List<Map<String, String>> storedSms = SmsDao.getAll(context);
         List<Map<String, String>> retrainedList = new ArrayList<>();
 
         for (Map<String, String> sms : storedSms) {
@@ -77,7 +79,7 @@ public class DatabaseBridgePerformanceTest {
 
         // Measure storeReTrainedSms
         long startTime = System.currentTimeMillis();
-        long updatedCount = DatabaseBridge.storeReTrainedSms(context, retrainedList);
+        long updatedCount = SmsDao.storeReTrainedSms(context, retrainedList);
         long endTime = System.currentTimeMillis();
 
         long duration = endTime - startTime;

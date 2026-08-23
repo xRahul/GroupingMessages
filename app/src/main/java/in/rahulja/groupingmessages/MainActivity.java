@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import in.rahulja.groupingmessages.db.CategoryDao;
+import in.rahulja.groupingmessages.db.SmsDao;
 
 public class MainActivity extends AppCompatActivity
     implements AddCategoryFragment.AddCategoryDialogListener {
@@ -240,12 +242,12 @@ public class MainActivity extends AppCompatActivity
     List<Map<String, String>> trainedLatestSmsFromInbox = TrainSms.getTrainedListOfSms(
         getBaseContext(),
         ExternalContentBridge.getLatestSmsFromInbox(getBaseContext()),
-        DatabaseBridge.getSelfTrainedSms(getBaseContext())
+        SmsDao.getSelfTrained(getBaseContext())
     );
 
     addSenderTypeToListOfSms(trainedLatestSmsFromInbox);
 
-    numRowsAddedToSms = DatabaseBridge.storeTrainedInboxSms(
+    numRowsAddedToSms = SmsDao.storeTrainedInboxSms(
         getBaseContext(),
         trainedLatestSmsFromInbox
     );
@@ -295,7 +297,7 @@ public class MainActivity extends AppCompatActivity
   private void addSmsCountToCategories() {
 
     List<Map<String, String>> categoryIdsWithSmsCount =
-        DatabaseBridge.getCategoryIdsWithSmsCount(this);
+        SmsDao.getCategoryIdsWithSmsCount(this);
 
     for (int i = 0; i < categoryList.size(); i++) {
       Map<String, String> categoryListItem = categoryList.get(i);
@@ -348,14 +350,14 @@ public class MainActivity extends AppCompatActivity
           DatabaseContract.Category._ID,
           String.valueOf(oldArgs.getLong(DatabaseContract.Category._ID))
       );
-      Boolean categoryUpdated = DatabaseBridge.updateCategory(this, newCategory);
+      Boolean categoryUpdated = CategoryDao.updateCategory(this, newCategory);
       if (categoryUpdated) {
         Toast.makeText(this, "Successfully updated category: " + categoryName.getText(),
             Toast.LENGTH_SHORT).show();
         Log.i(GM_ADD_CAT, "Successfully updated category: " + categoryName.getText());
       }
     } else {
-      Boolean categoryAdded = DatabaseBridge.addCategory(this, newCategory);
+      Boolean categoryAdded = CategoryDao.addCategory(this, newCategory);
       if (categoryAdded) {
         Toast.makeText(this, "Successfully added category: " + categoryName.getText(),
             Toast.LENGTH_SHORT).show();
@@ -382,7 +384,7 @@ public class MainActivity extends AppCompatActivity
 
   private void getAllCategoriesWithoutCount() {
 
-    List<Map<String, String>> allCategories = DatabaseBridge.getAllVisibleCategories(this);
+    List<Map<String, String>> allCategories = CategoryDao.getAllVisibleCategories(this);
 
     if (categoryList == null) {
       categoryList = new ArrayList<>();

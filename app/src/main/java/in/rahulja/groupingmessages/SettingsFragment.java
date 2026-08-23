@@ -14,6 +14,9 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
+import in.rahulja.groupingmessages.db.CategoryDao;
+import in.rahulja.groupingmessages.db.DatabaseBackup;
+import in.rahulja.groupingmessages.db.SmsDao;
 
 public class SettingsFragment extends PreferenceFragmentCompat {
 
@@ -180,7 +183,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   }
 
   private void asyncImportDb() {
-    DatabaseBridge.importDB(getActivity());
+    DatabaseBackup.importDb(getActivity());
     getActivity().runOnUiThread(new Runnable() {
       @Override
       public void run() {
@@ -242,7 +245,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   }
 
   private void asyncExportDb() {
-    DatabaseBridge.exportDB(getActivity());
+    DatabaseBackup.exportDb(getActivity());
 
     getActivity().runOnUiThread(new Runnable() {
       @Override
@@ -336,7 +339,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   }
 
   private void asyncDeleteCategories() {
-    DatabaseBridge.deleteCategories(
+    CategoryDao.deleteCategories(
         getActivity()
     );
     getActivity().runOnUiThread(new Runnable() {
@@ -396,7 +399,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   }
 
   private void asyncResetModel() {
-    DatabaseBridge.deleteModel(
+    SmsDao.deleteModel(
         getActivity()
     );
     getActivity().runOnUiThread(new Runnable() {

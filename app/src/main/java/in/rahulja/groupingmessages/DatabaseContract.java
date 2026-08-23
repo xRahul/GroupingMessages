@@ -2,7 +2,7 @@ package in.rahulja.groupingmessages;
 
 import android.provider.BaseColumns;
 
-@SuppressWarnings("WeakerAccess") final class DatabaseContract {
+public final class DatabaseContract {
 
   public static final int DATABASE_VERSION = 3;
   public static final String DATABASE_NAME = "groupMessage.db";
@@ -28,7 +28,7 @@ import android.provider.BaseColumns;
   private DatabaseContract() {
   }
 
-  abstract static class Config implements BaseColumns {
+  public abstract static class Config implements BaseColumns {
     public static final String TABLE_NAME = "config";
     public static final String KEY_NAME = "name";
     /**
@@ -37,8 +37,8 @@ import android.provider.BaseColumns;
     public static final String DEFAULT_SORT_ORDER = KEY_NAME + " ASC";
     public static final String KEY_VALUE = "value";
     public static final String DELETE_TABLE = DROP_TABLE_IF_EXISTS + TABLE_NAME;
-    private static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
-    private static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
+    public static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
+    public static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
     public static final String CREATE_TABLE = CREATE_TABLE_PREFIX +
         TABLE_NAME + " (" +
         _ID + INTEGER_TYPE + PRIMARY_KEY + COMMA_SEP +
@@ -52,7 +52,7 @@ import android.provider.BaseColumns;
     /**
      * Array of all the columns. Makes for cleaner code
      */
-    protected static final String[] KEY_ARRAY = {
+    public static final String[] KEY_ARRAY = {
         _ID,
         KEY_NAME,
         KEY_VALUE,
@@ -65,7 +65,7 @@ import android.provider.BaseColumns;
     }
   }
 
-  abstract static class Category implements BaseColumns {
+  public abstract static class Category implements BaseColumns {
     public static final String TABLE_NAME = "category";
     public static final String KEY_NAME = "name";
     public static final String KEY_COLOR = "color";
@@ -75,8 +75,8 @@ import android.provider.BaseColumns;
      */
     public static final String DEFAULT_SORT_ORDER = KEY_NAME + " ASC";
     public static final String DELETE_TABLE = DROP_TABLE_IF_EXISTS + TABLE_NAME;
-    private static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
-    private static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
+    public static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
+    public static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
     public static final String CREATE_TABLE = DatabaseContract.CREATE_TABLE_PREFIX +
         TABLE_NAME + " (" +
         _ID + INTEGER_TYPE + PRIMARY_KEY + COMMA_SEP +
@@ -91,7 +91,7 @@ import android.provider.BaseColumns;
     /**
      * Array of all the columns. Makes for cleaner code
      */
-    protected static final String[] KEY_ARRAY = {
+    public static final String[] KEY_ARRAY = {
         _ID,
         KEY_NAME,
         KEY_COLOR,
@@ -105,7 +105,7 @@ import android.provider.BaseColumns;
     }
   }
 
-  abstract static class Sms implements BaseColumns {
+  public abstract static class Sms implements BaseColumns {
     public static final String TABLE_NAME = "sms";
 
     public static final String KEY_DATE = "date";
@@ -135,15 +135,15 @@ import android.provider.BaseColumns;
             "1"),
         String.format(ALTER_TABLE_ADD_COLUMN, TABLE_NAME, KEY_SENDER_TYPE, INTEGER_TYPE, "", ""),
     };
-    private static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
-    private static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
+    public static final String KEY_CREATED_AT = COLUMN_CREATED_AT;
+    public static final String KEY_UPDATED_AT = COLUMN_UPDATED_AT;
     public static final String UPDATE_AT_TRIGGER =
         String.format(CREATE_TRIGGER_FORMAT, TABLE_NAME, TABLE_NAME, TABLE_NAME, KEY_UPDATED_AT,
             CURRENT_TIMESTAMP, _ID, _ID);
     /**
      * Array of all the columns. Makes for cleaner code
      */
-    protected static final String[] KEY_ARRAY = {
+    public static final String[] KEY_ARRAY = {
         _ID,
         KEY_DATE,
         KEY_PERSON,

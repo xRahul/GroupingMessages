@@ -1,16 +1,11 @@
 package in.rahulja.groupingmessages.model;
 
+import in.rahulja.groupingmessages.DatabaseContract;
+
 import android.content.ContentValues;
 import android.database.Cursor;
 
 public final class Sms {
-
-  private static final String COL_ID = "_id";
-  private static final String COL_CATEGORY_ID = "category_id";
-  private static final String COL_DATE = "date";
-  private static final String COL_VISIBILITY = "visibility";
-  private static final String COL_ADDRESS = "address";
-  private static final String COL_BODY = "body";
 
   private final long id;
   private final long categoryId;
@@ -30,21 +25,21 @@ public final class Sms {
 
   public static Sms fromCursor(Cursor cursor) {
     return new Sms(
-        cursor.getLong(cursor.getColumnIndexOrThrow(COL_ID)),
-        cursor.getLong(cursor.getColumnIndexOrThrow(COL_CATEGORY_ID)),
-        cursor.getLong(cursor.getColumnIndexOrThrow(COL_DATE)),
-        cursor.getInt(cursor.getColumnIndexOrThrow(COL_VISIBILITY)),
-        cursor.getString(cursor.getColumnIndexOrThrow(COL_ADDRESS)),
-        cursor.getString(cursor.getColumnIndexOrThrow(COL_BODY)));
+        cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Sms._ID)),
+        cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_CATEGORY_ID)),
+        cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_DATE)),
+        cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_VISIBILITY)),
+        cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_ADDRESS)),
+        cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_BODY)));
   }
 
   public ContentValues toContentValues() {
     ContentValues values = new ContentValues();
-    values.put(COL_CATEGORY_ID, categoryId);
-    values.put(COL_DATE, date);
-    values.put(COL_VISIBILITY, visibility);
-    values.put(COL_ADDRESS, address);
-    values.put(COL_BODY, body);
+    values.put(DatabaseContract.Sms.KEY_CATEGORY_ID, categoryId);
+    values.put(DatabaseContract.Sms.KEY_DATE, date);
+    values.put(DatabaseContract.Sms.KEY_VISIBILITY, visibility);
+    values.put(DatabaseContract.Sms.KEY_ADDRESS, address);
+    values.put(DatabaseContract.Sms.KEY_BODY, body);
     return values;
   }
 

@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import in.rahulja.groupingmessages.db.ConfigDao;
 
 @SuppressWarnings("WeakerAccess") class ExternalContentBridge {
 
@@ -24,7 +25,7 @@ import java.util.Set;
 
   public static List<Map<String, String>> getLatestSmsFromInbox(Context context) {
 
-    long lastSmsTime = Long.parseLong(DatabaseBridge.getConfig(context, LAST_SMS_TIME_CONFIG));
+    long lastSmsTime = Long.parseLong(ConfigDao.getValue(context, LAST_SMS_TIME_CONFIG));
 
     List<Map<String, String>> latestSms = new ArrayList<>();
     Uri uri = Uri.parse(SMS_URI_INBOX);
