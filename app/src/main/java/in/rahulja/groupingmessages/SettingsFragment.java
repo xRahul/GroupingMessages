@@ -7,16 +7,14 @@ import android.net.Uri;
 import android.os.Bundle;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.lifecycle.ViewModelProvider;
 import android.util.Log;
 import android.widget.Toast;
 import java.io.File;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Arrays;
 import in.rahulja.groupingmessages.db.CategoryDao;
 import in.rahulja.groupingmessages.db.DatabaseBackup;
 import in.rahulja.groupingmessages.db.SmsDao;
+import in.rahulja.groupingmessages.vm.SettingsViewModel;
 
 public class SettingsFragment extends PreferenceFragmentCompat {
 
@@ -29,6 +27,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   private String versionSummary;
   private Preference versionPref;
   private String latestVersionUrl;
+  private SettingsViewModel settingsViewModel;
   private Preference developerPref;
   private Preference resetModelPref;
   private Preference deleteCatPref;
@@ -39,8 +38,8 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
     setPreferencesFromResource(R.xml.preferences, rootKey);
     initPreferenceView();
-    checkLatestAppVersion();
     updatePreferenceView();
+    initVersionCheck();
   }
 
   private void initPreferenceView() {
@@ -67,49 +66,41 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     initializePreferenceListener();
   }
 
-  private void checkLatestAppVersion() {
+  private void initVersionCheck() {
     versionSummary = BuildConfig.VERSION_NAME;
-    Thread thread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        asyncCheckLatestAppVersion();
-      }
-    });
-    thread.start();
+    if (versionPref != null) {
+      versionPref.setSummary(versionSummary);
+    }
+    settingsViewModel = new ViewModelProvider(this).get(SettingsViewModel.class);
+    settingsViewModel.getVersionState().observe(this,
+        state -> applyVersionState(state));
+    settingsViewModel.checkLatestVersion();
   }
 
-  private void asyncCheckLatestAppVersion() {
-    try {
-      URL url = new URL(getString(R.string.latest_release_url));
-      HttpURLConnection ucon = (HttpURLConnection) url.openConnection();
-      ucon.setInstanceFollowRedirects(false);
-      URL secondURL = new URL(ucon.getHeaderField("Location"));
-      String secondUrl = String.valueOf(secondURL);
-      String latestVersion = Uri.parse(secondUrl).getLastPathSegment();
-      Log.d("GM/updateUrl", secondUrl);
-      if (getActivity() != null) {
-        String checkUrl = getString(R.string.current_release_url_prefix) + BuildConfig.VERSION_NAME;
-        if (secondUrl.equals(checkUrl)) {
-          versionSummary = BuildConfig.VERSION_NAME + " " +
-              getString(R.string.version_summary_latest);
-        } else {
-          versionSummary = BuildConfig.VERSION_NAME + " " +
-              "(" + getString(R.string.version_summary_changed_latest) + latestVersion + ")";
-          latestVersionUrl = secondUrl;
-        }
-        getActivity().runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            if (versionPref != null) {
-                versionPref.setSummary(versionSummary);
-            }
-            Log.d("GM/versionChecked", versionSummary);
-          }
-        });
-      }
-    } catch (IOException e) {
-      // Log.e("GM/SSFragment", Arrays.toString(e.getStackTrace()));
+  private void applyVersionState(SettingsViewModel.VersionState state) {
+    if (!isAdded()) {
+      return;
     }
+    switch (state) {
+      case UP_TO_DATE:
+        versionSummary = BuildConfig.VERSION_NAME + " "
+            + getString(R.string.version_summary_latest);
+        break;
+      case OUTDATED:
+        latestVersionUrl = settingsViewModel.getLatestVersionUrl();
+        versionSummary = BuildConfig.VERSION_NAME + " "
+            + "(" + getString(R.string.version_summary_changed_latest)
+            + SettingsViewModel.lastPathSegment(latestVersionUrl) + ")";
+        break;
+      case ERROR:
+      default:
+        // legacy behavior: failed check leaves the plain version summary
+        return;
+    }
+    if (versionPref != null) {
+      versionPref.setSummary(versionSummary);
+    }
+    Log.d("GM/versionChecked", versionSummary);
   }
 
   private void initializePreferenceListener() {
