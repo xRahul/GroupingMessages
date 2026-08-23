@@ -90,11 +90,12 @@ import in.rahulja.groupingmessages.db.SmsDao;
         double tempSimScore = scores[i];
         if (tempSimScore >= limitSimScore && tempSimScore > highestSimScore) {
           Log.d("GM/SimNewSms", String.format(
-              "%s %s %s %s",
+              "%s %s %s smsDate=%s exemplarId=%s",
               String.valueOf(tempSimScore),
               String.valueOf(limitSimScore),
               String.valueOf(highestSimScore),
-              toTrainSmsMap.toString()
+              toTrainSmsMap.get(DatabaseContract.Sms.KEY_DATE),
+              cleanedSmsListToTrainAgainst.get(i).get(DatabaseContract.Sms._ID)
           ));
           bestExemplarIndex = i;
           highestSimScore = tempSimScore;

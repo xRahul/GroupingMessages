@@ -53,7 +53,9 @@ import in.rahulja.groupingmessages.db.ConfigDao;
         DatabaseContract.Sms.KEY_DATE + " asc"
     );
 
+    long firstInboxSmsId = -1;
     if (cursor != null && cursor.moveToFirst()) {
+      int indexId = cursor.getColumnIndex(DatabaseContract.Sms._ID);
       int indexDate = cursor.getColumnIndex(DatabaseContract.Sms.KEY_DATE);
       int indexPerson = cursor.getColumnIndex(DatabaseContract.Sms.KEY_PERSON);
       int indexRead = cursor.getColumnIndex(DatabaseContract.Sms.KEY_READ);
@@ -83,6 +85,9 @@ import in.rahulja.groupingmessages.db.ConfigDao;
         smsTemp.put(DatabaseContract.Sms.KEY_ADDRESS, strAddress);
 
         latestSms.add(smsTemp);
+        if (indexId != -1 && latestSms.size() == 1) {
+          firstInboxSmsId = cursor.getLong(indexId);
+        }
         cursor.moveToNext();
       }
     } else {
@@ -94,8 +99,9 @@ import in.rahulja.groupingmessages.db.ConfigDao;
     }
 
     Log.i("GM/inboxSmsCount", String.valueOf(latestSms.size()));
-    if (!latestSms.isEmpty()) {
-      Log.i("GM/anInboxSms", latestSms.get(0).toString());
+    if (firstInboxSmsId != -1) {
+      Log.i("GM/anInboxSms", "id=" + firstInboxSmsId
+          + " date=" + latestSms.get(0).get(DatabaseContract.Sms.KEY_DATE));
     }
 
     return latestSms;
