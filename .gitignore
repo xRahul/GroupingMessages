@@ -10,3 +10,10 @@
 .idea/sonarlint/*
 .idea/sonarlint/issuestore/*
 .idea/caches/*
+# IDE / tooling artifacts
+.project
+.classpath
+.settings/
+.codegraph/
+.opencode/
+.superpowers/
