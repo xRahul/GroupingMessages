@@ -88,7 +88,7 @@ Recorded: 2026-08-23 · Head SHA: `d8d02882a8835d5bc8246ea5326ed0db94a49b8e` (`r
 Command: `./gradlew clean lint testDebugUnitTest assembleDebug assembleRelease --stacktrace`
 
 - Result: `BUILD SUCCESSFUL`, exit code 0 (1m 39s; 95 actionable tasks)
-- Artifacts: `app-debug.apk` (~7.2 MB), `app-release.apk` (~1.3 MB, `minifyEnabled` + `shrinkResources`)
+- Artifacts: `app-debug.apk` (≈7.5 MB, 7,477,822 bytes), `app-release.apk` (~1.3 MB, `minifyEnabled` + `shrinkResources`)
 - Signing note: local signing secrets absent — first attempt failed at `validateSigningRelease` (no local `keystore.jks`; config is env-driven for CI). Adapted by generating a throwaway local keystore so the release path ran end-to-end (V2 signature verified via apksigner); throwaway keystore deleted after QA. Production builds are signed in CI from secrets.
 
 ### Unit Tests (anti-flake ×3)
@@ -111,7 +111,7 @@ Clusters: UnusedResources 29, GradleDependency 6, ObsoleteSdkInt 5, NewerVersion
 
 - Manifest requests exactly `READ_SMS`, `READ_CONTACTS`, `INTERNET`; `android:allowBackup="false"` confirmed. Stale `tools:ignore="AllowBackup"` token remains (cosmetic, deferred minor).
 - Branch diff secret scan (`git diff master...HEAD` vs keystore/password/token/private-key/JWT patterns): only GitHub Actions `${{ secrets.* }}` references and SMS test-fixture strings ("your one time password is 456789…"). No credentials in tree or branch diff.
-- No `.jks`/`.keystore`/`.p12`/`.pem`/`.apk`/`.aab` files tracked.
+- No `.jks`/`.keystore`/`.p12`/`.pem` files tracked, and this branch adds no APKs — but 7 legacy **signed release APKs are already tracked** under `app/apks/` on master (`GroupingMessages 1.0.apk` … `1.6.apk` incl `[AVOID]GroupingMessages 1.4.apk`, master-era commits ecf9a93/d2e9743). Removal recommended (triage below).
 - `.gitignore` covers `/build`, `.gradle`, `local.properties`, `/captures`. Local IDE/tooling dirs (`.codegraph/`, `.opencode/`, `.project`, `.settings/`, `docs/superpowers/`) are untracked but not ignored — hygiene candidate.
 - Informational (pre-existing): the deleted `.travis.yml` contained a Travis token blob persisting in git history only.
 
@@ -147,7 +147,8 @@ Clusters: UnusedResources 29, GradleDependency 6, ObsoleteSdkInt 5, NewerVersion
 **POST-MERGE**
 
 - High priority: import-failure path deletes uncheckpointed `-wal`/`-shm` after close (pre-existing data-loss edge, T8).
-- Docs: README hardcodes `GroupMessagingBackupV3` filename (stale naming, T17); contact-name display divergence disclosure (T11, also ledgered above).
+- Docs: README's `GroupMessagingBackupV3` mention mirrors the version-derived filename (`DatabaseBackup.java:28-29` builds `"GroupMessagingBackupV" + DATABASE_VERSION`, so V3 is current truth) — revisit wording only at schema v4 (T17); contact-name display divergence disclosure (T11, also ledgered above).
+- Repo hygiene / supply-chain: remove the 7 legacy signed APKs tracked at `app/apks/` (v1.0–v1.6, master-era commits ecf9a93/d2e9743; branch adds none) via `git rm` — POST-MERGE, can ride the F2 CI wave; optional history rewrite given signed artifacts embed build provenance.
 - CI: `setup-gradle@v3` straggler in `release.yml:22` (T16); `-PversionCode=0` falsy fallback nit (T16).
 - Classifier hardening: negative-IDF unguarded if corpusSize < maxDf; weak determinism test (insertion order only); tie-break favors later category; non-ASCII truncation ceiling (T19/T20).
 - Test hygiene: `SchemaTest` closes singleton-held DB; `TrainSmsTest` reflection; `ModelLayerTest` tautological assertSame; per-column ContentValues rebuild; `CategoriesViewModelTest` reflection; `MigrationTest` reflection on private `sInstance`.
