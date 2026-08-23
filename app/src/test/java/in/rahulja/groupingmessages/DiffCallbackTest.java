@@ -90,4 +90,18 @@ public class DiffCallbackTest {
       assertFalse("variant should differ from base", callback.areContentsTheSame(base, variant));
     }
   }
+
+  @Test
+  public void sms_contentsSame_whenNullableFieldsNullOnBoth() {
+    SmsDiffCallback callback = new SmsDiffCallback();
+    assertTrue(callback.areContentsTheSame(
+        sms(7, 1, 100L, 1, 0, null, null, 7),
+        sms(7, 1, 100L, 1, 0, null, null, 7)));
+    assertFalse(callback.areContentsTheSame(
+        sms(7, 1, 100L, 1, 0, null, "hi", 7),
+        sms(7, 1, 100L, 1, 0, "12345", "hi", 7)));
+    assertFalse(callback.areContentsTheSame(
+        sms(7, 1, 100L, 1, 0, "12345", null, 7),
+        sms(7, 1, 100L, 1, 0, "12345", "hi", 7)));
+  }
 }

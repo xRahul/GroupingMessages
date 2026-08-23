@@ -18,8 +18,8 @@ class SmsDiffCallback extends DiffUtil.ItemCallback<Sms> {
         && oldItem.getDate() == newItem.getDate()
         && oldItem.getVisibility() == newItem.getVisibility()
         && oldItem.getRead() == newItem.getRead()
-        && oldItem.getAddress().equals(newItem.getAddress())
-        && oldItem.getBody().equals(newItem.getBody())
+        && Objects.equals(oldItem.getAddress(), newItem.getAddress())
+        && Objects.equals(oldItem.getBody(), newItem.getBody())
         && oldItem.getSimilarTo() == newItem.getSimilarTo();
   }
 }
