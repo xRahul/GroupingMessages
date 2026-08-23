@@ -76,3 +76,87 @@ Command: `./gradlew clean lintDebug testDebugUnitTest assembleDebug --stacktrace
 
 - Pure Java Android app (no Kotlin), classic Activity/Fragment + static bridge classes (`DatabaseBridge`, `ExternalContentBridge`) rather than MVVM; no ViewModel/LiveData/DataBinding usage.
 - UI built around `MainActivity` + `SmsActivity` + `SettingsActivity` with RecyclerView list adapters/holders performing direct DB access from background threads.
+
+---
+
+## Final QA Report (Revitalization Gate)
+
+Recorded: 2026-08-23 · Head SHA: `d8d02882a8835d5bc8246ea5326ed0db94a49b8e` (`revitalize/mvvm`, 24 commits ahead of `master`)
+
+### Build Matrix
+
+Command: `./gradlew clean lint testDebugUnitTest assembleDebug assembleRelease --stacktrace`
+
+- Result: `BUILD SUCCESSFUL`, exit code 0 (1m 39s; 95 actionable tasks)
+- Artifacts: `app-debug.apk` (~7.2 MB), `app-release.apk` (~1.3 MB, `minifyEnabled` + `shrinkResources`)
+- Signing note: local signing secrets absent — first attempt failed at `validateSigningRelease` (no local `keystore.jks`; config is env-driven for CI). Adapted by generating a throwaway local keystore so the release path ran end-to-end (V2 signature verified via apksigner); throwaway keystore deleted after QA. Production builds are signed in CI from secrets.
+
+### Unit Tests (anti-flake ×3)
+
+| Run | tests | failures | errors | skipped |
+|---|---|---|---|---|
+| 1 (in matrix) | 95 | 0 | 0 | 0 |
+| 2 | 95 | 0 | 0 | 0 |
+| 3 | 95 | 0 | 0 | 0 |
+
+16 suites (baseline had 4). Test classpath additions recorded here per Task 1 deferred note: junit 4.13.2, mockito-core/mockito-inline 4.11.0, robolectric 4.11.1.
+
+### Lint vs Baseline
+
+Baseline 0 errors / 44 warnings → **now 0 errors / 50 warnings (+6)**.
+
+Clusters: UnusedResources 29, GradleDependency 6, ObsoleteSdkInt 5, NewerVersionAvailable 3, RedundantLabel 2, single hits: Autofill, DataExtractionRules, HardcodedText (`choose_category_list_item.xml:11`), Overdraw (`tool_bar.xml:8`), PluralsCandidate. No security-severity findings.
+
+### Security Review
+
+- Manifest requests exactly `READ_SMS`, `READ_CONTACTS`, `INTERNET`; `android:allowBackup="false"` confirmed. Stale `tools:ignore="AllowBackup"` token remains (cosmetic, deferred minor).
+- Branch diff secret scan (`git diff master...HEAD` vs keystore/password/token/private-key/JWT patterns): only GitHub Actions `${{ secrets.* }}` references and SMS test-fixture strings ("your one time password is 456789…"). No credentials in tree or branch diff.
+- No `.jks`/`.keystore`/`.p12`/`.pem`/`.apk`/`.aab` files tracked.
+- `.gitignore` covers `/build`, `.gradle`, `local.properties`, `/captures`. Local IDE/tooling dirs (`.codegraph/`, `.opencode/`, `.project`, `.settings/`, `docs/superpowers/`) are untracked but not ignored — hygiene candidate.
+- Informational (pre-existing): the deleted `.travis.yml` contained a Travis token blob persisting in git history only.
+
+### Emulator-Blocked Items (no emulator/device available in this CLI environment)
+
+| Smoke checklist item | Partial static/Robolectric evidence |
+|---|---|
+| Fresh install → grant READ_SMS/READ_CONTACTS → Unknown category appears | DB bootstrap/default categories covered by Robolectric suite; runtime-permission dialog flow unverified |
+| Receive/train an SMS → category assigned | Training pipeline + hybrid engine covered by `SmsCategorizerTest`/`EngineCoreTest` goldens; on-device receiver unverified |
+| Swipe behaviors | ItemTouchHelper attach-once dedup verified in code review (T15); gesture UX unverified |
+| Add/rename/delete category | DAO + ViewModel CRUD unit tests pass; dialogs unverified |
+| Settings reset/export/import round-trip | WAL-aware backup/restore unit-tested (`DatabaseBackup`, T8); device file I/O unverified |
+| Airplane mode ON → settings version check graceful error, no crash | `checkLatestVersion` error-path state machine unit-tested (T12); live network-off behavior unverified |
+| Categorization accuracy smoke (shipped-order vs meeting texts + typo'd/reordered variants, unrelated stays Unknown) | Near-copy/unrelated variants asserted in classifier unit goldens; real-device accuracy smoke unverified |
+
+**Upgrade smoke (Step 4):** over-install APK flow EMULATOR-BLOCKED. Covered instead by the `MigrationTest` harness (v1→v3 and v2→v3 paths): data survives, `DATABASE_VERSION=3`, indexes `idx_sms_category`/`idx_sms_date`/`idx_sms_visibility` present (`DatabaseHelper` applies `CREATE INDEX IF NOT EXISTS` on create and upgrade). Legacy stored similarity-algorithm prefs map to `legacyLevenshtein` without crash (historical threshold semantics preserved at default 80); unset/stale values fall back to `balanced`.
+
+### Known Behavior Changes Ledger
+
+1. **Default algorithm/threshold** — new installs default to `balanced` @ similarity score 25 (re-baselined for cosine+dice scale); legacy whole-string default was 80.
+2. **Stale-pref mapping** — stored `levenshtein`/`jaroWinkler` aliases map to `legacyLevenshtein` (old semantics kept); unset/stale values fall back to `balanced`.
+3. **Swipe-vanish timing shift** — sub-second window after swipe-commit refresh; adjudicated acceptable (T15).
+4. Contact-name display resolves all addresses (legacy: `person != 0` only) — broader coverage, cosmetic divergence.
+5. Category-picker empty edge case no longer renders a literal "- null" title suffix.
+
+### Deferred-Minors Triage (input to F1–F3)
+
+**MUST-FIX-BEFORE-MERGE**
+
+- `SmsActivity.java:230` — `SmsDao.getById` may return null (row deleted while picker open) → NPE on disk thread; add null-check + bail (T11 final-review triage candidate).
+- `release.yml:18` — JDK 17 pinned vs JDK 21 in ci/instrumented (T17 confirmed carry-forward; assigned to F2 wave).
+
+**POST-MERGE**
+
+- High priority: import-failure path deletes uncheckpointed `-wal`/`-shm` after close (pre-existing data-loss edge, T8).
+- Docs: README hardcodes `GroupMessagingBackupV3` filename (stale naming, T17); contact-name display divergence disclosure (T11, also ledgered above).
+- CI: `setup-gradle@v3` straggler in `release.yml:22` (T16); `-PversionCode=0` falsy fallback nit (T16).
+- Classifier hardening: negative-IDF unguarded if corpusSize < maxDf; weak determinism test (insertion order only); tie-break favors later category; non-ASCII truncation ceiling (T19/T20).
+- Test hygiene: `SchemaTest` closes singleton-held DB; `TrainSmsTest` reflection; `ModelLayerTest` tautological assertSame; per-column ContentValues rebuild; `CategoriesViewModelTest` reflection; `MigrationTest` reflection on private `sInstance`.
+- Cleanup: `SmsDao.updateMapInTransaction` misleading name; dead `cursor != null` DAO guards; `markRead(List<Long>)` has no production caller; sticky-redelivery window (single-live-event wrapper candidate); MainActivity onDestroy count-map fields not nulled; stale-count window in count observers (pre-existing parity).
+- UI polish: transient flash of in-flight-undo rows after swipe-commit refresh; `ChangeCategoryActivity` dialog-theme double-padding risk (verify on device/F3); redundant `setTitle` in `SettingsActivity`; holder getter placement style.
+- Trivial: `DatabaseContract.java` missing EOF newline; double blank line `MainActivity.java:151`; stale `tools:ignore="AllowBackup"` token + manifest EOF newline; `ListPreference` blank summary for stale stored value; brittle full-precision goldens; dead LinkedHashMap block `SmsCategorizerTest.java:1260`.
+- Resolved/closed en route: `BACKUP_DB_PATH` consolidation (done, `SettingsFragment` references `DatabaseBackup.BACKUP_DB_PATH`); `PerformanceBenchmarkTest` reflection (removed in T20); contract-constants carry-forward (done in T7); alias-training supersession (resolved by T20 mapping).
+- Device-QA riders (emulator-blocked above): fresh-install permission flow, categorization accuracy smoke, dialog padding check — run before public rollout.
+
+### Tag Recommendation
+
+**Recommend `v1.7.0`** (current 1.6). Minor bump fits scope: major internal revitalization (MVVM layering, hybrid TF-IDF classifier, DB v3 + indexes, WAL-aware backup, modernized CI) with user-facing feature set preserved; migrations and pref mapping keep upgrades non-breaking; disclosed behavior changes are parameter-level, not feature removals. Conditions before tagging: land the two MUST-FIX-BEFORE-MERGE items (F-wave), and given local emulator-blocked smoke, run the device-QA rider list on hardware or CI instrumented before public rollout.
