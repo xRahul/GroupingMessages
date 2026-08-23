@@ -180,7 +180,7 @@ import android.provider.BaseColumns;
         KEY_CREATED_AT + TIME_TYPE + DEFAULT + CURRENT_TIMESTAMP + COMMA_SEP +
         KEY_UPDATED_AT + TIME_TYPE + DEFAULT + CURRENT_TIMESTAMP + COMMA_SEP +
         " FOREIGN KEY (" + KEY_CATEGORY_ID + ") REFERENCES "
-        + Category.TABLE_NAME + "(" + Category._ID + ")" +
+        + Category.TABLE_NAME + "(" + Category._ID + ")" + COMMA_SEP +
         " FOREIGN KEY (" + KEY_SIMILAR_TO + ") REFERENCES "
         + TABLE_NAME + "(" + _ID + ")" + ");";
 
