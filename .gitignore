@@ -17,6 +17,7 @@
 .codegraph/
 .opencode/
 .superpowers/
+.ruff_cache/
 
 # Signed release artifacts stay out of the repo (published via GitHub releases)
 app/apks/
