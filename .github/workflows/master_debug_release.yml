@@ -1,4 +1,4 @@
-name: Master Debug Release
+name: Debug APK Release
 
 on:
   push:
@@ -41,9 +41,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Latest master build
+          name: Latest build
           prerelease: true
           files: GroupingMessages-debug.apk
           body: |
-            Auto-built debug APK from master @ ${{ steps.sha.outputs.short }}.
-            This asset is replaced automatically on every push to master.
+            Auto-built debug APK from ${{ github.ref_name }} @ ${{ steps.sha.outputs.short }}.
+            This asset is replaced automatically on every push to main/master.
