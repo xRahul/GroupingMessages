@@ -17,3 +17,9 @@
 .codegraph/
 .opencode/
 .superpowers/
+
+# Signed release artifacts stay out of the repo (published via GitHub releases)
+app/apks/
+*.apk
+*.jks
+*.keystore

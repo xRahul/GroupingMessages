@@ -111,8 +111,8 @@ Clusters: UnusedResources 29, GradleDependency 6, ObsoleteSdkInt 5, NewerVersion
 
 - Manifest requests exactly `READ_SMS`, `READ_CONTACTS`, `INTERNET`; `android:allowBackup="false"` confirmed. Stale `tools:ignore="AllowBackup"` token remains (cosmetic, deferred minor).
 - Branch diff secret scan (`git diff master...HEAD` vs keystore/password/token/private-key/JWT patterns): only GitHub Actions `${{ secrets.* }}` references and SMS test-fixture strings ("your one time password is 456789…"). No credentials in tree or branch diff.
-- No `.jks`/`.keystore`/`.p12`/`.pem` files tracked, and this branch adds no APKs — but 7 legacy **signed release APKs are already tracked** under `app/apks/` on master (`GroupingMessages 1.0.apk` … `1.6.apk` incl `[AVOID]GroupingMessages 1.4.apk`, master-era commits ecf9a93/d2e9743). Removal recommended (triage below).
-- `.gitignore` covers `/build`, `.gradle`, `local.properties`, `/captures`. Local IDE/tooling dirs (`.codegraph/`, `.opencode/`, `.project`, `.settings/`, `docs/superpowers/`) are untracked but not ignored — hygiene candidate.
+- No `.jks`/`.keystore`/`.p12`/`.pem` files tracked, and this branch adds no APKs — the 7 legacy **signed release APKs** formerly tracked under `app/apks/` on master (`GroupingMessages 1.0.apk` … `1.6.apk` incl `[AVOID]GroupingMessages 1.4.apk`, master-era commits ecf9a93/d2e9743) were **removed on this branch** via `git rm`; blobs persist only in git history (rewrite = separate maintainer decision).
+- `.gitignore` covers `/build`, `.gradle`, `local.properties`, `/captures`, plus IDE/tooling dirs (`.codegraph/`, `.opencode/`, `.superpowers/`, `.project`, `.classpath`, `.settings/`) and build artifacts (`app/apks/`, `*.apk`, `*.jks`, `*.keystore`).
 - Informational (pre-existing): the deleted `.travis.yml` contained a Travis token blob persisting in git history only.
 
 ### Emulator-Blocked Items (no emulator/device available in this CLI environment)
@@ -148,7 +148,7 @@ Clusters: UnusedResources 29, GradleDependency 6, ObsoleteSdkInt 5, NewerVersion
 
 - High priority: import-failure path deletes uncheckpointed `-wal`/`-shm` after close (pre-existing data-loss edge, T8).
 - Docs: README's `GroupMessagingBackupV3` mention mirrors the version-derived filename (`DatabaseBackup.java:28-29` builds `"GroupMessagingBackupV" + DATABASE_VERSION`, so V3 is current truth) — revisit wording only at schema v4 (T17); contact-name display divergence disclosure (T11, also ledgered above).
-- Repo hygiene / supply-chain: remove the 7 legacy signed APKs tracked at `app/apks/` (v1.0–v1.6, master-era commits ecf9a93/d2e9743; branch adds none) via `git rm` — POST-MERGE, can ride the F2 CI wave; optional history rewrite given signed artifacts embed build provenance.
+- Repo hygiene / supply-chain: ~~remove the 7 legacy signed APKs tracked at `app/apks/`~~ **RESOLVED on `revitalize/mvvm`** (removed pre-merge via `git rm`, `.gitignore` now blocks re-addition); optional history rewrite given signed artifacts embed build provenance remains a maintainer decision.
 - CI: `setup-gradle@v3` straggler in `release.yml:22` (T16); `-PversionCode=0` falsy fallback nit (T16).
 - Classifier hardening: weak determinism test (insertion order only); tie-break favors later category; non-ASCII truncation ceiling (T19/T20). Original negative-IDF claim withdrawn at HEAD: structurally impossible — `df` counts documents within the corpus, so `df ≤ corpusSize` and `idf = ln((N+1)/(df+1)) ≥ ln(1) = 0` always (TextVectorizer.java:54).
 - Test hygiene: `SchemaTest` closes singleton-held DB; `TrainSmsTest` reflection; `ModelLayerTest` tautological assertSame; per-column ContentValues rebuild; `CategoriesViewModelTest` reflection; `MigrationTest` reflection on private `sInstance`.
