@@ -24,3 +24,23 @@ app/apks/
 *.apk
 *.jks
 *.keystore
+# >>> opencode-config auto
+build/
+out/
+target/
+dist/
+coverage/
+node_modules/
+kotlin-js-store/
+__pycache__/
+.venv/
+venv/
+.gradle/
+.kotlin/
+.dart_tool/
+.flutter-plugins-dependencies
+.idea/
+.vscode/
+.worktrees/
+*.aab
+# <<< opencode-config auto

@@ -7,9 +7,11 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
@@ -23,8 +25,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import in.rahulja.groupingmessages.db.CategoryDao;
 import in.rahulja.groupingmessages.db.SmsDao;
 import in.rahulja.groupingmessages.model.Sms;
+import in.rahulja.groupingmessages.util.SmsFilter;
 import in.rahulja.groupingmessages.vm.AppExecutors;
 import in.rahulja.groupingmessages.vm.SmsListViewModel;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -39,8 +43,13 @@ public class SmsActivity extends AppCompatActivity {
   private LinearLayoutManager llm;
   private ProgressBar pbCircle;
   private RecyclerView listView;
+  private TextView emptySearchView;
   private long categoryId;
-  private List<Sms> currentSms;
+  private List<Sms> allLoadedSms = Collections.emptyList();
+  private List<Sms> currentSms = Collections.emptyList();
+  private Map<String, String> contactNames = Collections.emptyMap();
+  private Map<Long, String> categoryNames = Collections.emptyMap();
+  private String currentQuery = "";
   private SmsListArrayAdapter smsItemsAdapter;
   private SmsListViewModel smsListViewModel;
 
@@ -59,6 +68,7 @@ public class SmsActivity extends AppCompatActivity {
 
     pbCircle = findViewById(R.id.progressBarCircle);
     listView = findViewById(R.id.sms_list_view);
+    emptySearchView = findViewById(R.id.empty_sms_search_view);
 
     categoryId = Long.parseLong(getIntent().getStringExtra(CATEGORY_ID));
 
@@ -91,11 +101,12 @@ public class SmsActivity extends AppCompatActivity {
         addressSet.add(sms.getAddress());
       }
 
-      Map<String, String> contactNames = ExternalContentBridge.getContactNames(this, addressSet);
+      Map<String, String> resolvedContactNames =
+          ExternalContentBridge.getContactNames(this, addressSet);
 
-      Map<Long, String> categories = new HashMap<>();
+      Map<Long, String> resolvedCategories = new HashMap<>();
       for (Map<String, String> category : CategoryDao.getAllVisibleCategories(this)) {
-        categories.put(
+        resolvedCategories.put(
             Long.parseLong(category.get(DatabaseContract.Category._ID)),
             category.get(DatabaseContract.Category.KEY_NAME)
         );
@@ -105,10 +116,37 @@ public class SmsActivity extends AppCompatActivity {
         if (isFinishing() || isDestroyed()) {
           return;
         }
-        currentSms = loadedSms;
-        smsItemsAdapter.submitSms(loadedSms, contactNames, categories);
+        allLoadedSms = loadedSms;
+        contactNames = resolvedContactNames;
+        categoryNames = resolvedCategories;
+        applyFilterAndSubmit();
       });
     });
+  }
+
+  private void onSearchQueryChanged(String query) {
+    currentQuery = query != null ? query : "";
+    applyFilterAndSubmit();
+  }
+
+  private void applyFilterAndSubmit() {
+    if (isFinishing() || isDestroyed() || smsItemsAdapter == null) {
+      return;
+    }
+    List<Sms> filteredSms = SmsFilter.filter(allLoadedSms, currentQuery, contactNames);
+    currentSms = filteredSms;
+    smsItemsAdapter.submitSms(filteredSms, contactNames, categoryNames);
+
+    if (emptySearchView != null) {
+      if (filteredSms.isEmpty() && !currentQuery.trim().isEmpty()) {
+        emptySearchView.setText(getString(R.string.no_matching_sms, currentQuery.trim()));
+        emptySearchView.setVisibility(View.VISIBLE);
+        listView.setVisibility(View.GONE);
+      } else {
+        emptySearchView.setVisibility(View.GONE);
+        listView.setVisibility(View.VISIBLE);
+      }
+    }
   }
 
   private void setSwipeForRecyclerView() {
@@ -163,8 +201,39 @@ public class SmsActivity extends AppCompatActivity {
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
-    // Inflate the menu; this adds items to the action bar if it is present.
-    getMenuInflater().inflate(R.menu.menu_main, menu);
+    getMenuInflater().inflate(R.menu.menu_sms, menu);
+    MenuItem searchItem = menu.findItem(R.id.action_search);
+    if (searchItem != null) {
+      SearchView searchView = (SearchView) searchItem.getActionView();
+      if (searchView != null) {
+        searchView.setQueryHint(getString(R.string.search_messages_hint));
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+          @Override
+          public boolean onQueryTextSubmit(String query) {
+            onSearchQueryChanged(query);
+            return true;
+          }
+
+          @Override
+          public boolean onQueryTextChange(String newText) {
+            onSearchQueryChanged(newText);
+            return true;
+          }
+        });
+      }
+      searchItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
+        @Override
+        public boolean onMenuItemActionExpand(MenuItem item) {
+          return true;
+        }
+
+        @Override
+        public boolean onMenuItemActionCollapse(MenuItem item) {
+          onSearchQueryChanged("");
+          return true;
+        }
+      });
+    }
     return true;
   }
 
@@ -203,24 +272,37 @@ public class SmsActivity extends AppCompatActivity {
   @Override
   public void onActivityResult(int requestCode, int resultCode, Intent receivedIntent) {
     super.onActivityResult(requestCode, resultCode, receivedIntent);
-    if (requestCode == CHANGE_CATEGORY_REQUEST_CODE && resultCode == RESULT_OK) {
+    if (requestCode == CHANGE_CATEGORY_REQUEST_CODE && resultCode == RESULT_OK && receivedIntent != null) {
       final long newCategoryId = Long.parseLong(
           receivedIntent.getStringExtra(CATEGORY_ID)
-      );
-      final int smsListPosition = Integer.parseInt(
-          receivedIntent.getStringExtra("sms_list_position")
       );
       if (receivedIntent.getExtras() != null) {
         Log.d("GM/choseCat", receivedIntent.getExtras().toString());
       }
 
-      if (currentSms == null || smsListPosition >= currentSms.size()) {
+      long smsId = 0L;
+      if (receivedIntent.hasExtra(ChangeCategoryActivity.SMS_ID)) {
+        try {
+          smsId = Long.parseLong(receivedIntent.getStringExtra(ChangeCategoryActivity.SMS_ID));
+        } catch (NumberFormatException ignored) {
+        }
+      }
+      if (smsId == 0L && receivedIntent.hasExtra("sms_list_position")) {
+        final int smsListPosition = Integer.parseInt(
+            receivedIntent.getStringExtra("sms_list_position")
+        );
+        if (currentSms != null && smsListPosition < currentSms.size()) {
+          smsId = currentSms.get(smsListPosition).getId();
+        }
+      }
+
+      if (smsId == 0L) {
         return;
       }
-      final long smsId = currentSms.get(smsListPosition).getId();
 
+      final long finalSmsId = smsId;
       showTitleProgressSpinner();
-      AppExecutors.disk(() -> asyncRetrainAllSms(smsId, newCategoryId));
+      AppExecutors.disk(() -> asyncRetrainAllSms(finalSmsId, newCategoryId));
     }
   }
 
@@ -287,8 +369,12 @@ public class SmsActivity extends AppCompatActivity {
     llm = null;
     pbCircle = null;
     listView = null;
+    emptySearchView = null;
     smsItemsAdapter = null;
-    currentSms = null;
+    allLoadedSms = Collections.emptyList();
+    currentSms = Collections.emptyList();
+    contactNames = Collections.emptyMap();
+    categoryNames = Collections.emptyMap();
     super.onDestroy();
   }
 }

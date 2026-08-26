@@ -23,4 +23,15 @@
         android:dividerHeight="0dp"
         android:scrollbars="vertical" />
 
+    <TextView
+        android:id="@+id/empty_sms_search_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:padding="16dp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
 </RelativeLayout>

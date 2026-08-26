@@ -119,6 +119,10 @@
     <string name="some_permission_denied">Some Permission is Denied</string>
     <string name="sms_not_found">SMS not found</string>
 
+    <string name="action_search">Search</string>
+    <string name="search_messages_hint">Search messages…</string>
+    <string name="no_matching_sms">No messages matching \"%1$s\"</string>
+
     <plurals name="unread_messages_count">
         <item quantity="one">%d unread message</item>
         <item quantity="other">%d unread messages</item>
