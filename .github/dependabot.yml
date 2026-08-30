@@ -1,0 +1,16 @@
+version: 2
+updates:
+- package-ecosystem: gradle
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "21:00"
+    timezone: Asia/Calcutta
+  open-pull-requests-limit: 50
+  ignore:
+  - dependency-name: org.projectlombok:lombok
+    versions:
+    - 1.18.18
+  - dependency-name: com.android.tools.build:gradle
+    versions:
+    - 4.1.2
