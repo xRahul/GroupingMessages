@@ -22,6 +22,7 @@ public final class SmsDao {
   private static final String SMS_COUNT = "sms_count";
   private static final String EQUALS_QUESTION = " = ? ";
   private static final long UNKNOWN_CATEGORY_ID = 1L;
+  private static final long INSERT_DUPLICATE = -2L;
 
   private SmsDao() {
   }
@@ -34,15 +35,10 @@ public final class SmsDao {
 
     String selection = DatabaseContract.Sms._ID +
         " = " +
-        DatabaseContract.Sms.KEY_SIMILAR_TO +
-        " AND " +
-        DatabaseContract.Sms.KEY_SIM_SCORE +
-        EQUALS_QUESTION;
-
-    String[] selectionArgs = { String.valueOf(1.0) };
+        DatabaseContract.Sms.KEY_SIMILAR_TO;
 
     Log.i(TAG, "getSelfTrained, selection= " + selection);
-    return queryMaps(context, selection, selectionArgs);
+    return queryMaps(context, selection, null);
   }
 
   public static Map<String, String> getById(Context context, long smsId) {
@@ -107,10 +103,11 @@ public final class SmsDao {
   public static long storeTrainedInboxSms(Context context,
       List<Map<String, String>> trainedInboxSms) {
 
-    long lastSmsTime = Long.parseLong(ConfigDao.getValue(context, LAST_SMS_TIME_CONFIG));
+    long lastSmsTime = ConfigDao.getLong(context, LAST_SMS_TIME_CONFIG, 0L);
     Log.i(GM_STORE_TRAINED_INBOX_SMS, "before lastSmsTime: " + lastSmsTime);
 
     long numSmsStored = 0;
+    long numSmsDuplicate = 0;
     long numSmsError = 0;
     long tempLastSmsTime = lastSmsTime;
 
@@ -122,15 +119,16 @@ public final class SmsDao {
         long longDate = Long.parseLong(trainedSmsMap.get(DatabaseContract.Sms.KEY_DATE));
         long insertResult = insertInTransaction(localDb, trainedSmsMap);
 
-        if (insertResult != -1) {
+        if (insertResult >= 0) {
           numSmsStored += 1;
-          tempLastSmsTime = longDate;
+          tempLastSmsTime = Math.max(tempLastSmsTime, longDate);
+        } else if (insertResult == INSERT_DUPLICATE) {
+          numSmsDuplicate += 1;
+          tempLastSmsTime = Math.max(tempLastSmsTime, longDate);
         } else {
           numSmsError += 1;
-          Log.e(
-              "GM/insertSms",
-              "Some error occured while inserting sms- " + trainedSmsMap.toString()
-          );
+          // Never log the row: it contains the sender address and message body.
+          Log.e("GM/insertSms", "Some error occured while inserting sms");
         }
       }
       localDb.setTransactionSuccessful();
@@ -144,6 +142,7 @@ public final class SmsDao {
 
     Log.i(GM_STORE_TRAINED_INBOX_SMS, "after lastSmsTime: " + tempLastSmsTime);
     Log.i(GM_STORE_TRAINED_INBOX_SMS, "Number of sms inserted successfully: " + numSmsStored);
+    Log.i(GM_STORE_TRAINED_INBOX_SMS, "Number of duplicate sms skipped: " + numSmsDuplicate);
 
     if (numSmsError > 0) {
       Log.e(GM_STORE_TRAINED_INBOX_SMS, "Number of sms failed to insert: " + numSmsError);
@@ -466,6 +465,9 @@ public final class SmsDao {
         case DatabaseContract.Sms.KEY_SIMILAR_TO:
           tempSms.put(key, String.valueOf(cursor.getLong(index)));
           break;
+        case DatabaseContract.Sms.KEY_PROVIDER_ID:
+          tempSms.put(key, cursor.isNull(index) ? null : String.valueOf(cursor.getLong(index)));
+          break;
         case DatabaseContract.Sms.KEY_CREATED_AT:
         case DatabaseContract.Sms.KEY_UPDATED_AT:
           // legacy maps excluded timestamp columns
@@ -484,10 +486,32 @@ public final class SmsDao {
 
   private static long insertInTransaction(SQLiteDatabase db, Map<String, String> sms) {
 
+    String providerIdValue = sms.get(DatabaseContract.Sms.KEY_PROVIDER_ID);
+    if (providerIdValue != null && !providerIdValue.isEmpty()) {
+      try (Cursor cursor = db.query(
+          DatabaseContract.Sms.TABLE_NAME,
+          new String[] { DatabaseContract.Sms._ID },
+          DatabaseContract.Sms.KEY_PROVIDER_ID + EQUALS_QUESTION,
+          new String[] { providerIdValue },
+          null,
+          null,
+          null
+      )) {
+        if (cursor != null && cursor.moveToFirst()) {
+          return INSERT_DUPLICATE;
+        }
+      }
+    }
+
     ContentValues values = contentValuesFromMap(sms);
     long insertResult;
     try {
-      insertResult = db.insert(DatabaseContract.Sms.TABLE_NAME, null, values);
+      insertResult = db.insertWithOnConflict(
+          DatabaseContract.Sms.TABLE_NAME,
+          null,
+          values,
+          SQLiteDatabase.CONFLICT_IGNORE
+      );
     } catch (Exception e) {
       Log.e("GM/insertIntoSms", "Error occurred while inserting sms", e);
       insertResult = -1;
@@ -601,6 +625,10 @@ public final class SmsDao {
         DatabaseContract.Sms.KEY_CATEGORY_ID,
         Long.parseLong(sms.get(DatabaseContract.Sms.KEY_CATEGORY_ID))
     );
+    String providerId = sms.get(DatabaseContract.Sms.KEY_PROVIDER_ID);
+    if (providerId != null && !providerId.isEmpty()) {
+      values.put(DatabaseContract.Sms.KEY_PROVIDER_ID, Long.parseLong(providerId));
+    }
 
     return values;
   }

@@ -56,6 +56,9 @@ public class SmsActivity extends AppCompatActivity {
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    getWindow().setFlags(
+        android.view.WindowManager.LayoutParams.FLAG_SECURE,
+        android.view.WindowManager.LayoutParams.FLAG_SECURE);
     setContentView(R.layout.activity_sms);
     setupActionBar();
 
@@ -70,7 +73,12 @@ public class SmsActivity extends AppCompatActivity {
     listView = findViewById(R.id.sms_list_view);
     emptySearchView = findViewById(R.id.empty_sms_search_view);
 
-    categoryId = Long.parseLong(getIntent().getStringExtra(CATEGORY_ID));
+    String categoryIdExtra = getIntent().getStringExtra(CATEGORY_ID);
+    if (categoryIdExtra == null) {
+      finish();
+      return;
+    }
+    categoryId = Long.parseLong(categoryIdExtra);
 
     llm = new LinearLayoutManager(this);
     listView.setLayoutManager(llm);

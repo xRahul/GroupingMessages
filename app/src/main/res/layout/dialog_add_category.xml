@@ -15,7 +15,8 @@
         android:ems="10"
         android:inputType="text"
         android:maxLines="1"
-        android:hint="@string/category_name_hint" />
+        android:hint="@string/category_name_hint"
+        android:autofillHints="name" />
 
     <com.flask.colorpicker.ColorPickerView
         android:id="@+id/pick_category_color"

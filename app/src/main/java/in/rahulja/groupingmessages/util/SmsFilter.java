@@ -23,7 +23,7 @@ public final class SmsFilter {
     if (query == null || query.trim().isEmpty()) {
       return allSms;
     }
-    String lowerQuery = query.trim().toLowerCase(Locale.getDefault());
+    String lowerQuery = query.trim().toLowerCase(Locale.ROOT);
     List<Sms> result = new ArrayList<>();
     for (Sms sms : allSms) {
       if (matches(sms, lowerQuery, contactNamesByAddress)) {
@@ -41,15 +41,15 @@ public final class SmsFilter {
     if (sms == null) {
       return false;
     }
-    if (sms.getBody() != null && sms.getBody().toLowerCase(Locale.getDefault()).contains(lowerQuery)) {
+    if (sms.getBody() != null && sms.getBody().toLowerCase(Locale.ROOT).contains(lowerQuery)) {
       return true;
     }
-    if (sms.getAddress() != null && sms.getAddress().toLowerCase(Locale.getDefault()).contains(lowerQuery)) {
+    if (sms.getAddress() != null && sms.getAddress().toLowerCase(Locale.ROOT).contains(lowerQuery)) {
       return true;
     }
     if (contactNames != null && sms.getAddress() != null) {
       String contact = contactNames.get(sms.getAddress());
-      if (contact != null && contact.toLowerCase(Locale.getDefault()).contains(lowerQuery)) {
+      if (contact != null && contact.toLowerCase(Locale.ROOT).contains(lowerQuery)) {
         return true;
       }
     }

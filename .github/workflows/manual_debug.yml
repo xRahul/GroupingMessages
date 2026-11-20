@@ -3,9 +3,17 @@ name: Manual Debug Build
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-debug-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v5

@@ -8,7 +8,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="@dimen/activity_horizontal_margin"
-        android:text="Demo"
         android:textColor="#000"
         android:visibility="gone" />
 

@@ -1,7 +1,8 @@
 package in.rahulja.groupingmessages;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.content.FileProvider;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -9,10 +10,12 @@ import android.net.Uri;
 import android.os.Bundle;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.SwitchPreferenceCompat;
 import androidx.lifecycle.ViewModelProvider;
 import android.util.Log;
 import android.widget.Toast;
-import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
 import in.rahulja.groupingmessages.db.CategoryDao;
 import in.rahulja.groupingmessages.db.DatabaseBackup;
 import in.rahulja.groupingmessages.db.SmsDao;
@@ -36,13 +39,34 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   private Preference deleteCatPref;
   private Preference exportDbPref;
   private Preference importDbPref;
+  private SwitchPreferenceCompat checkUpdatesPref;
+  private ActivityResultLauncher<String> exportLauncher;
+  private ActivityResultLauncher<String[]> importLauncher;
 
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+    registerBackupLaunchers();
     setPreferencesFromResource(R.xml.preferences, rootKey);
     initPreferenceView();
     updatePreferenceView();
     initVersionCheck();
+  }
+
+  private void registerBackupLaunchers() {
+    exportLauncher = registerForActivityResult(
+        new ActivityResultContracts.CreateDocument("application/octet-stream"),
+        uri -> {
+          if (uri != null) {
+            asyncExportDb(uri);
+          }
+        });
+    importLauncher = registerForActivityResult(
+        new ActivityResultContracts.OpenDocument(),
+        uri -> {
+          if (uri != null) {
+            asyncImportDb(uri);
+          }
+        });
   }
 
   private void initPreferenceView() {
@@ -52,6 +76,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     deleteCatPref = findPreference(PREF_DELETE_CAT);
     exportDbPref = findPreference(PREF_EXPORT_DB);
     importDbPref = findPreference(PREF_IMPORT_DB);
+    checkUpdatesPref = findPreference(SettingsViewModel.PREF_CHECK_UPDATES);
   }
 
   private void updatePreferenceView() {
@@ -65,6 +90,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     deleteCatPref = findPreference(PREF_DELETE_CAT);
     exportDbPref = findPreference(PREF_EXPORT_DB);
     importDbPref = findPreference(PREF_IMPORT_DB);
+    checkUpdatesPref = findPreference(SettingsViewModel.PREF_CHECK_UPDATES);
 
     initializePreferenceListener();
   }
@@ -86,6 +112,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     }
     switch (state) {
       case UP_TO_DATE:
+        latestVersionUrl = null;
         versionSummary = BuildConfig.VERSION_NAME + " "
             + getString(R.string.version_summary_latest);
         break;
@@ -94,6 +121,10 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         versionSummary = BuildConfig.VERSION_NAME + " "
             + "(" + getString(R.string.version_summary_changed_latest)
             + SettingsViewModel.lastPathSegment(latestVersionUrl) + ")";
+        break;
+      case DISABLED:
+        versionSummary = BuildConfig.VERSION_NAME + " "
+            + getString(R.string.version_summary_check_disabled);
         break;
       case ERROR:
       default:
@@ -119,6 +150,8 @@ public class SettingsFragment extends PreferenceFragmentCompat {
 
     initializeVersionPreferenceClickListener();
 
+    initializeUpdateCheckPreferenceListener();
+
     initializeDeveloperPreferenceClickListener();
 
     initializeExportDbPreferenceClickListener();
@@ -142,25 +175,20 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         getActivity()
     );
 
-    builder.setTitle("Import & Overwrite existing db");
-    builder.setMessage(
-        "Import & Overwrite existing db with one at \n" +
-            new File(
-                getActivity().getExternalFilesDir(null),
-                DatabaseBackup.BACKUP_DB_PATH
-            ).getAbsolutePath()
-    );
-    builder.setPositiveButton("Yes",
+    builder.setTitle(R.string.import_db_title);
+    builder.setMessage(R.string.import_db_warning);
+    builder.setPositiveButton(R.string.yes,
         new DialogInterface.OnClickListener() {
           public void onClick(DialogInterface dialog,
               int which) {
-
-            Context appContext =
-                requireContext().getApplicationContext();
-            AppExecutors.disk(() -> asyncImportDb(appContext));
+            importLauncher.launch(new String[] {
+                "application/octet-stream",
+                "application/x-sqlite3",
+                "application/vnd.sqlite3"
+            });
           }
         });
-    builder.setNegativeButton("No",
+    builder.setNegativeButton(R.string.no,
         new DialogInterface.OnClickListener() {
           public void onClick(DialogInterface dialog,
               int which) {
@@ -170,34 +198,30 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     builder.show();
   }
 
-  private void asyncImportDb(Context appContext) {
-    try {
-      DatabaseBackup.importDb(appContext);
-    } catch (Exception e) {
-      Log.e("GM/importDb", Log.getStackTraceString(e));
-      AppExecutors.main(new Runnable() {
-        @Override
-        public void run() {
+  private void asyncImportDb(Uri uri) {
+    Context appContext = requireContext().getApplicationContext();
+    AppExecutors.disk(() -> {
+      try (InputStream in = appContext.getContentResolver().openInputStream(uri)) {
+        if (in == null) {
+          throw new java.io.IOException("Could not open the selected file");
+        }
+        DatabaseBackup.importFrom(appContext, in);
+      } catch (Exception e) {
+        Log.e("GM/importDb", Log.getStackTraceString(e));
+        AppExecutors.main(() -> {
           if (!isAdded()) {
             return;
           }
-          Toast.makeText(appContext, "Import failed!", Toast.LENGTH_SHORT).show();
-        }
-      });
-      return;
-    }
-    AppExecutors.main(new Runnable() {
-      @Override
-      public void run() {
+          Toast.makeText(appContext, R.string.import_db_failed, Toast.LENGTH_SHORT).show();
+        });
+        return;
+      }
+      AppExecutors.main(() -> {
         if (!isAdded()) {
           return;
         }
-        Toast.makeText(
-            appContext,
-            "Import completed!",
-            Toast.LENGTH_SHORT
-        ).show();
-      }
+        Toast.makeText(appContext, R.string.import_db_completed, Toast.LENGTH_SHORT).show();
+      });
     });
   }
 
@@ -217,25 +241,16 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         getActivity()
     );
 
-    builder.setTitle("Export Apllication db");
-    builder.setMessage(
-        "Export application db & overwrite if old backup exist at \n" +
-            new File(
-                getActivity().getExternalFilesDir(null),
-                DatabaseBackup.BACKUP_DB_PATH
-            ).getAbsolutePath()
-    );
-    builder.setPositiveButton("Yes",
+    builder.setTitle(R.string.export_db_title);
+    builder.setMessage(R.string.export_db_warning);
+    builder.setPositiveButton(R.string.yes,
         new DialogInterface.OnClickListener() {
           public void onClick(DialogInterface dialog,
               int which) {
-
-            Context appContext =
-                requireContext().getApplicationContext();
-            AppExecutors.disk(() -> asyncExportDb(appContext));
+            exportLauncher.launch("grouping-messages-backup.db");
           }
         });
-    builder.setNegativeButton("No",
+    builder.setNegativeButton(R.string.no,
         new DialogInterface.OnClickListener() {
           public void onClick(DialogInterface dialog,
               int which) {
@@ -245,77 +260,31 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     builder.show();
   }
 
-  private void asyncExportDb(Context appContext) {
-    try {
-      DatabaseBackup.exportDb(appContext);
-    } catch (Exception e) {
-      Log.e("GM/exportDb", Log.getStackTraceString(e));
-      AppExecutors.main(new Runnable() {
-        @Override
-        public void run() {
+  private void asyncExportDb(Uri uri) {
+    Context appContext = requireContext().getApplicationContext();
+    AppExecutors.disk(() -> {
+      try (OutputStream out = appContext.getContentResolver().openOutputStream(uri)) {
+        if (out == null) {
+          throw new java.io.IOException("Could not open the selected file");
+        }
+        DatabaseBackup.exportTo(appContext, out);
+      } catch (Exception e) {
+        Log.e("GM/exportDb", Log.getStackTraceString(e));
+        AppExecutors.main(() -> {
           if (!isAdded()) {
             return;
           }
-          Toast.makeText(appContext, "Export failed!", Toast.LENGTH_SHORT).show();
-        }
-      });
-      return;
-    }
-
-    AppExecutors.main(new Runnable() {
-      @Override
-      public void run() {
+          Toast.makeText(appContext, R.string.export_db_failed, Toast.LENGTH_SHORT).show();
+        });
+        return;
+      }
+      AppExecutors.main(() -> {
         if (!isAdded()) {
           return;
         }
-        showShareExportedDbAlert();
-        Toast.makeText(
-            appContext,
-            "Export completed!",
-            Toast.LENGTH_SHORT
-        ).show();
-      }
+        Toast.makeText(appContext, R.string.export_db_completed, Toast.LENGTH_SHORT).show();
+      });
     });
-  }
-
-  private void showShareExportedDbAlert() {
-    AlertDialog.Builder builder = new AlertDialog.Builder(
-        getActivity()
-    );
-
-    builder.setTitle("Share exported db");
-    builder.setMessage(
-        "Share the database as file that you've just exported"
-    );
-    builder.setPositiveButton("Yes",
-        new DialogInterface.OnClickListener() {
-          public void onClick(DialogInterface dialog,
-              int which) {
-            File dbFile = new File(
-                getActivity().getExternalFilesDir(null),
-                DatabaseBackup.BACKUP_DB_PATH
-            );
-            Uri dbUri = FileProvider.getUriForFile(
-                requireContext(),
-                requireContext().getPackageName() + ".fileprovider",
-                dbFile
-            );
-            Intent shareIntent = new Intent();
-            shareIntent.setAction(Intent.ACTION_SEND);
-            shareIntent.putExtra(Intent.EXTRA_STREAM, dbUri);
-            shareIntent.setType("*/*");
-            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(Intent.createChooser(shareIntent, "Share database via"));
-          }
-        });
-    builder.setNegativeButton("No",
-        new DialogInterface.OnClickListener() {
-          public void onClick(DialogInterface dialog,
-              int which) {
-            // do nothing
-          }
-        });
-    builder.show();
   }
 
   private void initializeDeleteCategoriesPreferenceClickListener() {
@@ -334,10 +303,8 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         getActivity()
     );
 
-    builder.setTitle("Reset model and delete all categories?");
-    builder.setMessage(
-        "SMS will be retained. All categories will be deleted except unknown. All sms will move to unknown category"
-    );
+    builder.setTitle(R.string.reset_categories_title);
+    builder.setMessage(R.string.reset_categories_warning);
     builder.setPositiveButton("Yes",
         new DialogInterface.OnClickListener() {
           public void onClick(DialogInterface dialog,
@@ -370,7 +337,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         }
         Toast.makeText(
             appContext,
-            "Model reset and categories' deletion complete!",
+            R.string.reset_categories_completed,
             Toast.LENGTH_SHORT
         ).show();
       }
@@ -393,10 +360,8 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         getActivity()
     );
 
-    builder.setTitle("Reset trained model?");
-    builder.setMessage(
-        "SMS and categories will be retained. All sms will move to unknown category"
-    );
+    builder.setTitle(R.string.reset_model_title);
+    builder.setMessage(R.string.reset_model_warning);
     builder.setPositiveButton("Yes",
         new DialogInterface.OnClickListener() {
           public void onClick(DialogInterface dialog,
@@ -429,7 +394,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         }
         Toast.makeText(
             appContext,
-            "Model reset complete!",
+            R.string.reset_model_completed,
             Toast.LENGTH_SHORT
         ).show();
       }
@@ -451,14 +416,24 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   private void initializeVersionPreferenceClickListener() {
     versionPref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
       public boolean onPreferenceClick(Preference versionPref) {
-        if (versionPref.getSummary().toString()
-            .contains(getString(R.string.version_summary_changed_latest))) {
+        if (latestVersionUrl != null
+            && SettingsViewModel.isTrustedReleaseUrl(latestVersionUrl)) {
           Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(latestVersionUrl));
           startActivity(intent);
         }
         Log.d("GM/versionClick", versionPref.toString());
         return true;
       }
+    });
+  }
+
+  private void initializeUpdateCheckPreferenceListener() {
+    if (checkUpdatesPref == null) {
+      return;
+    }
+    checkUpdatesPref.setOnPreferenceChangeListener((preference, newValue) -> {
+      settingsViewModel.checkLatestVersion(Boolean.TRUE.equals(newValue));
+      return true;
     });
   }
 }

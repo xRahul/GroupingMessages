@@ -1,5 +1,5 @@
 plugins {
-    id 'com.android.application'
+    alias(libs.plugins.android.application)
 }
 
 android {
@@ -19,13 +19,19 @@ android {
         resConfigs 'en'
     }
 
-    signingConfigs {
-        release {
-            storeFile file(System.getenv("STORE_FILE") ?: "keystore.jks")
-            storePassword System.getenv("KEY_STORE_PASSWORD")
-            keyAlias System.getenv("KEY_ALIAS")
-            keyPassword System.getenv("KEY_PASSWORD")
+    def releaseStoreFile = System.getenv("STORE_FILE")
+    if (releaseStoreFile != null) {
+        signingConfigs {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword System.getenv("KEY_STORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            }
         }
+    } else {
+        println "NOTE: STORE_FILE not set; release build will stay UNSIGNED."
+        println "Set STORE_FILE, KEY_STORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD to sign it."
     }
 
     buildTypes {
@@ -38,7 +44,9 @@ android {
             proguardFile 'proguard-rules.pro'
         }
         release {
-            signingConfig signingConfigs.release
+            if (releaseStoreFile != null) {
+                signingConfig signingConfigs.release
+            }
             shrinkResources true
             minifyEnabled true
             proguardFile 'proguard-guava.pro'
@@ -50,8 +58,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     buildFeatures {
@@ -70,25 +78,30 @@ configurations.configureEach {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation libs.androidx.appcompat
+    implementation libs.androidx.preference
+    implementation libs.material
 
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.preference:preference:1.2.1'
-    implementation 'com.google.android.material:material:1.11.0'
-    implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.recyclerview:recyclerview:1.3.2'
-    implementation 'androidx.lifecycle:lifecycle-livedata:2.11.0'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.11.0'
+    // Kept until CardView usages migrate to MaterialCardView (see improvements.md GM-031).
+    implementation libs.androidx.cardview
 
-    implementation 'com.github.QuadFlask:colorpicker:0.0.13'
-    implementation 'com.github.mpkorstanje:simmetrics-core:4.1.1'
-    implementation 'org.apache.commons:commons-collections4:4.4'
+    implementation libs.androidx.recyclerview
+    implementation libs.androidx.lifecycle.livedata
+    implementation libs.androidx.lifecycle.viewmodel
 
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    androidTestImplementation 'androidx.test:runner:1.5.2'
-    androidTestImplementation 'androidx.test:rules:1.5.0'
-    testImplementation "junit:junit:${rootProject.ext.jUnitVersion}"
-    testImplementation 'org.mockito:mockito-core:4.11.0'
-    testImplementation 'org.mockito:mockito-inline:4.11.0'
-    testImplementation 'org.robolectric:robolectric:4.16.1'
+    // QuadFlask colorpicker declares unused com.android.support:* deps (no android.support
+    // references exist in its bytecode); excluded so jetifier can stay off (GM-005).
+    implementation(libs.colorpicker) {
+        exclude group: 'com.android.support'
+    }
+    implementation libs.simmetrics.core
+
+    androidTestImplementation libs.androidx.espresso.core
+    androidTestImplementation libs.androidx.test.core
+    androidTestImplementation libs.androidx.test.runner
+    androidTestImplementation libs.androidx.test.rules
+    testImplementation libs.androidx.test.core
+    testImplementation libs.junit
+    testImplementation libs.mockito.core
+    testImplementation libs.robolectric
 }

@@ -1,0 +1,52 @@
+Categories:
+  - Phone & SMS
+License: Apache-2.0
+AuthorName: Rahul Jain
+AuthorWebSite: https://github.com/xRahul
+SourceCode: https://github.com/xRahul/GroupingMessages
+IssueTracker: https://github.com/xRahul/GroupingMessages/issues
+
+AutoName: Grouping Messages
+Summary: Categorize your SMS on-device, with no analytics and no cloud sync.
+Description: |-
+  Grouping Messages sorts incoming SMS into categories you define. It learns from
+  the messages you move: a correction makes similar future messages follow the
+  same category.
+
+  Everything runs on the device. Message text, sender addresses, contact names and
+  the training model stay in a local SQLite database. There is no analytics, no
+  crash reporting, no account and no sync service.
+
+  Features:
+  - On-device similarity classifier with word and character-trigram scoring
+  - User-defined categories with colors and an Unknown fallback
+  - Per-category read/unread counts and mark-all-read
+  - Search within a category by message text, sender or contact name
+  - Manual database backup and restore, with an explicit warning that the file
+    contains message text
+  - Optional update check against GitHub releases; it is off by default
+
+  Permissions:
+  - READ_SMS is required to import and categorize your inbox
+  - READ_CONTACTS is optional; it only resolves display names
+  - INTERNET is used only for the optional update check
+
+  The app is read-only with respect to the system SMS database. It never sends,
+  modifies or blocks messages.
+
+RepoType: git
+Repo: https://github.com/xRahul/GroupingMessages.git
+
+Builds:
+  - versionName: 1.7.0
+    versionCode: 10700
+    commit: v1.7.0
+    gradle:
+      - yes
+      - -PversionCode=10700
+      - -PversionName=1.7.0
+
+AutoUpdateMode: Version v%v
+UpdateCheckMode: Tags
+CurrentVersion: 1.7.0
+CurrentVersionCode: 10700

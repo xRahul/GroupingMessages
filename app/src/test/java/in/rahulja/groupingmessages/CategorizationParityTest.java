@@ -68,6 +68,8 @@ public class CategorizationParityTest {
       f.set(null, null);
     }
     AppDatabase.get(ctx);
+    AppDatabase.get(ctx).execSQL("INSERT OR IGNORE INTO category (_id, name, color, visibility)"
+        + " VALUES (2, 'Bank', '-16711936', 1), (3, 'Promo', '-65536', 1)");
     seedExemplars();
   }
 

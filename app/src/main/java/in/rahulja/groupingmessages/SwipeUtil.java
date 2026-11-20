@@ -57,7 +57,7 @@ public abstract class SwipeUtil extends ItemTouchHelper.SimpleCallback {
     int itemHeight = itemView.getBottom() - itemView.getTop();
 
     int intrinsicWidth = deleteIcon.getIntrinsicWidth();
-    int intrinsicHeight = deleteIcon.getIntrinsicWidth();
+    int intrinsicHeight = deleteIcon.getIntrinsicHeight();
 
     int xMarkLeft = itemView.getRight() - xMarkMargin - intrinsicWidth;
     int xMarkRight = itemView.getRight() - xMarkMargin;

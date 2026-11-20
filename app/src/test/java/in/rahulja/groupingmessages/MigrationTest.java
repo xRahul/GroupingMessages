@@ -152,6 +152,19 @@ public class MigrationTest {
     assertEquals(1, c.getInt(c.getColumnIndexOrThrow("visibility")));
     c.close();
 
+    c = db.rawQuery("SELECT provider_id FROM sms WHERE _id = 10", null);
+    assertTrue(c.moveToFirst());
+    assertTrue(c.isNull(c.getColumnIndexOrThrow("provider_id")));
+    c.close();
+
+    Cursor fkRefs = db.rawQuery("PRAGMA foreign_key_list(sms)", null);
+    List<String> refs = new ArrayList<>();
+    while (fkRefs.moveToNext()) {
+      refs.add(fkRefs.getString(2) + "." + fkRefs.getString(3));
+    }
+    fkRefs.close();
+    assertEquals(Arrays.asList("category.category_id"), refs);
+
     c = db.rawQuery("SELECT name FROM sqlite_master WHERE type = 'table'", null);
     List<String> tables = new ArrayList<>();
     while (c.moveToNext()) {
@@ -169,8 +182,8 @@ public class MigrationTest {
       indexes.add(c.getString(0));
     }
     c.close();
-    assertEquals(3, indexes.size());
+    assertEquals(4, indexes.size());
     assertTrue(indexes.containsAll(Arrays.asList(
-        "idx_sms_category", "idx_sms_date", "idx_sms_visibility")));
+        "idx_sms_category", "idx_sms_date", "idx_sms_visibility", "idx_sms_provider_id")));
   }
 }

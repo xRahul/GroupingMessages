@@ -1,0 +1,1 @@
+Categorize SMS on-device. No analytics, no cloud, no account.

@@ -78,6 +78,40 @@ public class BackupRestoreTest {
   }
 
   @Test
+  public void futureSchemaBackupIsRejectedWithoutTouchingLiveDb() throws Exception {
+    ConfigDao.put(ctx, PROBE_KEY, PROBE_VALUE);
+    DatabaseBackup.exportDb(ctx);
+    try (android.database.sqlite.SQLiteDatabase backup =
+             android.database.sqlite.SQLiteDatabase.openDatabase(
+                 backupFile.getPath(), null,
+                 android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)) {
+      backup.setVersion(DatabaseContract.DATABASE_VERSION + 1);
+    }
+
+    try {
+      DatabaseBackup.importDb(ctx);
+      fail("Expected a future-schema backup to be rejected");
+    } catch (IOException expected) {
+      // rejected before the live file is replaced
+    }
+    AppDatabase.get(ctx);
+    assertEquals(PROBE_VALUE, ConfigDao.getValue(ctx, PROBE_KEY));
+  }
+
+  @Test
+  public void streamRoundTripRestoresData() throws Exception {
+    ConfigDao.put(ctx, PROBE_KEY, PROBE_VALUE);
+    java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+    DatabaseBackup.exportTo(ctx, out);
+
+    ConfigDao.put(ctx, PROBE_KEY, "mutated");
+    DatabaseBackup.importFrom(ctx, new java.io.ByteArrayInputStream(out.toByteArray()));
+
+    AppDatabase.get(ctx);
+    assertEquals(PROBE_VALUE, ConfigDao.getValue(ctx, PROBE_KEY));
+  }
+
+  @Test
   public void noTmpResidueAfterSuccessfulExportAndImport() throws Exception {
     ConfigDao.put(ctx, PROBE_KEY, PROBE_VALUE);
 

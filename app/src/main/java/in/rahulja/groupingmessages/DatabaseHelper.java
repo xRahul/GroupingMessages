@@ -18,6 +18,13 @@ import android.util.Log;
           + DatabaseContract.Sms.TABLE_NAME + "(" + DatabaseContract.Sms.KEY_VISIBILITY + ")",
   };
 
+  private static final String[] SMS_INDEXES_V4 = {
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_provider_id ON "
+          + DatabaseContract.Sms.TABLE_NAME
+          + "(" + DatabaseContract.Sms.KEY_PROVIDER_ID + ") WHERE "
+          + DatabaseContract.Sms.KEY_PROVIDER_ID + " IS NOT NULL",
+  };
+
   private static DatabaseHelper sInstance;
 
   private DatabaseHelper(Context context) {
@@ -47,6 +54,9 @@ import android.util.Log;
 
   private void createSmsIndexes(SQLiteDatabase db) {
     for (String createIndex : SMS_INDEXES_V3) {
+      db.execSQL(createIndex);
+    }
+    for (String createIndex : SMS_INDEXES_V4) {
       db.execSQL(createIndex);
     }
   }
@@ -98,15 +108,80 @@ import android.util.Log;
         db.execSQL(query);
       }
     }
-    if (oldVersion < 3) {
-      createSmsIndexes(db);
+    if (oldVersion < 4) {
+      db.execSQL("INSERT OR IGNORE INTO " + DatabaseContract.Category.TABLE_NAME
+          + " (" + DatabaseContract.Category._ID + ", " + DatabaseContract.Category.KEY_NAME
+          + ", " + DatabaseContract.Category.KEY_COLOR + ", "
+          + DatabaseContract.Category.KEY_VISIBILITY + ") VALUES (1, 'Unknown', '-1', 1)");
+
+      String legacyTable = DatabaseContract.Sms.TABLE_NAME + "_v4";
+      String createNew = DatabaseContract.Sms.CREATE_TABLE.replace(
+          "CREATE TABLE " + DatabaseContract.Sms.TABLE_NAME + " (",
+          "CREATE TABLE " + legacyTable + " (");
+      db.execSQL(createNew);
+      db.execSQL("INSERT INTO " + legacyTable + " ("
+          + DatabaseContract.Sms._ID + ", "
+          + DatabaseContract.Sms.KEY_DATE + ", "
+          + DatabaseContract.Sms.KEY_PERSON + ", "
+          + DatabaseContract.Sms.KEY_READ + ", "
+          + DatabaseContract.Sms.KEY_SEEN + ", "
+          + DatabaseContract.Sms.KEY_SUBJECT + ", "
+          + DatabaseContract.Sms.KEY_ADDRESS + ", "
+          + DatabaseContract.Sms.KEY_BODY + ", "
+          + DatabaseContract.Sms.KEY_CLEANED_SMS + ", "
+          + DatabaseContract.Sms.KEY_VISIBILITY + ", "
+          + DatabaseContract.Sms.KEY_SENDER_TYPE + ", "
+          + DatabaseContract.Sms.KEY_CATEGORY_ID + ", "
+          + DatabaseContract.Sms.KEY_SIMILAR_TO + ", "
+          + DatabaseContract.Sms.KEY_SIM_SCORE + ", "
+          + DatabaseContract.Sms.KEY_CREATED_AT + ", "
+          + DatabaseContract.Sms.KEY_UPDATED_AT + ") SELECT "
+          + DatabaseContract.Sms._ID + ", "
+          + DatabaseContract.Sms.KEY_DATE + ", "
+          + DatabaseContract.Sms.KEY_PERSON + ", "
+          + DatabaseContract.Sms.KEY_READ + ", "
+          + DatabaseContract.Sms.KEY_SEEN + ", "
+          + DatabaseContract.Sms.KEY_SUBJECT + ", "
+          + DatabaseContract.Sms.KEY_ADDRESS + ", "
+          + DatabaseContract.Sms.KEY_BODY + ", "
+          + DatabaseContract.Sms.KEY_CLEANED_SMS + ", "
+          + DatabaseContract.Sms.KEY_VISIBILITY + ", "
+          + DatabaseContract.Sms.KEY_SENDER_TYPE + ", "
+          + DatabaseContract.Sms.KEY_CATEGORY_ID + ", "
+          + DatabaseContract.Sms.KEY_SIMILAR_TO + ", "
+          + DatabaseContract.Sms.KEY_SIM_SCORE + ", "
+          + DatabaseContract.Sms.KEY_CREATED_AT + ", "
+          + DatabaseContract.Sms.KEY_UPDATED_AT
+          + " FROM " + DatabaseContract.Sms.TABLE_NAME);
+      db.execSQL("DROP TABLE " + DatabaseContract.Sms.TABLE_NAME);
+      db.execSQL("ALTER TABLE " + legacyTable + " RENAME TO "
+          + DatabaseContract.Sms.TABLE_NAME);
+
+      db.execSQL("UPDATE " + DatabaseContract.Sms.TABLE_NAME
+          + " SET " + DatabaseContract.Sms.KEY_CATEGORY_ID + " = 1 WHERE "
+          + DatabaseContract.Sms.KEY_CATEGORY_ID + " IS NULL OR "
+          + DatabaseContract.Sms.KEY_CATEGORY_ID + " NOT IN (SELECT "
+          + DatabaseContract.Category._ID + " FROM " + DatabaseContract.Category.TABLE_NAME + ")");
+      db.execSQL("UPDATE " + DatabaseContract.Sms.TABLE_NAME
+          + " SET " + DatabaseContract.Sms.KEY_SIMILAR_TO + " = 0 WHERE "
+          + DatabaseContract.Sms.KEY_SIMILAR_TO + " IS NOT NULL AND "
+          + DatabaseContract.Sms.KEY_SIMILAR_TO + " != 0 AND "
+          + DatabaseContract.Sms.KEY_SIMILAR_TO + " NOT IN (SELECT "
+          + DatabaseContract.Sms._ID + " FROM " + DatabaseContract.Sms.TABLE_NAME + ")");
+
+      for (String createIndex : SMS_INDEXES_V3) {
+        db.execSQL(createIndex);
+      }
+      for (String createIndex : SMS_INDEXES_V4) {
+        db.execSQL(createIndex);
+      }
+      db.execSQL(DatabaseContract.Sms.UPDATE_AT_TRIGGER);
     }
   }
 
-  @SuppressWarnings("unused")
-  private void deleteAllTables(SQLiteDatabase db) {
-    db.execSQL(DatabaseContract.Sms.DELETE_TABLE);
-    db.execSQL(DatabaseContract.Category.DELETE_TABLE);
-    db.execSQL(DatabaseContract.Config.DELETE_TABLE);
+  @Override
+  public void onOpen(SQLiteDatabase db) {
+    super.onOpen(db);
+    db.setForeignKeyConstraintsEnabled(true);
   }
 }

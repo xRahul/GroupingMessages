@@ -2,55 +2,64 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <androidx.preference.PreferenceCategory android:title="Advanced Settings">
+    <androidx.preference.PreferenceCategory
+        android:title="@string/pref_category_advanced">
         <androidx.preference.ListPreference
             android:defaultValue="balanced"
             android:entries="@array/SimilarityAlgorithms"
             android:entryValues="@array/SimilarityAlgorithmsAlias"
             android:key="key_similarity_algorithm"
             android:summary="%s"
-            android:title="String Similarity Algorithm" />
+            android:title="@string/pref_title_similarity_algorithm" />
 
         <androidx.preference.SeekBarPreference
             android:defaultValue="25"
             android:enabled="true"
             android:key="key_similarity_score"
-            android:summary="Select minimum considerable similarity %age for string comparison"
-            android:title="Base String Similarity"
+            android:summary="@string/pref_summary_similarity_score"
+            android:title="@string/pref_title_similarity_score"
             android:max="100"
             app:min="0"
             app:seekBarIncrement="1"
             app:showSeekBarValue="true" />
+
+        <androidx.preference.SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="key_check_updates"
+            android:summary="@string/pref_summary_check_updates"
+            android:title="@string/pref_title_check_updates" />
     </androidx.preference.PreferenceCategory>
 
-    <androidx.preference.PreferenceCategory android:title="Data Settings">
+    <androidx.preference.PreferenceCategory
+        android:title="@string/pref_category_data">
         <androidx.preference.Preference
             android:key="key_reset_model"
             android:summary=""
-            android:title="Reset trained Model" />
+            android:title="@string/pref_title_reset_model" />
         <androidx.preference.Preference
             android:key="key_reset_model_delete_cat"
             android:summary=""
-            android:title="Reset Model &amp; Delete Categories" />
+            android:title="@string/pref_title_reset_model_delete_cat" />
         <androidx.preference.Preference
             android:key="key_export_db"
             android:summary=""
-            android:title="Export database" />
+            android:title="@string/pref_title_export_db" />
         <androidx.preference.Preference
             android:key="key_import_db"
             android:summary=""
-            android:title="Import Database" />
-
+            android:title="@string/pref_title_import_db" />
     </androidx.preference.PreferenceCategory>
-    <androidx.preference.PreferenceCategory android:title="About">
+
+    <androidx.preference.PreferenceCategory
+        android:title="@string/pref_category_about">
         <androidx.preference.Preference
             android:key="key_developer"
             android:summary="@string/developer_name"
-            android:title="Developer" />
+            android:title="@string/pref_title_developer" />
         <androidx.preference.Preference
             android:key="key_version"
             android:summary=""
-            android:title="Version" />
+            android:title="@string/pref_title_version" />
     </androidx.preference.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>

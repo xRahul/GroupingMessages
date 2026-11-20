@@ -11,10 +11,10 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
-import android.widget.TextView;
 import java.util.List;
 import java.util.Map;
 import in.rahulja.groupingmessages.db.CategoryDao;
+import in.rahulja.groupingmessages.vm.AppExecutors;
 
 public class ChangeCategoryActivity extends AppCompatActivity {
 
@@ -34,13 +34,23 @@ public class ChangeCategoryActivity extends AppCompatActivity {
     setTitle(R.string.choose_category);
     oldIntent = getIntent();
 
-    categories = CategoryDao.getAllVisibleCategories(this);
-
     categoryListView = findViewById(R.id.activity_choose_category_list_view);
 
-    setCategoryListView();
-
     setCategoryListViewClickListener();
+    loadCategories();
+  }
+
+  private void loadCategories() {
+    AppExecutors.disk(() -> {
+      List<Map<String, String>> loaded = CategoryDao.getAllVisibleCategories(this);
+      AppExecutors.main(() -> {
+        if (isFinishing() || isDestroyed()) {
+          return;
+        }
+        categories = loaded;
+        setCategoryListView();
+      });
+    });
   }
 
   private void setupWindowInsets() {
@@ -63,17 +73,20 @@ public class ChangeCategoryActivity extends AppCompatActivity {
       @Override
       public void onItemClick(AdapterView<?> parent, View view,
           int position, long id) {
-        returnResult(view);
+        returnResult(position);
       }
     });
   }
 
-  private void returnResult(View view) {
+  private void returnResult(int position) {
+    if (categories == null || position < 0 || position >= categories.size()) {
+      return;
+    }
+    Map<String, String> category = categories.get(position);
     Intent resultIntent = new Intent();
     resultIntent.putExtra(
         CATEGORY_ID,
-        ((TextView) view.findViewById(R.id.id_category_textview))
-            .getText().toString()
+        String.valueOf(category.get(DatabaseContract.Category._ID))
     );
     resultIntent.putExtra(
         SMS_ID,

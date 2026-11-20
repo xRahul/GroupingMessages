@@ -1,10 +1,8 @@
 <resources>
     <string name="app_name">Grouping Messages</string>
 
-    <string name="title_activity_show">Grouping Messages</string>
     <string name="action_settings">Settings</string>
     <string name="change_bucket">Change Bucket</string>
-    <string name="title_activity_main">SMS Grouping</string>
 
     <string name="add">Add</string>
     <string name="cancel">Cancel</string>
@@ -17,82 +15,41 @@
     <string name="current_release_url_prefix">https://github.com/xRahul/GroupingMessages/releases/tag/</string>
     <string name="version_summary_latest">" (latest)"</string>
     <string name="version_summary_changed_latest">"Click to get latest version: "</string>
+    <string name="version_summary_check_disabled">" (update check disabled)"</string>
     <string name="developer_name">Rahul Jain - http://rahulja.in</string>
+
+    <string name="pref_category_advanced">Advanced settings</string>
+    <string name="pref_category_data">Data settings</string>
+    <string name="pref_category_about">About</string>
+    <string name="pref_title_similarity_algorithm">String similarity algorithm</string>
+    <string name="pref_title_similarity_score">Base string similarity</string>
+    <string name="pref_summary_similarity_score">Minimum similarity percentage for string comparison</string>
+    <string name="pref_title_check_updates">Check for updates</string>
+    <string name="pref_summary_check_updates">Contact GitHub for the latest release. Off by default; no message data is sent.</string>
+    <string name="pref_title_reset_model">Reset trained model</string>
+    <string name="pref_title_reset_model_delete_cat">Reset model and delete categories</string>
+    <string name="pref_title_export_db">Export database</string>
+    <string name="pref_title_import_db">Import database</string>
+    <string name="pref_title_developer">Developer</string>
+    <string name="pref_title_version">Version</string>
+    <string name="import_db_title">Import and overwrite the existing database?</string>
+    <string name="import_db_warning">Choose a Grouping Messages backup file. Every stored SMS, sender address and category in the current database will be replaced. Real SMS messages are not affected.</string>
+    <string name="export_db_title">Export database</string>
+    <string name="export_db_warning">The backup contains every stored SMS, sender address and contact name in plain text. Store it somewhere you trust and delete it when you are done.</string>
+    <string name="import_db_failed">Import failed</string>
+    <string name="import_db_completed">Import completed</string>
+    <string name="export_db_failed">Export failed</string>
+    <string name="export_db_completed">Export completed</string>
+    <string name="reset_categories_title">Reset model and delete all categories?</string>
+    <string name="reset_categories_warning">SMS will be retained. All categories except Unknown will be deleted, and every SMS moves to the Unknown category.</string>
+    <string name="reset_model_title">Reset trained model?</string>
+    <string name="reset_model_warning">SMS and categories will be retained. Every SMS moves to the Unknown category.</string>
+    <string name="reset_categories_completed">Model and categories reset</string>
+    <string name="reset_model_completed">Model reset complete</string>
 
 
     <!-- Strings related to Settings -->
 
-    <!-- Example General settings -->
-    <string name="pref_header_general">General</string>
-
-    <string name="pref_title_social_recommendations">Enable social recommendations</string>
-    <string name="pref_description_social_recommendations">Recommendations for people to contact
-        based on your message history
-    </string>
-
-    <string name="pref_title_display_name">Display name</string>
-    <string name="pref_default_display_name">John Smith</string>
-
-    <string name="pref_title_add_friends_to_messages">Add friends to messages</string>
-    <string-array name="pref_example_list_titles">
-        <item>Always</item>
-        <item>When possible</item>
-        <item>Never</item>
-    </string-array>
-    <string-array name="pref_example_list_values">
-        <item>1</item>
-        <item>0</item>
-        <item>-1</item>
-    </string-array>
-
-    <!-- Example settings for Data & Sync -->
-    <string name="pref_header_data_sync">Data &amp; sync</string>
-
-    <string name="pref_title_sync_frequency">Sync frequency</string>
-    <string-array name="pref_sync_frequency_titles">
-        <item>15 minutes</item>
-        <item>30 minutes</item>
-        <item>1 hour</item>
-        <item>3 hours</item>
-        <item>6 hours</item>
-        <item>Never</item>
-    </string-array>
-    <string-array name="pref_sync_frequency_values">
-        <item>15</item>
-        <item>30</item>
-        <item>60</item>
-        <item>180</item>
-        <item>360</item>
-        <item>-1</item>
-    </string-array>
-
-    <string-array name="list_preference_entries">
-        <item>Entry 1</item>
-        <item>Entry 2</item>
-        <item>Entry 3</item>
-    </string-array>
-
-    <string-array name="list_preference_entry_values">
-        <item>1</item>
-        <item>2</item>
-        <item>3</item>
-    </string-array>
-
-    <string-array name="multi_select_list_preference_default_value" />
-
-    <string name="pref_title_system_sync_settings">System sync settings</string>
-
-    <!-- Example settings for Notifications -->
-    <string name="pref_header_notifications">Notifications</string>
-
-    <string name="pref_title_new_message_notifications">New message notifications</string>
-
-    <string name="pref_title_ringtone">Ringtone</string>
-    <string name="pref_ringtone_silent">Silent</string>
-
-    <string name="pref_title_vibrate">Vibrate</string>
-    <string name="hello_blank_fragment">Hello Blank Fragment</string>
-    <string name="key_similarity_algorithm" />
     <string name="edit">Edit</string>
     <string name="delete">Delete</string>
     <string name="mark_all_as_read">Mark all as Read</string>
@@ -110,10 +67,12 @@
     <string name="cannot_delete_unknown_category">Cannot Delete Unknown Category</string>
     <string name="delete_all_sms_in_category_title">Delete All Sms in %1$s?</string>
     <string name="delete_all_sms_warning">All sms from this category will be deleted from this application\'s database. Real SMS are not affected</string>
-    <string name="new_sms_added_count">%1$d new sms added</string>
+    <plurals name="new_sms_added_count">
+        <item quantity="one">%d new SMS added</item>
+        <item quantity="other">%d new SMS added</item>
+    </plurals>
     <string name="trained_sms_count">Trained %1$d Sms</string>
     <string name="permission_read_sms_entry">Read SMS</string>
-    <string name="permission_read_contacts_entry">Read Contacts</string>
     <string name="permission_rationale_prefix" translatable="false">"You need to grant access to "</string>
     <string name="permission_rationale_separator" translatable="false">", "</string>
     <string name="some_permission_denied">Some Permission is Denied</string>

@@ -32,6 +32,18 @@ public final class ConfigDao {
     return null;
   }
 
+  public static long getLong(Context context, String key, long defaultValue) {
+    String value = getValue(context, key);
+    if (value == null || value.isEmpty()) {
+      return defaultValue;
+    }
+    try {
+      return Long.parseLong(value);
+    } catch (NumberFormatException ignored) {
+      return defaultValue;
+    }
+  }
+
   public static void put(Context context, String key, String value) {
 
     ContentValues values = new ContentValues();

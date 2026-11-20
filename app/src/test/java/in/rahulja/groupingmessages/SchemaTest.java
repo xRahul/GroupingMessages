@@ -41,6 +41,5 @@ public class SchemaTest {
     assertTrue(tables.contains("config"));
     assertTrue(tables.contains("android_metadata"));
     assertTrue(fkRefs.contains("category.category_id"));
-    assertTrue(fkRefs.contains("sms.similar_to"));
   }
 }

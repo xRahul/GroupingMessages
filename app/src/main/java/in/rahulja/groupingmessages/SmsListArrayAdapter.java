@@ -97,7 +97,10 @@ import java.util.Set;
 
   private String displayNameFor(Sms sms) {
     String contactName = contactNamesByAddress.get(sms.getAddress());
-    return contactName != null ? contactName : sms.getAddress();
+    if (contactName != null && !contactName.isEmpty()) {
+      return contactName;
+    }
+    return sms.getAddress() != null ? sms.getAddress() : "";
   }
 
   private void undoOpt(Sms smsItem) {
@@ -107,7 +110,18 @@ import java.util.Set;
     }
     itemsPendingRemoval.remove(smsItem.getId());
     // this will rebind the row in "normal" state
-    notifyItemChanged(positionOf(smsItem.getId()));
+    int position = positionOf(smsItem.getId());
+    if (position != RecyclerView.NO_POSITION) {
+      notifyItemChanged(position);
+    }
+  }
+
+  @Override
+  public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView) {
+    handler.removeCallbacksAndMessages(null);
+    pendingRunnables.clear();
+    itemsPendingRemoval.clear();
+    super.onDetachedFromRecyclerView(recyclerView);
   }
 
   public void pendingRemoval(int position) {

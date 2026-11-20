@@ -15,6 +15,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v5
@@ -37,13 +38,14 @@ jobs:
           name: GroupingMessages-debug
           path: GroupingMessages-debug.apk
           if-no-files-found: ignore
-      - name: Publish Rolling Latest Release
+      - name: Publish Rolling Debug Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: latest
-          name: Latest build
+          tag_name: debug-latest
+          name: Latest debug build
           prerelease: true
           files: GroupingMessages-debug.apk
           body: |
             Auto-built debug APK from ${{ github.ref_name }} @ ${{ steps.sha.outputs.short }}.
             This asset is replaced automatically on every push to main/master.
+            Debug builds are not store artifacts and are never used for F-Droid or IzzyOnDroid.

@@ -1,0 +1,10 @@
+1.7.0
+
+- On-device category search and the existing local-only classifier
+- Opt-in update check; off by default
+- Optional contacts permission; SMS permission remains required
+- Backup and restore through the system file picker
+- Import validation and database integrity checks
+- Safer database migration and duplicate-inbox protection
+- No SMS content in logs
+- Signed, reproducible release builds

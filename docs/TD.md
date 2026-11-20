@@ -1,49 +1,57 @@
 # Technical Design (TD)
 
 ## Architecture
-The CI/CD pipeline is built using GitHub Actions. It leverages standard Android build tools (Gradle) and GitHub-hosted runners (Ubuntu-latest).
 
-### Workflows
-1.  **CI (`ci.yml`)**: Focuses on code quality and build integrity. It runs in parallel jobs for efficiency.
-2.  **Manual Debug (`manual_debug.yml`)**: specific for generating testable binaries without releasing.
-3.  **Release (`release.yml`)**: Handles the sensitive process of signing and publishing.
+- Single-module Java Android app, XML views, `Activity` -> `ViewModel` -> DAO.
+- `ExternalContentBridge` reads the SMS and contacts providers.
+- `DatabaseHelper`/`AppDatabase` own one SQLite database; all callers use `AppDatabase.get`.
+- `SmsDao`, `CategoryDao`, `ConfigDao` own SQL. User input is passed as selection args.
+- `SmsCategorizer` performs on-device scoring; `TrainSms` applies corrections.
+- `AppExecutors` provides one disk executor and a separate network executor.
 
-## Secret Management
-We use GitHub Secrets to store sensitive information. The Keystore is stored as a Base64 encoded string to avoid committing binary files to the repository.
+## Database
 
-*   `KEY_ALIAS`: The alias of the key in the keystore.
-*   `KEY_PASSWORD`: The password for the key.
-*   `KEY_STORE_PASSWORD`: The password for the keystore.
-*   `KEY_STORE_BASE64`: The Base64 encoded content of the `.jks` file.
+- Schema version 4.
+- `sms` has a category foreign key and a nullable `provider_id` with a unique partial
+  index so repeated provider reads are ignored.
+- Foreign keys are enabled in `onOpen`, after any upgrade. The v4 upgrade rebuilds the
+  `sms` table, removes the historical self-referential `similar_to` constraint (the app
+  uses `0` as "no exemplar"), copies all rows, repairs orphan categories and similar-to
+  references, and recreates indexes and the update trigger.
+- Migration v1 -> v4 and v2 -> v4 are covered by `MigrationTest`.
 
-### Secret Generation
-To generate the `KEY_STORE_BASE64` secret, run this PowerShell command:
-`[Convert]::ToBase64String([IO.File]::ReadAllBytes('app-release.jks'))`
+## Backup
 
-## Semantic Versioning
-The pipeline implements automated semantic versioning (`Major.Minor.Patch`).
-*   It fetches existing Git tags.
-*   It sorts them to find the latest version.
-*   It increments the Patch version (e.g., `1.0.0` -> `1.0.1`).
-*   If no tags exist, it defaults to `1.0.0`.
+- Export: checkpoint the WAL, close the live database under `synchronized
+  (AppDatabase.class)`, stream the file to a user-selected SAF `OutputStream`.
+- Import: copy to a scratch file, verify the SQLite header, `PRAGMA integrity_check`,
+  `user_version <= DATABASE_VERSION`, and required tables, then close and atomically
+  replace the live file.
+- The legacy fixed-path export remains only for existing tests/backward compatibility.
+- The backup is plaintext. The UI warns before export.
 
-## Signing Process
-The signing configuration is injected into the build process via environment variables. The `build.gradle` file is modified to read these variables during the release build type execution.
+## Network
 
-```mermaid
-sequenceDiagram
-    participant GH as GitHub Actions
-    participant Sec as GitHub Secrets
-    participant FS as File System
-    participant Gradle as Gradle Build
+- The update check is off by default (`key_check_updates`).
+- When enabled, it runs on the network executor, uses HEAD with 5 s timeouts, follows no
+  redirects itself, accepts only HTTPS GitHub release URLs for this repository, and
+  normalizes a leading `v` before comparing versions.
+- No other network calls exist.
 
-    GH->>Sec: Request KEY_STORE_BASE64
-    Sec-->>GH: Returns Base64 String
-    GH->>GH: Decode Base64 to binary
-    GH->>FS: Write app-release.jks
-    GH->>Gradle: Run assembleRelease
-    Note over Gradle: Reads Environment Variables
-    Gradle->>FS: Read app-release.jks
-    Gradle->>Gradle: Sign APK
-    Gradle-->>GH: Signed APK
-```
+## CI/CD
+
+1. `ci.yml`: wrapper validation, lint, unit tests, debug build.
+2. `instrumented.yml`: emulator matrix API 24 and 36.
+3. `release.yml`: tag validation, tests, lint, reproducible unsigned builds, signing from
+   `$RUNNER_TEMP`, APK verification, GitHub release.
+4. `store.yml`: Fastlane/F-Droid metadata and released APK validation.
+5. `dependencies.yml`: dependency review on pull requests.
+
+Secrets: `KEY_STORE_BASE64`, `KEY_STORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. The
+keystore is decoded outside the checkout and deleted in an `if: always()` step.
+
+## Versioning
+
+`versionName` and `versionCode` come from the `vX.Y.Z` tag. Local defaults in
+`build.gradle` are only for developer builds; CI passes `-PversionCode` and
+`-PversionName`.

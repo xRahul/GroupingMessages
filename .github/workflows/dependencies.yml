@@ -6,11 +6,18 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: dependencies-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   dependency-review:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Review Dependencies
         uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

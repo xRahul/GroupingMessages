@@ -92,6 +92,21 @@ public class VersionCheckTest {
     assertTimeoutsSet();
   }
 
+  @Test
+  public void updateCheckIsDisabledByDefault() {
+    assertEquals(SettingsViewModel.VersionState.DISABLED,
+        viewModel.checkLatestVersion(false).getValue());
+  }
+
+  @Test
+  public void untrustedRedirectIsRejected() {
+    when(connection.getHeaderField("Location"))
+        .thenReturn("https://evil.example/releases/tag/v9.9.9");
+
+    assertEquals(SettingsViewModel.VersionState.ERROR, viewModel.fetchLatestVersion());
+    assertNull(viewModel.getLatestVersionUrl());
+  }
+
   private void assertTimeoutsSet() {
     verify(connection).setConnectTimeout(SettingsViewModel.CONNECT_TIMEOUT_MS);
     verify(connection).setReadTimeout(SettingsViewModel.READ_TIMEOUT_MS);

@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the actual code as of schema v3 / version 1.6.
+This document describes the actual code as of schema v4 / version 1.7.0.
 
 ## Layers
 
@@ -147,21 +147,22 @@ and visibility-filtered count queries.
 
 ## Backup format notes
 
-`db/DatabaseBackup` copies the raw SQLite database file — not SQL dumps — to
-`GroupMessagingBackupV<schemaVersion>` inside the app's external files dir
-(`getExternalFilesDir(null)`).
+`db/DatabaseBackup` copies the raw SQLite database file — not SQL dumps.
 
-- **Export:** `PRAGMA wal_checkpoint(TRUNCATE)` drains the WAL, DB closed, file copied
-  to `<backup>.tmp` then atomically renamed onto the backup name.
-- **Import:** header verified as `SQLite format 3\0` before anything touches live data;
-  DB closed, stale `-wal`/`-shm` sidecars deleted, backup copied to `<live>.tmp`,
-  header re-verified inside the lock (guards TOCTOU on the backup file), then atomic
-  rename over the live DB. Next `AppDatabase.get()` reopens lazily.
-- Both operations hold `synchronized (AppDatabase.class)` end-to-end; the contract on
-  `AppDatabase.get(Context)` documents that no readers may be in flight during a swap.
-- Failure paths clean up `.tmp` files and leave the previous database intact.
-- Backups are version-tagged by filename; restoring across schema versions relies on
-  SQLiteOpenHelper's upgrade path after import.
+- **Export (current UI):** `PRAGMA wal_checkpoint(TRUNCATE)` drains the WAL, DB closed,
+  file streamed to a Storage Access Framework `OutputStream` the user picked. No fixed
+  external path is written by default.
+- **Import (current UI):** selected document copied to `<live>.tmp`; header, `PRAGMA
+  integrity_check`, `user_version <= DATABASE_VERSION` and required tables are checked on
+  that scratch file; only then is the live DB closed, stale `-wal`/`-shm` sidecars
+  deleted, and the scratch file atomically renamed over the live DB.
+- **Legacy path:** `exportDb`/`importDb` keep the old fixed
+  `GroupMessagingBackupV<schemaVersion>` file in `getExternalFilesDir(null)` for
+  backward compatibility and tests; the Settings UI no longer uses it.
+- Both operations hold `synchronized (AppDatabase.class)` for the swap; failure paths
+  clean up `.tmp` files and leave the previous database intact.
+- Backups are plaintext SQLite. The UI warns before export. Restoring across schema
+  versions relies on `SQLiteOpenHelper`'s upgrade path after import.
 
 ## ViewModel inventory
 
@@ -169,11 +170,11 @@ and visibility-filtered count queries.
 |---|---|---|
 | `CategoriesViewModel` | categories list, unread/read counts per category, newly-added-SMS count, added-category name | `refresh`, `syncLatestSms`, `addCategory`, `deleteCategory` (guarded: Unknown id 1 never deleted), one-shot events consumed via `consume...()` |
 | `SmsListViewModel` | sms list for the open category | `refresh(categoryId)`, `swipeDelete` (hides self-trained, deletes untrained — decision lives in `SmsDao.deleteSmsByMap`), `markRead(ids)`, `moveToCategory(ids, targetId)` |
-| `SettingsViewModel` | `VersionState` (`UP_TO_DATE`/`OUTDATED`/`ERROR`) | `checkLatestVersion()` — resolves the GitHub releases redirect without following it and compares against the current `VERSION_NAME` tag URL; 5 s connect/read timeouts |
+| `SettingsViewModel` | `VersionState` (`UP_TO_DATE`/`OUTDATED`/`ERROR`/`DISABLED`) | `checkLatestVersion()` — reads the opt-in preference, runs on the network executor, resolves the GitHub releases redirect without following it, accepts only HTTPS GitHub release URLs for this repository, normalizes a leading `v`, 5 s connect/read timeouts |
 
 ## Network surface
 
 The only outbound request in the app is `SettingsViewModel.fetchLatestVersion()`:
-an HTTP GET of `https://github.com/xRahul/GroupingMessages/releases/latest` with
-redirects disabled, reading the `Location` header to compare versions. All SMS
-processing stays on-device.
+an HTTP HEAD of `https://github.com/xRahul/GroupingMessages/releases/latest` with
+redirects disabled, reading the `Location` header to compare versions. It runs only
+when the user enables "Check for updates". All SMS processing stays on-device.

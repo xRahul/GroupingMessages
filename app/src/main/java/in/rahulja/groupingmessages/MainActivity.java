@@ -14,7 +14,6 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -32,6 +31,7 @@ import com.flask.colorpicker.ColorPickerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import in.rahulja.groupingmessages.db.CategoryDao;
 import in.rahulja.groupingmessages.model.Category;
+import in.rahulja.groupingmessages.vm.AppExecutors;
 import in.rahulja.groupingmessages.vm.CategoriesViewModel;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -108,7 +108,8 @@ public class MainActivity extends AppCompatActivity
     if (newlyAddedSmsCount > 0) {
       Toast.makeText(
           getBaseContext(),
-          getString(R.string.new_sms_added_count, newlyAddedSmsCount.intValue()),
+          getResources().getQuantityString(R.plurals.new_sms_added_count,
+              newlyAddedSmsCount.intValue(), newlyAddedSmsCount.intValue()),
           Toast.LENGTH_SHORT
       ).show();
     }
@@ -170,16 +171,18 @@ public class MainActivity extends AppCompatActivity
     categoriesViewModel.refresh();
   }
 
-  @RequiresApi(api = Build.VERSION_CODES.M)
   private void checkAndGetPermissions() {
     List<String> permissionsNeeded = new ArrayList<>();
 
     final List<String> permissionsList = new ArrayList<>();
     if (!addPermission(permissionsList, Manifest.permission.READ_SMS)) {
       permissionsNeeded.add(getString(R.string.permission_read_sms_entry));
-    }
-    if (!addPermission(permissionsList, Manifest.permission.READ_CONTACTS)) {
-      permissionsNeeded.add(getString(R.string.permission_read_contacts_entry));
+      // Contacts are a display-name nicety; request them alongside SMS once,
+      // but never block the app on them.
+      addPermission(permissionsList, Manifest.permission.READ_CONTACTS);
+    } else {
+      init();
+      return;
     }
 
     Log.d("GM/permNeed", permissionsNeeded.toString());
@@ -221,7 +224,6 @@ public class MainActivity extends AppCompatActivity
   }
 
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-  @RequiresApi(api = Build.VERSION_CODES.M)
   private boolean addPermission(List<String> permissionsList, String permission) {
     if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
       permissionsList.add(permission);
@@ -231,7 +233,6 @@ public class MainActivity extends AppCompatActivity
     return true;
   }
 
-  @RequiresApi(api = Build.VERSION_CODES.M)
   public void showMessageOKCancel(String message, DialogInterface.OnClickListener okListener) {
     Log.d("GM/showPermMessage", message);
     new AlertDialog.Builder(MainActivity.this)
@@ -274,12 +275,8 @@ public class MainActivity extends AppCompatActivity
   @Override
   protected void onPostResume() {
     super.onPostResume();
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      Log.d("GM/checkPerm", String.valueOf(Build.VERSION.SDK_INT));
-      checkAndGetPermissions();
-    } else {
-      init();
-    }
+    Log.d("GM/checkPerm", String.valueOf(Build.VERSION.SDK_INT));
+    checkAndGetPermissions();
   }
 
   void requestDeleteCategory(long categoryId) {
@@ -290,6 +287,7 @@ public class MainActivity extends AppCompatActivity
   public void onDialogPositiveClick(DialogFragment dialog, Bundle oldArgs) {
     // User touched the dialog's positive button
     Log.i(GM_ADD_CAT, "User touched the add category dialog's add button");
+    Bundle args = oldArgs != null ? oldArgs : new Bundle();
 
     EditText categoryName = dialog.getDialog().findViewById(R.id.editTextAddCategory);
     ColorPickerView cpView =
@@ -301,7 +299,7 @@ public class MainActivity extends AppCompatActivity
       return;
     }
 
-    if ("EDIT".equals(oldArgs.getString("ACTION"))) {
+    if ("EDIT".equals(args.getString("ACTION"))) {
       Map<String, String> updatedCategory = new HashMap<>();
       updatedCategory.put(DatabaseContract.Category.KEY_NAME,
           categoryName.getText().toString());
@@ -310,16 +308,24 @@ public class MainActivity extends AppCompatActivity
           String.valueOf(cpView.getSelectedColor()));
       updatedCategory.put(
           DatabaseContract.Category._ID,
-          String.valueOf(oldArgs.getLong(DatabaseContract.Category._ID))
+          String.valueOf(args.getLong(DatabaseContract.Category._ID))
       );
-      Boolean categoryUpdated = CategoryDao.updateCategory(this, updatedCategory);
-      if (categoryUpdated) {
-        Toast.makeText(this,
-            getString(R.string.successfully_updated_category, categoryName.getText().toString()),
-            Toast.LENGTH_SHORT).show();
-        Log.i(GM_ADD_CAT, "Successfully updated category: " + categoryName.getText());
-      }
-      categoriesViewModel.refresh();
+      final String editedName = categoryName.getText().toString();
+      AppExecutors.disk(() -> {
+        Boolean categoryUpdated = CategoryDao.updateCategory(this, updatedCategory);
+        AppExecutors.main(() -> {
+          if (isFinishing() || isDestroyed()) {
+            return;
+          }
+          if (Boolean.TRUE.equals(categoryUpdated)) {
+            Toast.makeText(this,
+                getString(R.string.successfully_updated_category, editedName),
+                Toast.LENGTH_SHORT).show();
+            Log.i(GM_ADD_CAT, "Successfully updated a category");
+          }
+          categoriesViewModel.refresh();
+        });
+      });
     } else {
       categoriesViewModel.addCategory(
           categoryName.getText().toString(),
@@ -338,17 +344,16 @@ public class MainActivity extends AppCompatActivity
   public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
       @NonNull int[] grantResults) {
     if (requestCode == REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS) {
-      Map<String, Integer> perms = new HashMap<>();
-      perms.put(Manifest.permission.READ_SMS, PackageManager.PERMISSION_GRANTED);
-      perms.put(Manifest.permission.READ_CONTACTS, PackageManager.PERMISSION_GRANTED);
-      for (int i = 0; i < permissions.length; i++)
-        perms.put(permissions[i], grantResults[i]);
-      if (perms.get(Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
-          && perms.get(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-        // All Permissions Granted
+      boolean smsGranted = false;
+      for (int i = 0; i < permissions.length; i++) {
+        if (Manifest.permission.READ_SMS.equals(permissions[i])
+            && grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+          smsGranted = true;
+        }
+      }
+      if (smsGranted) {
         init();
       } else {
-        // Permission Denied
         Toast.makeText(MainActivity.this, R.string.some_permission_denied, Toast.LENGTH_SHORT)
             .show();
       }

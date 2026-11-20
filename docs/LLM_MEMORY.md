@@ -1,23 +1,26 @@
 # Project Context & Memory
 
-## Project Structure
-*   **Type:** Native Android Application
-*   **Language:** Java (compatible with Java 17/21 for build environment, source compatibility Java 1.8)
-*   **Build System:** Gradle 8.5 (Wrapper configured)
-*   **Main Module:** `app/`
+## Project structure
 
-## Key Commands
-*   **Build Debug:** `./gradlew assembleDebug`
-*   **Build Release:** `./gradlew assembleRelease`
-*   **Run Tests:** `./gradlew test`
-*   **Lint:** `./gradlew lint`
+- Native Android app, Java, single `app` module.
+- Build: Gradle wrapper 9.7.1, AGP 9.3.1, JDK 21, source/target Java 17.
+- `compileSdk`/`targetSdk` 36, `minSdk` 24.
+- Database schema version 4.
 
-## Architecture Decisions
-*   **CI/CD:** GitHub Actions.
-*   **Signing:** Keystore injected via Base64 secret `KEY_STORE_BASE64` and decoded at runtime. Signing config uses environment variables.
-*   **Versioning:** Automated patch increment based on Git tags.
-*   **Artifacts:** Debug APKs retained for 7 days; Release APKs attached to GitHub Releases.
+## Key commands
 
-## Configuration Details
-*   `app/build.gradle` is modified to include a `signingConfigs` block for release builds, reading from `System.getenv()`.
-*   Project uses `androidx` libraries and `simmetrics-core`.
+- Build debug: `./gradlew assembleDebug`
+- Build release: `./gradlew assembleRelease`
+- Unit tests: `./gradlew testDebugUnitTest`
+- Lint: `./gradlew lintDebug`
+- Instrumented: `./gradlew connectedDebugAndroidTest`
+
+## Architecture decisions
+
+- SMS and contact processing stays on-device. No analytics, crash reporting or sync.
+- Contacts permission is optional; SMS is required.
+- Update check is opt-in and limited to HTTPS GitHub release pages.
+- Backup uses the Storage Access Framework and validates the imported database.
+- Release is tag-driven: `vX.Y.Z`, `versionCode = X*10000 + Y*100 + Z`.
+- Signing key is written under `$RUNNER_TEMP` only and removed after the build.
+- F-Droid and Fastlane metadata are validated by `store.yml`.

@@ -1,0 +1,24 @@
+Grouping Messages sorts your SMS into categories you define. It learns from the
+messages you move: when you correct a message's category, similar future messages
+follow the same category.
+
+Everything runs on your phone. Message text, sender addresses, contact names and the
+training model stay in a local SQLite database. There is no analytics, no crash
+reporting, no account and no sync service.
+
+Features:
+- On-device similarity classifier using word TF-IDF and character-trigram scoring
+- User-defined categories with colors and an Unknown fallback
+- Per-category read/unread counts and mark-all-read
+- Search within a category by message text, sender or contact name
+- Manual database backup and restore, with a warning that the backup contains
+  message text
+- Optional update check against GitHub releases; it is off by default
+
+Permissions:
+- READ_SMS is required to import and categorize your inbox
+- READ_CONTACTS is optional; it only resolves contact display names
+- INTERNET is used only for the optional update check
+
+The app is read-only with respect to the system SMS database. It never sends,
+modifies or blocks messages.

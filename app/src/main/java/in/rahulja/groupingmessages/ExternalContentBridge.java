@@ -25,7 +25,7 @@ import in.rahulja.groupingmessages.db.ConfigDao;
 
   public static List<Map<String, String>> getLatestSmsFromInbox(Context context) {
 
-    long lastSmsTime = Long.parseLong(ConfigDao.getValue(context, LAST_SMS_TIME_CONFIG));
+    long lastSmsTime = ConfigDao.getLong(context, LAST_SMS_TIME_CONFIG, 0L);
 
     List<Map<String, String>> latestSms = new ArrayList<>();
     Uri uri = Uri.parse(SMS_URI_INBOX);
@@ -41,7 +41,7 @@ import in.rahulja.groupingmessages.db.ConfigDao;
     };
     StringBuilder searchString = new StringBuilder();
     searchString.append(DatabaseContract.Sms.KEY_DATE)
-        .append(" > ").append(String.valueOf(lastSmsTime));
+        .append(" >= ").append(String.valueOf(lastSmsTime));
 
     Log.d("GM/searchString", searchString.toString());
 
@@ -55,18 +55,19 @@ import in.rahulja.groupingmessages.db.ConfigDao;
 
     long firstInboxSmsId = -1;
     if (cursor != null && cursor.moveToFirst()) {
-      int indexId = cursor.getColumnIndex(DatabaseContract.Sms._ID);
-      int indexDate = cursor.getColumnIndex(DatabaseContract.Sms.KEY_DATE);
-      int indexPerson = cursor.getColumnIndex(DatabaseContract.Sms.KEY_PERSON);
-      int indexRead = cursor.getColumnIndex(DatabaseContract.Sms.KEY_READ);
-      int indexSeen = cursor.getColumnIndex(DatabaseContract.Sms.KEY_SEEN);
-      int indexSubject = cursor.getColumnIndex(DatabaseContract.Sms.KEY_SUBJECT);
-      int indexBody = cursor.getColumnIndex(DatabaseContract.Sms.KEY_BODY);
-      int indexAddress = cursor.getColumnIndex(DatabaseContract.Sms.KEY_ADDRESS);
+      int indexId = cursor.getColumnIndexOrThrow(DatabaseContract.Sms._ID);
+      int indexDate = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_DATE);
+      int indexPerson = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_PERSON);
+      int indexRead = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ);
+      int indexSeen = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SEEN);
+      int indexSubject = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SUBJECT);
+      int indexBody = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_BODY);
+      int indexAddress = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_ADDRESS);
       Map<String, String> smsTemp;
 
       while (!cursor.isAfterLast()) {
 
+        long providerId = cursor.getLong(indexId);
         long longDate = cursor.getLong(indexDate);
         long longPerson = cursor.getLong(indexPerson);
         long longRead = cursor.getLong(indexRead);
@@ -76,6 +77,7 @@ import in.rahulja.groupingmessages.db.ConfigDao;
         String strAddress = cursor.getString(indexAddress);
 
         smsTemp = new HashMap<>();
+        smsTemp.put(DatabaseContract.Sms.KEY_PROVIDER_ID, String.valueOf(providerId));
         smsTemp.put(DatabaseContract.Sms.KEY_DATE, String.valueOf(longDate));
         smsTemp.put(DatabaseContract.Sms.KEY_PERSON, String.valueOf(longPerson));
         smsTemp.put(DatabaseContract.Sms.KEY_READ, String.valueOf(longRead));
@@ -85,8 +87,8 @@ import in.rahulja.groupingmessages.db.ConfigDao;
         smsTemp.put(DatabaseContract.Sms.KEY_ADDRESS, strAddress);
 
         latestSms.add(smsTemp);
-        if (indexId != -1 && latestSms.size() == 1) {
-          firstInboxSmsId = cursor.getLong(indexId);
+        if (latestSms.size() == 1) {
+          firstInboxSmsId = providerId;
         }
         cursor.moveToNext();
       }
@@ -119,6 +121,9 @@ import in.rahulja.groupingmessages.db.ConfigDao;
     List<String> chunkNormalized = new ArrayList<>();
 
     for (String phoneNumber : addressSet) {
+      if (phoneNumber == null || phoneNumber.isEmpty()) {
+        continue;
+      }
       contactList.put(phoneNumber, "");
       String normalized = android.telephony.PhoneNumberUtils.normalizeNumber(phoneNumber);
       if (normalized != null && !normalized.isEmpty()) {
@@ -129,7 +134,12 @@ import in.rahulja.groupingmessages.db.ConfigDao;
       }
     }
 
-    List<String> allOriginals = new ArrayList<>(addressSet);
+    List<String> allOriginals = new ArrayList<>();
+    for (String address : addressSet) {
+      if (address != null && !address.isEmpty()) {
+        allOriginals.add(address);
+      }
+    }
     int batchSize = 50;
 
     for (int i = 0; i < allOriginals.size(); i += batchSize) {
@@ -204,10 +214,12 @@ import in.rahulja.groupingmessages.db.ConfigDao;
       );
 
       if (cursor != null) {
-        int idxNumber = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
+        int idxNumber = cursor.getColumnIndexOrThrow(
+            ContactsContract.CommonDataKinds.Phone.NUMBER);
         int idxNormalized = cursor.getColumnIndex(
             ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER);
-        int idxName = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
+        int idxName = cursor.getColumnIndexOrThrow(
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
 
         while (cursor.moveToNext()) {
           String name = cursor.getString(idxName);

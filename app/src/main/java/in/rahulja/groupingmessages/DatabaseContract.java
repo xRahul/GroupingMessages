@@ -4,7 +4,7 @@ import android.provider.BaseColumns;
 
 public final class DatabaseContract {
 
-  public static final int DATABASE_VERSION = 3;
+  public static final int DATABASE_VERSION = 4;
   public static final String DATABASE_NAME = "groupMessage.db";
   private static final String TEXT_TYPE = " TEXT";
   private static final String INTEGER_TYPE = " INTEGER";
@@ -116,6 +116,7 @@ public final class DatabaseContract {
     public static final String KEY_BODY = "body";
     public static final String KEY_ADDRESS = "address";
     public static final String KEY_CATEGORY_ID = "category_id";
+    public static final String KEY_PROVIDER_ID = "provider_id";
     public static final String KEY_SIMILAR_TO = "similar_to";
     public static final String KEY_SIM_SCORE = "similarity_score";
     public static final String KEY_CLEANED_SMS = "cleaned_sms";
@@ -156,6 +157,7 @@ public final class DatabaseContract {
         KEY_VISIBILITY,
         KEY_SENDER_TYPE,
         KEY_CATEGORY_ID,
+        KEY_PROVIDER_ID,
         KEY_SIMILAR_TO,
         KEY_SIM_SCORE,
         KEY_CREATED_AT,
@@ -175,14 +177,13 @@ public final class DatabaseContract {
         KEY_VISIBILITY + INTEGER_TYPE + DEFAULT + " 1" + COMMA_SEP +
         KEY_SENDER_TYPE + INTEGER_TYPE + COMMA_SEP +
         KEY_CATEGORY_ID + INTEGER_TYPE + COMMA_SEP +
+        KEY_PROVIDER_ID + INTEGER_TYPE + COMMA_SEP +
         KEY_SIMILAR_TO + INTEGER_TYPE + COMMA_SEP +
         KEY_SIM_SCORE + FLOAT_TYPE + DEFAULT + " 0.0" + COMMA_SEP +
         KEY_CREATED_AT + TIME_TYPE + DEFAULT + CURRENT_TIMESTAMP + COMMA_SEP +
         KEY_UPDATED_AT + TIME_TYPE + DEFAULT + CURRENT_TIMESTAMP + COMMA_SEP +
         " FOREIGN KEY (" + KEY_CATEGORY_ID + ") REFERENCES "
-        + Category.TABLE_NAME + "(" + Category._ID + ")" + COMMA_SEP +
-        " FOREIGN KEY (" + KEY_SIMILAR_TO + ") REFERENCES "
-        + TABLE_NAME + "(" + _ID + ")" + ");";
+        + Category.TABLE_NAME + "(" + Category._ID + ")" + ");";
 
     private Sms() {
       throw new IllegalAccessError(CANT_INSTANTIATE_CLASS);

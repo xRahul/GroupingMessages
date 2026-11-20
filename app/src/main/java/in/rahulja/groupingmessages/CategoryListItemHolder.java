@@ -116,8 +116,10 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
           context.getString(R.string.cannot_delete_unknown_category),
           Toast.LENGTH_SHORT).show();
     } else if (id == R.id.category_popup_all_read_item) {
-      SmsDao.setAllCategorySmsAsRead(context, String.valueOf(category.getId()));
-      ((MainActivity) context).onPostResume();
+      AppExecutors.disk(() -> {
+        SmsDao.setAllCategorySmsAsRead(context, String.valueOf(category.getId()));
+        AppExecutors.main(() -> ((MainActivity) context).onPostResume());
+      });
     } else if (id == R.id.category_popup_delete_all_sms) {
       AlertDialog.Builder builder = new AlertDialog.Builder(context);
 

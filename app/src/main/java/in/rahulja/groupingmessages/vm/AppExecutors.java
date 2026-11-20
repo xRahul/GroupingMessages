@@ -8,9 +8,14 @@ import java.util.concurrent.Executors;
 public class AppExecutors {
 
   private static final ExecutorService DISK_IO = Executors.newSingleThreadExecutor();
+  private static final ExecutorService NETWORK_IO = Executors.newSingleThreadExecutor();
 
   public static void disk(Runnable r) {
     DISK_IO.execute(r);
+  }
+
+  public static void network(Runnable r) {
+    NETWORK_IO.execute(r);
   }
 
   public static void main(Runnable r) {

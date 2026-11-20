@@ -9,6 +9,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 
@@ -56,9 +58,9 @@ public final class DatabaseBackup {
 
         copyFile(backupDB, tmpOf(currentDB));
         // Re-verify inside the lock: the backup file can change between the
-        // pre-flight check and the copy above. Installing a non-SQLite file
-        // triggers the platform's silent delete-and-recreate on next open.
-        verifySqliteHeader(tmpOf(currentDB));
+        // pre-flight check and the copy above. Installing a non-SQLite or
+        // foreign-schema file triggers silent data loss on next open.
+        validateBackup(tmpOf(currentDB));
         rename(tmpOf(currentDB), currentDB);
       } catch (IOException e) {
         deleteIfExists(tmpOf(context.getDatabasePath(DatabaseContract.DATABASE_NAME)));
@@ -70,7 +72,106 @@ public final class DatabaseBackup {
   }
 
   /**
-   * Copies the live database to the backup file after flushing the WAL.
+   * Writes a consistent copy of the live database to {@code out}. The caller
+   * owns the stream. The destination is usually a Storage Access Framework
+   * document chosen by the user.
+   */
+  public static void exportTo(Context context, OutputStream out) throws IOException {
+    synchronized (AppDatabase.class) {
+      SQLiteDatabase db = AppDatabase.get(context);
+      checkpoint(db);
+      AppDatabase.close(context);
+
+      File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
+      try (FileInputStream in = new FileInputStream(currentDB)) {
+        byte[] buffer = new byte[8192];
+        int read;
+        while ((read = in.read(buffer)) != -1) {
+          out.write(buffer, 0, read);
+        }
+        out.flush();
+      } catch (IOException e) {
+        Log.e(TAG, "export failed: " + e);
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Installs a database from {@code in} after validating it on a scratch copy.
+   * The live database is not touched until validation passes.
+   */
+  public static void importFrom(Context context, InputStream in) throws IOException {
+    File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
+    File tmp = tmpOf(currentDB);
+    try {
+      try (FileOutputStream out = new FileOutputStream(tmp)) {
+        byte[] buffer = new byte[8192];
+        int read;
+        while ((read = in.read(buffer)) != -1) {
+          out.write(buffer, 0, read);
+        }
+        out.flush();
+      }
+      validateBackup(tmp);
+
+      synchronized (AppDatabase.class) {
+        AppDatabase.close(context);
+        deleteIfExists(sidecar(currentDB, WAL_SUFFIX));
+        deleteIfExists(sidecar(currentDB, SHM_SUFFIX));
+        rename(tmp, currentDB);
+      }
+    } catch (IOException e) {
+      deleteIfExists(tmp);
+      Log.e(TAG, "import failed: " + e);
+      throw e;
+    }
+  }
+
+  private static void checkpoint(SQLiteDatabase db) {
+    try (Cursor cursor = db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null)) {
+      while (cursor.moveToNext()) {
+        // Fully drain the checkpoint result row(s).
+      }
+    }
+  }
+
+  /**
+   * Rejects a well-formed but foreign or future-schema SQLite file before it
+   * replaces the live database.
+   */
+  private static void validateBackup(File file) throws IOException {
+    verifySqliteHeader(file);
+    try (SQLiteDatabase db = SQLiteDatabase.openDatabase(
+        file.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY)) {
+      if (db.getVersion() > DatabaseContract.DATABASE_VERSION) {
+        throw new IOException("Backup schema is newer than this app");
+      }
+      try (Cursor cursor = db.rawQuery("PRAGMA integrity_check", null)) {
+        if (!cursor.moveToFirst() || !"ok".equalsIgnoreCase(cursor.getString(0))) {
+          throw new IOException("Backup failed SQLite integrity check");
+        }
+      }
+      for (String table : new String[] {
+          DatabaseContract.Sms.TABLE_NAME,
+          DatabaseContract.Category.TABLE_NAME,
+          DatabaseContract.Config.TABLE_NAME
+      }) {
+        try (Cursor cursor = db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?", new String[] {table})) {
+          if (!cursor.moveToFirst()) {
+            throw new IOException("Backup is missing table: " + table);
+          }
+        }
+      }
+    } catch (android.database.sqlite.SQLiteException e) {
+      throw new IOException("Backup is not a valid SQLite database", e);
+    }
+  }
+
+  /**
+   * Copies the live database to the fixed app-specific backup file after
+   * flushing the WAL. Kept for legacy imports; new callers use SAF streams.
    *
    * @throws IOException if external storage is unavailable or copying fails
    */
@@ -105,10 +206,8 @@ public final class DatabaseBackup {
   }
 
   /**
-   * Rejects non-SQLite sources before anything touches the live database.
-   * ponytail: header check only; deeper corruption inside a well-formed file
-   * surfaces via the platform's own handling on next open - upgrade path is a
-   * {@code PRAGMA integrity_check} against a scratch copy.
+   * Cheap pre-flight check used to reject obvious non-SQLite files before any
+   * copy. Full integrity and schema validation lives in {@link #validateBackup}.
    */
   private static void verifySqliteHeader(File backupDB) throws IOException {
     try (FileInputStream in = new FileInputStream(backupDB)) {

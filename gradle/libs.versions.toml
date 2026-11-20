@@ -1,0 +1,38 @@
+[versions]
+agp = "9.3.1"
+sonarqubePlugin = "7.4.0.8496"
+appcompat = "1.8.0"
+material = "1.14.0"
+recyclerview = "1.4.0"
+cardview = "1.0.0"
+lifecycle = "2.11.0"
+preference = "1.2.1"
+colorpicker = "0.0.13"
+simmetrics = "4.1.1"
+espresso = "3.7.0"
+androidxTest = "1.7.0"
+junit = "4.13.2"
+mockito = "5.18.0"
+robolectric = "4.16.1"
+
+[libraries]
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+androidx-cardview = { module = "androidx.cardview:cardview", version.ref = "cardview" }
+androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
+androidx-lifecycle-livedata = { module = "androidx.lifecycle:lifecycle-livedata", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
+androidx-preference = { module = "androidx.preference:preference", version.ref = "preference" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
+colorpicker = { module = "com.github.QuadFlask:colorpicker", version.ref = "colorpicker" }
+simmetrics-core = { module = "com.github.mpkorstanje:simmetrics-core", version.ref = "simmetrics" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTest" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTest" }
+androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTest" }
+androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
+junit = { module = "junit:junit", version.ref = "junit" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqubePlugin" }

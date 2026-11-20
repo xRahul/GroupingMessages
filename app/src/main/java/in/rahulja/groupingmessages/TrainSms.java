@@ -226,6 +226,11 @@ import in.rahulja.groupingmessages.db.SmsDao;
     for (int i = 0; i < cleanedAllSms.size(); i++) {
 
       Map<String, String> toTrainSmsMap = cleanedAllSms.get(i);
+      if (String.valueOf(toTrainSmsMap.get(DatabaseContract.Sms._ID))
+          .equals(String.valueOf(cleanedTrainedSms.get(DatabaseContract.Sms._ID)))) {
+        // a message must not become its own exemplar
+        continue;
+      }
 
       double highestSimScore =
           Double.parseDouble(toTrainSmsMap.get(DatabaseContract.Sms.KEY_SIM_SCORE));

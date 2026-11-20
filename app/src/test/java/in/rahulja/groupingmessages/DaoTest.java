@@ -49,6 +49,11 @@ public class DaoTest {
     AppDatabase.get(ctx);
   }
 
+  private void seedCategory(long id) {
+    AppDatabase.get(ctx).execSQL("INSERT OR IGNORE INTO category (_id, name, color, visibility)"
+        + " VALUES (" + id + ", 'Test" + id + "', '-16711936', 1)");
+  }
+
   private static Map<String, String> smsMap(long date, String body, long categoryId,
       long similarTo, double simScore) {
     Map<String, String> m = new HashMap<>();
@@ -206,6 +211,7 @@ public class DaoTest {
 
   @Test
   public void getSelfTrainedReturnsOnlySelfSimilarFullScoreRows() {
+    seedCategory(2L);
     SmsDao.storeTrainedInboxSms(ctx, Arrays.asList(
         smsMap(1000L, "untrained", 1L, 0L, 0.4d),
         smsMap(2000L, "trained", 2L, 2L, 1.0d)
@@ -219,6 +225,7 @@ public class DaoTest {
 
   @Test
   public void visibleByCategoryFiltersAndOrdersBothShapes() {
+    seedCategory(2L);
     SmsDao.storeTrainedInboxSms(ctx, Arrays.asList(
         smsMap(1000L, "catOneVisible", 1L, 0L, 0.0d),
         smsMap(2000L, "catTwoHidden", 2L, 0L, 0.0d)
@@ -236,6 +243,25 @@ public class DaoTest {
     List<Map<String, String>> maps =
         SmsDao.getVisibleMapsByCategory(ctx, 2L);
     assertEquals(Arrays.asList("catTwoShown"), bodiesOf(maps));
+  }
+
+  @Test
+  public void repeatedProviderMessageIsStoredOnce() {
+    Map<String, String> first = smsMap(1000L, "same provider message", 1L, 0L, 0.0d);
+    first.put(DatabaseContract.Sms.KEY_PROVIDER_ID, "424242");
+    Map<String, String> duplicate = smsMap(1000L, "same provider message", 1L, 0L, 0.0d);
+    duplicate.put(DatabaseContract.Sms.KEY_PROVIDER_ID, "424242");
+
+    assertEquals(1, SmsDao.storeTrainedInboxSms(ctx, Collections.singletonList(first)));
+    assertEquals(0, SmsDao.storeTrainedInboxSms(ctx, Collections.singletonList(duplicate)));
+    assertEquals(1, SmsDao.getAll(ctx).size());
+  }
+
+  @Test
+  public void orphanCategoryIsRejectedWhenForeignKeysAreOn() {
+    Map<String, String> orphan = smsMap(1000L, "orphan", 999L, 0L, 0.0d);
+    assertEquals(0, SmsDao.storeTrainedInboxSms(ctx, Collections.singletonList(orphan)));
+    assertEquals(0, SmsDao.getAll(ctx).size());
   }
 
   @Test

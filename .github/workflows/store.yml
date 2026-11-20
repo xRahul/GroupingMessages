@@ -1,0 +1,173 @@
+name: Store Metadata and APK Validation
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to validate (vX.Y.Z)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate Fastlane, F-Droid recipe, and APK
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.release.prerelease == false && startsWith(github.event.release.tag_name, 'v')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install validation dependencies
+        run: pip install --disable-pip-version-check pyyaml pillow
+
+      - name: Validate Fastlane metadata
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from PIL import Image
+
+          base = Path("fastlane/metadata/android/en-US")
+          required = ["title.txt", "short_description.txt", "full_description.txt"]
+          for name in required:
+              path = base / name
+              assert path.is_file() and path.read_text().strip(), f"Missing or empty {path}"
+
+          short = (base / "short_description.txt").read_text().strip()
+          assert len(short) <= 80, f"short_description.txt is {len(short)} characters (max 80)"
+
+          icon = base / "images" / "icon.png"
+          assert icon.is_file(), f"Missing {icon}"
+          with Image.open(icon) as image:
+              assert image.size == (512, 512), f"icon.png must be 512x512, got {image.size}"
+
+          screenshots = sorted((base / "phoneScreenshots").glob("*"))
+          screenshots = [p for p in screenshots if p.suffix.lower() in {".png", ".jpg", ".jpeg"}]
+          assert len(screenshots) >= 2, "At least two phone screenshots are required"
+
+          print(f"Fastlane metadata OK: {len(short)}-char summary, {len(screenshots)} screenshots")
+          PY
+
+      - name: Validate F-Droid recipe
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          import yaml
+
+          tag = os.environ["TAG"]
+          assert re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag), f"Invalid tag: {tag}"
+          version_name = tag[1:]
+          major, minor, patch = (int(part) for part in version_name.split("."))
+          expected_code = major * 10000 + minor * 100 + patch
+
+          path = "metadata/in.rahulja.groupingmessages.yml"
+          data = yaml.safe_load(open(path, encoding="utf-8"))
+          required = [
+              "Categories", "License", "AuthorName", "SourceCode", "IssueTracker",
+              "AutoName", "Summary", "Description", "RepoType", "Repo", "Builds",
+              "AutoUpdateMode", "UpdateCheckMode", "CurrentVersion", "CurrentVersionCode",
+          ]
+          for key in required:
+              assert key in data, f"Missing F-Droid metadata key: {key}"
+
+          assert data["License"] == "Apache-2.0", f"Unexpected License: {data['License']}"
+          assert data["RepoType"] == "git"
+          assert data["CurrentVersion"] == version_name, "CurrentVersion does not match the tag"
+          assert int(data["CurrentVersionCode"]) == expected_code, "CurrentVersionCode does not match the tag"
+
+          builds = data["Builds"]
+          assert builds, "Builds must not be empty"
+          build = builds[0]
+          assert "subdir" not in build, "Do not set subdir for this root Gradle project"
+          assert build["commit"] == tag, f"Build commit {build['commit']} does not match {tag}"
+          assert build["versionName"] == version_name
+          assert int(build["versionCode"]) == expected_code
+          gradle_args = build.get("gradle") or []
+          assert f"-PversionCode={expected_code}" in gradle_args
+          assert f"-PversionName={version_name}" in gradle_args
+          print(f"F-Droid recipe OK for {tag} ({expected_code})")
+          PY
+
+      - name: Download release assets
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --dir dist
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.sha256' --dir dist || true
+          test -n "$(find dist -name '*.apk' -print -quit)"
+
+      - name: Verify APK manifest and signature
+        run: |
+          set -euo pipefail
+          APK="$(find dist -name '*.apk' -print -quit)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -n 1)"
+          AAPT2="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt2 -type f | sort -V | tail -n 1)"
+          test -n "$APKSIGNER" && test -n "$AAPT2"
+
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          EXPECTED_CODE="$(python3 - <<'PY'
+          import yaml
+          print(yaml.safe_load(open("metadata/in.rahulja.groupingmessages.yml"))["CurrentVersionCode"])
+          PY
+          )"
+          BADGING="$("$AAPT2" dump badging "$APK")"
+          echo "$BADGING" | grep -q "package: name='in.rahulja.groupingmessages'"
+          echo "$BADGING" | grep -q "versionCode='${EXPECTED_CODE}'"
+          echo "$BADGING" | grep -q "versionName='${TAG#v}'"
+          if echo "$BADGING" | grep -q "application-debuggable"; then
+            echo "::error::Published APK is debuggable"
+            exit 1
+          fi
+          if "$AAPT2" dump xmltree --file AndroidManifest.xml "$APK" | grep -q "testOnly"; then
+            echo "::error::Published APK is testOnly"
+            exit 1
+          fi
+
+          sha256sum "$APK"
+          if [ -f "$APK.sha256" ]; then
+            sha256sum -c "$APK.sha256"
+          fi
+
+          FINGERPRINT="$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ':' | tr 'A-F' 'a-f')"
+          echo "Signer SHA-256: $FINGERPRINT"
+          EXPECTED="$(python3 - <<'PY'
+          import yaml
+          data = yaml.safe_load(open("metadata/in.rahulja.groupingmessages.yml"))
+          keys = data.get("AllowedAPKSigningKeys") or []
+          print(keys[0].replace(":", "").lower() if keys else "")
+          PY
+          )"
+          if [ -n "$EXPECTED" ] && [ "$EXPECTED" != "$FINGERPRINT" ]; then
+            echo "::error::APK signer does not match AllowedAPKSigningKeys"
+            exit 1
+          fi
+
+      - name: Store readiness summary
+        run: |
+          cat <<EOF >> "$GITHUB_STEP_SUMMARY"
+          ## Store validation: ${TAG}
+
+          - Fastlane metadata: present, summary <= 80 chars, 512x512 icon, >= 2 screenshots
+          - F-Droid recipe: present, license Apache-2.0, build commit matches ${TAG}
+          - APK: signed, not debuggable/testOnly, version matches the recipe
+          - SHA-256: $(sha256sum "$(find dist -name '*.apk' -print -quit)" | cut -d' ' -f1)
+          EOF
