@@ -38,15 +38,15 @@ RepoType: git
 Repo: https://github.com/xRahul/GroupingMessages.git
 
 Builds:
-  - versionName: 1.7.0
-    versionCode: 10700
-    commit: v1.7.0
+  - versionName: 1.7.1
+    versionCode: 10701
+    commit: v1.7.1
     gradle:
       - yes
-      - -PversionCode=10700
-      - -PversionName=1.7.0
+      - -PversionCode=10701
+      - -PversionName=1.7.1
 
 AutoUpdateMode: Version v%v
 UpdateCheckMode: Tags
-CurrentVersion: 1.7.0
-CurrentVersionCode: 10700
+CurrentVersion: 1.7.1
+CurrentVersionCode: 10701
