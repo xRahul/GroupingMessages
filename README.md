@@ -36,11 +36,11 @@ training, or categorizing messages (see [Privacy](#privacy)).
 
 ## Screenshots
 
-![Activities](https://github.com/xRahul/GroupingMessages/raw/master/Screenshots/Activities_View_1.2.jpg)
+![Categories](https://github.com/xRahul/GroupingMessages/raw/master/fastlane/metadata/android/en-US/phoneScreenshots/1.png)
 
----
+![Messages](https://github.com/xRahul/GroupingMessages/raw/master/fastlane/metadata/android/en-US/phoneScreenshots/2.png)
 
-![Settings](https://github.com/xRahul/GroupingMessages/raw/master/Screenshots/Settings_View_1.2.jpg)
+![Settings](https://github.com/xRahul/GroupingMessages/raw/master/fastlane/metadata/android/en-US/phoneScreenshots/3.png)
 
 ## Building
 
