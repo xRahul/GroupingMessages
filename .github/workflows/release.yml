@@ -215,7 +215,7 @@ jobs:
           OUT="dist/in.rahulja.groupingmessages-${VERSION_NAME}.apk"
           DEBUG_OUT="dist/in.rahulja.groupingmessages-${VERSION_NAME}-debug.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$DEBUG_OUT"
-          sha256sum "$DEBUG_OUT" > "$DEBUG_OUT.sha256"
+          (cd dist && sha256sum "$(basename "$DEBUG_OUT")" > "$(basename "$DEBUG_OUT").sha256")
 
           "$ZIPALIGN" -f 4 /tmp/release-first.apk /tmp/release-aligned.apk
           "$APKSIGNER" sign \
@@ -245,7 +245,7 @@ jobs:
             exit 1
           fi
 
-          sha256sum "$OUT" > "$OUT.sha256"
+          (cd dist && sha256sum "$(basename "$OUT")" > "$(basename "$OUT").sha256")
           cat "$OUT.sha256"
           rm -f /tmp/release-first.apk /tmp/release-second.apk /tmp/release-aligned.apk
 
