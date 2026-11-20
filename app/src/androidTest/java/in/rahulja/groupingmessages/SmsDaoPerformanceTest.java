@@ -1,5 +1,6 @@
 package in.rahulja.groupingmessages;
 
+import in.rahulja.groupingmessages.db.CategoryDao;
 import in.rahulja.groupingmessages.db.SmsDao;
 
 import android.content.Context;
@@ -36,6 +37,7 @@ public class SmsDaoPerformanceTest {
         int smsCount = 100;
         List<Map<String, String>> initialSmsList = new ArrayList<>();
         long currentTime = System.currentTimeMillis();
+        long targetCategoryId = CategoryDao.insert(context, "PerfTest");
 
         for (int i = 0; i < smsCount; i++) {
             Map<String, String> sms = new HashMap<>();
@@ -66,7 +68,8 @@ public class SmsDaoPerformanceTest {
             String body = sms.get(DatabaseContract.Sms.KEY_BODY);
             if (body != null && body.startsWith("PerfTest Body")) {
                 // Modify to simulate retraining (e.g. changing category)
-                sms.put(DatabaseContract.Sms.KEY_CATEGORY_ID, "2");
+                sms.put(DatabaseContract.Sms.KEY_CATEGORY_ID,
+                    String.valueOf(targetCategoryId));
                 retrainedList.add(sms);
             }
         }
