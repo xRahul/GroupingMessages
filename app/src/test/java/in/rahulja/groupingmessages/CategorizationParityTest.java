@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import androidx.preference.PreferenceManager;
 import in.rahulja.groupingmessages.db.AppDatabase;
 import in.rahulja.groupingmessages.db.SmsDao;
+import in.rahulja.groupingmessages.model.Sms;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -108,6 +109,23 @@ public class CategorizationParityTest {
         SmsDao.updateSmsData(ctx, storedRow);
       }
     }
+  }
+
+  @Test
+  public void suggestCategoriesReturnsBestExemplarCategoryForUnclassifiedRows() {
+    List<Sms> unknown = Arrays.asList(
+        new Sms(9001L, 1L, 9000L, 1, 0, "+15550000002",
+            "rs 640 debited from account xx7788 available balance rs 2000", 0L, 0.0f),
+        new Sms(9002L, 1L, 9001L, 1, 0, "+15550000003",
+            "flat 30 percent off on all orders today hurry", 0L, 0.0f));
+
+    Map<Long, TrainSms.Suggestion> suggestions =
+        TrainSms.suggestCategories(ctx, unknown);
+
+    assertEquals(CATEGORY_BANK_ID, suggestions.get(9001L).categoryId);
+    assertEquals(CATEGORY_PROMO_ID, suggestions.get(9002L).categoryId);
+    assertTrue(suggestions.get(9001L).score > 0.0);
+    assertTrue(suggestions.get(9002L).score > 0.0);
   }
 
   private void setAlgorithmPref(String value) {

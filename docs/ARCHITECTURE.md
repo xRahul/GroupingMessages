@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the actual code as of schema v4 / version 1.7.0.
+This document describes the actual code as of schema v4 / version 1.7.3.
 
 ## Layers
 
@@ -44,10 +44,9 @@ This document describes the actual code as of schema v4 / version 1.7.0.
 
 - `disk(Runnable)` — a single-threaded executor serializing bulk/pipeline work
   (inbox sync, training, backup/import). Serial execution means that pipelined
-  work never overlaps — but it does not cover everything: a few legacy
-  micro-queries still run on the UI thread (`MainActivity` rename dialog,
-  `SmsListItemHolder` tap-to-read, `CategoryListItemHolder` bulk mark-read,
-  `ChangeCategoryActivity` onCreate load).
+  work never overlaps. The previously audited micro-queries (rename dialog,
+  tap-to-read, bulk mark-read, category load) now run here too; do not add new
+  database work on the UI thread.
 - `main(Runnable)` — posts to the main-looper handler so ViewModels can call
   `setValue(...)` on `LiveData`.
 
@@ -114,32 +113,40 @@ Everything below runs locally. Entry points:
   ties go to the first exemplar in pipeline order. Otherwise it falls back to the
   built-in **Unknown category (id 1)** with `similar_to = 0`, `sim_score = 0`.
 
-## Schema v3
+## Schema v4
 
 SQLite database managed by `DatabaseHelper` (singleton). Version history:
 v2 added training columns (`cleaned_sms`, `sender_type`, `category_id`, `similar_to`,
-`sim_score` changes); v3 added the sms indexes below.
+`sim_score` changes); v3 added the sms indexes; v4 added `provider_id` with a
+unique partial index, enabled foreign-key enforcement, rebuilt the `sms` table,
+repaired orphan categories and `similar_to` references, and recreated the indexes
+and update trigger.
 
 - **config** — key/value store (`name` unique, `value`); seeded with `lastSmsTime = 0`.
 - **category** — `_id`, `name`, `color`, `visibility` (default 1), timestamps.
   Seeded with the white **Unknown** category (id 1).
 - **sms** — `_id`, `date`, `person`, `read`, `seen`, `subject`, `address`, `body`,
-  `cleaned_sms`, `visibility`, `sender_type`, `category_id` → category(`_id`),
-  `similar_to` → sms(`_id`) (self-reference marking the exemplar a message was
-  trained against), `sim_score` (default 0.0), timestamps.
+  `cleaned_sms`, `visibility`, `sender_type`, `category_id` → category(`_id`)
+  (enforced foreign key), `provider_id` (nullable, unique partial index so
+  repeated provider reads are ignored), `similar_to` (logical reference to
+  sms(`_id`) marking the exemplar a message was trained against; `0` means none;
+  no foreign-key constraint), `sim_score` (default 0.0), timestamps.
 
-> SQLite foreign-key enforcement is **OFF** — `PRAGMA foreign_keys=ON` is never
-> issued anywhere in the codebase — so these `→` arrows document intent, not
-> enforced constraints.
+> SQLite foreign-key enforcement is **ON** — `DatabaseHelper.onOpen` calls
+> `setForeignKeyConstraintsEnabled(true)` after any upgrade, and the v4 migration
+> repairs orphan category and `similar_to` references before the indexes are
+> recreated.
 
 All three tables carry `created_at`/`updated_at` defaults plus `updated_at` triggers.
 
-Indexes (v3):
+Indexes (v3 + v4):
 
 ```sql
 CREATE INDEX IF NOT EXISTS idx_sms_category   ON sms(category_id);
 CREATE INDEX IF NOT EXISTS idx_sms_date       ON sms(date);
 CREATE INDEX IF NOT EXISTS idx_sms_visibility ON sms(visibility);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sms_provider_id
+    ON sms(provider_id) WHERE provider_id IS NOT NULL;
 ```
 
 These back the hot paths: per-category visible listings, `lastSmsTime` date scans,
@@ -151,18 +158,23 @@ and visibility-filtered count queries.
 
 - **Export (current UI):** `PRAGMA wal_checkpoint(TRUNCATE)` drains the WAL, DB closed,
   file streamed to a Storage Access Framework `OutputStream` the user picked. No fixed
-  external path is written by default.
-- **Import (current UI):** selected document copied to `<live>.tmp`; header, `PRAGMA
-  integrity_check`, `user_version <= DATABASE_VERSION` and required tables are checked on
-  that scratch file; only then is the live DB closed, stale `-wal`/`-shm` sidecars
-  deleted, and the scratch file atomically renamed over the live DB.
+  external path is written by default. If the user sets a passphrase, `BackupCrypto`
+  writes a versioned AES-256-GCM container (PBKDF2-HMAC-SHA256, per-file salt and IV)
+  instead of plaintext SQLite.
+- **Import (current UI):** selected document copied to `<live>.tmp`; an encrypted
+  container is detected by its `GMBK1` header, decrypted to a scratch file with the
+  supplied passphrase, and then header, `PRAGMA integrity_check`,
+  `user_version <= DATABASE_VERSION` and required tables are checked. Only then is the
+  live DB closed, stale `-wal`/`-shm` sidecars deleted, and the scratch file atomically
+  renamed over the live DB.
 - **Legacy path:** `exportDb`/`importDb` keep the old fixed
   `GroupMessagingBackupV<schemaVersion>` file in `getExternalFilesDir(null)` for
   backward compatibility and tests; the Settings UI no longer uses it.
 - Both operations hold `synchronized (AppDatabase.class)` for the swap; failure paths
   clean up `.tmp` files and leave the previous database intact.
-- Backups are plaintext SQLite. The UI warns before export. Restoring across schema
-  versions relies on `SQLiteOpenHelper`'s upgrade path after import.
+- Backups are plaintext SQLite by default or an encrypted container when the user sets a
+  passphrase. The UI warns before export and the passphrase is never stored. Restoring
+  across schema versions relies on `SQLiteOpenHelper`'s upgrade path after import.
 
 ## ViewModel inventory
 

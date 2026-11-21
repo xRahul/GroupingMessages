@@ -1,19 +1,19 @@
 [versions]
-agp = "9.3.1"
-sonarqubePlugin = "7.4.0.8496"
+agp = "9.5.2"
+sonarqubePlugin = "7.6.0.18749"
 appcompat = "1.8.0"
 material = "1.14.0"
 recyclerview = "1.4.0"
 cardview = "1.0.0"
-lifecycle = "2.11.0"
+lifecycle = "2.11.1"
 preference = "1.2.1"
 colorpicker = "0.0.13"
 simmetrics = "4.1.1"
 espresso = "3.7.0"
 androidxTest = "1.7.0"
 junit = "4.13.2"
-mockito = "5.18.0"
-robolectric = "4.16.1"
+mockito = "5.24.0"
+robolectric = "4.18.1"
 
 [libraries]
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }

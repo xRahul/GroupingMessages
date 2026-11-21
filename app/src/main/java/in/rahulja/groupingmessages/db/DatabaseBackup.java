@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 
 /**
  * Exports and imports the application database file to/from external storage.
@@ -98,14 +99,47 @@ public final class DatabaseBackup {
   }
 
   /**
+   * Writes the live database as an encrypted container. The caller owns the
+   * stream. Keep the passphrase in memory only; it is never written to disk.
+   */
+  public static void exportEncryptedTo(Context context, OutputStream out, char[] passphrase)
+      throws IOException {
+    synchronized (AppDatabase.class) {
+      SQLiteDatabase db = AppDatabase.get(context);
+      checkpoint(db);
+      AppDatabase.close(context);
+
+      File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
+      try (FileInputStream in = new FileInputStream(currentDB)) {
+        try {
+          BackupCrypto.encrypt(in, out, passphrase);
+        } catch (GeneralSecurityException e) {
+          throw new IOException("Backup encryption failed", e);
+        }
+      } catch (IOException e) {
+        Log.e(TAG, "encrypted export failed: " + e);
+        throw e;
+      }
+    }
+  }
+
+  /**
    * Installs a database from {@code in} after validating it on a scratch copy.
-   * The live database is not touched until validation passes.
+   * The live database is not touched until validation passes. Accepts plaintext
+   * SQLite for backward compatibility and the encrypted container when a
+   * passphrase is supplied.
    */
   public static void importFrom(Context context, InputStream in) throws IOException {
+    importFrom(context, in, null);
+  }
+
+  public static void importFrom(Context context, InputStream in, char[] passphrase)
+      throws IOException {
     File currentDB = context.getDatabasePath(DatabaseContract.DATABASE_NAME);
-    File tmp = tmpOf(currentDB);
+    File container = tmpOf(currentDB);
+    File plain = new File(currentDB.getParentFile(), currentDB.getName() + TMP_SUFFIX + ".plain");
     try {
-      try (FileOutputStream out = new FileOutputStream(tmp)) {
+      try (FileOutputStream out = new FileOutputStream(container)) {
         byte[] buffer = new byte[8192];
         int read;
         while ((read = in.read(buffer)) != -1) {
@@ -113,16 +147,37 @@ public final class DatabaseBackup {
         }
         out.flush();
       }
-      validateBackup(tmp);
+
+      File databaseToInstall = container;
+      boolean encrypted;
+      try (FileInputStream header = new FileInputStream(container)) {
+        encrypted = BackupCrypto.isEncrypted(header);
+      }
+      if (encrypted) {
+        if (passphrase == null || passphrase.length == 0) {
+          throw new IOException("This backup is encrypted; a passphrase is required");
+        }
+        try (FileInputStream encryptedIn = new FileInputStream(container);
+            FileOutputStream decrypted = new FileOutputStream(plain)) {
+          BackupCrypto.decrypt(encryptedIn, decrypted, passphrase);
+        } catch (GeneralSecurityException e) {
+          throw new IOException("Wrong passphrase or corrupt encrypted backup", e);
+        }
+        databaseToInstall = plain;
+      }
+
+      validateBackup(databaseToInstall);
 
       synchronized (AppDatabase.class) {
         AppDatabase.close(context);
         deleteIfExists(sidecar(currentDB, WAL_SUFFIX));
         deleteIfExists(sidecar(currentDB, SHM_SUFFIX));
-        rename(tmp, currentDB);
+        rename(databaseToInstall, currentDB);
       }
+      deleteIfExists(container);
     } catch (IOException e) {
-      deleteIfExists(tmp);
+      deleteIfExists(container);
+      deleteIfExists(plain);
       Log.e(TAG, "import failed: " + e);
       throw e;
     }

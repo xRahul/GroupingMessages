@@ -3,9 +3,12 @@ package in.rahulja.groupingmessages;
 import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -45,6 +48,9 @@ public class MainActivity extends AppCompatActivity
   private static final String GM_ADD_CAT = "GM/addCat";
 
   private static final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 124;
+  private static final String ONBOARDING_PREFS = "onboarding";
+  private static final String KEY_ONBOARDING_DONE = "done";
+  private boolean onboardingShowing;
   private CategoriesViewModel categoriesViewModel;
   private ProgressBar pbCircle;
   private GridLayoutManager glm;
@@ -156,6 +162,23 @@ public class MainActivity extends AppCompatActivity
     int id = item.getItemId();
 
     //noinspection SimplifiableIfStatement
+    if (id == R.id.action_search) {
+      Intent searchIntent = new Intent(this, SmsActivity.class);
+      searchIntent.putExtra(SmsActivity.CATEGORY_ID,
+          String.valueOf(SmsActivity.ALL_CATEGORIES));
+      startActivity(searchIntent);
+      return true;
+    }
+
+    if (id == R.id.action_review) {
+      Intent reviewIntent = new Intent(this, SmsActivity.class);
+      reviewIntent.putExtra(SmsActivity.CATEGORY_ID,
+          String.valueOf(SmsActivity.UNKNOWN_CATEGORY_ID));
+      reviewIntent.putExtra(SmsActivity.EXTRA_REVIEW, true);
+      startActivity(reviewIntent);
+      return true;
+    }
+
     if (id == R.id.action_settings) {
       Intent settingsIntent = new Intent(this, SettingsActivity.class);
       startActivity(settingsIntent);
@@ -276,7 +299,50 @@ public class MainActivity extends AppCompatActivity
   protected void onPostResume() {
     super.onPostResume();
     Log.d("GM/checkPerm", String.valueOf(Build.VERSION.SDK_INT));
+    if (!isOnboardingDone()) {
+      showOnboarding();
+      return;
+    }
     checkAndGetPermissions();
+  }
+
+  private boolean isOnboardingDone() {
+    SharedPreferences prefs = getSharedPreferences(ONBOARDING_PREFS, MODE_PRIVATE);
+    return prefs.getBoolean(KEY_ONBOARDING_DONE, false);
+  }
+
+  private void showOnboarding() {
+    if (onboardingShowing || isFinishing() || isDestroyed()) {
+      return;
+    }
+    onboardingShowing = true;
+    new AlertDialog.Builder(this)
+        .setTitle(R.string.onboarding_title)
+        .setMessage(R.string.onboarding_message)
+        .setCancelable(false)
+        .setPositiveButton(R.string.onboarding_continue, (dialog, which) -> {
+          getSharedPreferences(ONBOARDING_PREFS, MODE_PRIVATE)
+              .edit()
+              .putBoolean(KEY_ONBOARDING_DONE, true)
+              .apply();
+          onboardingShowing = false;
+          checkAndGetPermissions();
+        })
+        .setOnDismissListener(dialog -> onboardingShowing = false)
+        .show();
+  }
+
+  private void showPermissionRecovery() {
+    new AlertDialog.Builder(this)
+        .setTitle(R.string.permission_denied_title)
+        .setMessage(R.string.permission_denied_message)
+        .setPositiveButton(R.string.open_settings, (dialog, which) -> {
+          Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+              Uri.parse("package:" + getPackageName()));
+          startActivity(intent);
+        })
+        .setNegativeButton(R.string.cancel, null)
+        .show();
   }
 
   void requestDeleteCategory(long categoryId) {
@@ -354,8 +420,7 @@ public class MainActivity extends AppCompatActivity
       if (smsGranted) {
         init();
       } else {
-        Toast.makeText(MainActivity.this, R.string.some_permission_denied, Toast.LENGTH_SHORT)
-            .show();
+        showPermissionRecovery();
       }
     } else {
       super.onRequestPermissionsResult(requestCode, permissions, grantResults);

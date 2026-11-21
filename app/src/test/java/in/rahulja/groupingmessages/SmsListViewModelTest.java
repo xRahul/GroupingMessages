@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -152,6 +153,48 @@ public class SmsListViewModelTest {
   }
 
   @Test
+  public void deleteSmsRemovesRowsAndRefreshesTheList() throws InterruptedException {
+    long categoryId = CategoryDao.insert(ctx, "News");
+    insertSms(1000L, "delete one", categoryId);
+    insertSms(2000L, "delete two", categoryId);
+    List<Long> ids = new ArrayList<>();
+    for (Map<String, String> row : SmsDao.getAll(ctx)) {
+      ids.add(Long.parseLong(row.get(DatabaseContract.Sms._ID)));
+    }
+
+    viewModel.deleteSms(ids, categoryId);
+    runPendingWorkToCompletion();
+
+    assertEquals(0, SmsDao.getAll(ctx).size());
+    List<Sms> emitted = viewModel.getSms(categoryId).getValue();
+    assertNotNull(emitted);
+    assertEquals(0, emitted.size());
+  }
+
+  @Test
+  public void restoreSmsUndoesBatchDelete() throws InterruptedException {
+    long categoryId = CategoryDao.insert(ctx, "News");
+    insertSms(1000L, "undo one", categoryId);
+    insertSms(2000L, "undo two", categoryId);
+    List<Long> ids = new ArrayList<>();
+    for (Map<String, String> row : SmsDao.getAll(ctx)) {
+      ids.add(Long.parseLong(row.get(DatabaseContract.Sms._ID)));
+    }
+
+    AtomicReference<List<Map<String, String>>> snapshot = new AtomicReference<>();
+    viewModel.deleteSms(ids, categoryId, snapshot::set);
+    runPendingWorkToCompletion();
+
+    assertEquals(0, SmsDao.getAll(ctx).size());
+    assertNotNull(snapshot.get());
+    assertEquals(2, snapshot.get().size());
+
+    viewModel.restoreSms(snapshot.get(), categoryId);
+    runPendingWorkToCompletion();
+    assertEquals(2, SmsDao.getAll(ctx).size());
+  }
+
+  @Test
   public void markReadUpdatesRows() throws InterruptedException {
     long categoryId = CategoryDao.insert(ctx, "News");
     Map<String, String> first = insertSms(1000L, "one", categoryId);
@@ -197,6 +240,25 @@ public class SmsListViewModelTest {
       assertEquals(String.valueOf(targetId),
           row.get(DatabaseContract.Sms.KEY_CATEGORY_ID));
     }
+  }
+
+  @Test
+  public void refreshAllCategoriesEmitsVisibleRowsAcrossCategories()
+      throws InterruptedException {
+    long firstCategory = CategoryDao.insert(ctx, "First");
+    long secondCategory = CategoryDao.insert(ctx, "Second");
+    insertSms(1000L, "first category", firstCategory);
+    insertSms(2000L, "second category", secondCategory);
+    Map<String, String> hidden = insertSms(3000L, "hidden row", secondCategory);
+    SmsDao.setVisibility(ctx, Collections.singletonList(
+        Long.parseLong(hidden.get(DatabaseContract.Sms._ID))), 0);
+
+    viewModel.refresh(SmsListViewModel.ALL_CATEGORIES);
+    runPendingWorkToCompletion();
+
+    List<Sms> emitted = viewModel.getSms(SmsListViewModel.ALL_CATEGORIES).getValue();
+    assertNotNull(emitted);
+    assertEquals(2, emitted.size());
   }
 
   @Test

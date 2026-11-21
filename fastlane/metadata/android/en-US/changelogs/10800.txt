@@ -1,0 +1,10 @@
+1.8.0
+
+- Search across all categories from the home screen
+- Review unclassified messages with a suggested category and one-tap training
+- Long-press to select messages, then move, mark read or delete them; deletion has undo
+- Optional passphrase encryption for database backups
+- Dark mode follows the system theme
+- First-run explainer and a recoverable SMS-permission path
+- Faster, debounced message filtering
+- Updated build tooling

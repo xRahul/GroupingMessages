@@ -8,6 +8,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.InputType;
+import android.widget.EditText;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.SwitchPreferenceCompat;
@@ -16,6 +18,8 @@ import android.util.Log;
 import android.widget.Toast;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
+import in.rahulja.groupingmessages.db.BackupCrypto;
 import in.rahulja.groupingmessages.db.CategoryDao;
 import in.rahulja.groupingmessages.db.DatabaseBackup;
 import in.rahulja.groupingmessages.db.SmsDao;
@@ -42,6 +46,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   private SwitchPreferenceCompat checkUpdatesPref;
   private ActivityResultLauncher<String> exportLauncher;
   private ActivityResultLauncher<String[]> importLauncher;
+  private char[] pendingExportPassphrase;
 
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -58,6 +63,8 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         uri -> {
           if (uri != null) {
             asyncExportDb(uri);
+          } else {
+            clearPendingExportPassphrase();
           }
         });
     importLauncher = registerForActivityResult(
@@ -201,20 +208,68 @@ public class SettingsFragment extends PreferenceFragmentCompat {
   private void asyncImportDb(Uri uri) {
     Context appContext = requireContext().getApplicationContext();
     AppExecutors.disk(() -> {
+      boolean encrypted;
       try (InputStream in = appContext.getContentResolver().openInputStream(uri)) {
         if (in == null) {
           throw new java.io.IOException("Could not open the selected file");
         }
-        DatabaseBackup.importFrom(appContext, in);
+        encrypted = BackupCrypto.isEncrypted(in);
       } catch (Exception e) {
         Log.e("GM/importDb", Log.getStackTraceString(e));
         AppExecutors.main(() -> {
-          if (!isAdded()) {
-            return;
+          if (isAdded()) {
+            Toast.makeText(appContext, R.string.import_db_failed, Toast.LENGTH_SHORT).show();
           }
-          Toast.makeText(appContext, R.string.import_db_failed, Toast.LENGTH_SHORT).show();
         });
         return;
+      }
+      AppExecutors.main(() -> {
+        if (!isAdded()) {
+          return;
+        }
+        if (encrypted) {
+          promptImportPassphrase(uri);
+        } else {
+          asyncImportDb(uri, null);
+        }
+      });
+    });
+  }
+
+  private void promptImportPassphrase(Uri uri) {
+    EditText input = new EditText(requireContext());
+    input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+    input.setHint(R.string.import_passphrase_hint);
+    new AlertDialog.Builder(requireContext())
+        .setTitle(R.string.import_passphrase_title)
+        .setMessage(R.string.import_passphrase_message)
+        .setView(input)
+        .setPositiveButton(R.string.ok, (dialog, which) ->
+            asyncImportDb(uri, input.getText().toString().toCharArray()))
+        .setNegativeButton(R.string.cancel, null)
+        .show();
+  }
+
+  private void asyncImportDb(Uri uri, char[] passphrase) {
+    Context appContext = requireContext().getApplicationContext();
+    AppExecutors.disk(() -> {
+      try (InputStream in = appContext.getContentResolver().openInputStream(uri)) {
+        if (in == null) {
+          throw new java.io.IOException("Could not open the selected file");
+        }
+        DatabaseBackup.importFrom(appContext, in, passphrase);
+      } catch (Exception e) {
+        Log.e("GM/importDb", Log.getStackTraceString(e));
+        AppExecutors.main(() -> {
+          if (isAdded()) {
+            Toast.makeText(appContext, R.string.import_db_failed, Toast.LENGTH_SHORT).show();
+          }
+        });
+        return;
+      } finally {
+        if (passphrase != null) {
+          Arrays.fill(passphrase, '\0');
+        }
       }
       AppExecutors.main(() -> {
         if (!isAdded()) {
@@ -247,7 +302,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         new DialogInterface.OnClickListener() {
           public void onClick(DialogInterface dialog,
               int which) {
-            exportLauncher.launch("grouping-messages-backup.db");
+            promptExportPassphrase();
           }
         });
     builder.setNegativeButton(R.string.no,
@@ -260,23 +315,57 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     builder.show();
   }
 
+  private void promptExportPassphrase() {
+    EditText input = new EditText(requireContext());
+    input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+    input.setHint(R.string.export_passphrase_hint);
+    new AlertDialog.Builder(requireContext())
+        .setTitle(R.string.export_encrypt_title)
+        .setMessage(R.string.export_encrypt_message)
+        .setView(input)
+        .setPositiveButton(R.string.ok, (dialog, which) -> {
+          clearPendingExportPassphrase();
+          String value = input.getText().toString();
+          pendingExportPassphrase = value.isEmpty() ? null : value.toCharArray();
+          exportLauncher.launch("grouping-messages-backup.db");
+        })
+        .setNegativeButton(R.string.cancel, null)
+        .show();
+  }
+
+  private void clearPendingExportPassphrase() {
+    if (pendingExportPassphrase != null) {
+      Arrays.fill(pendingExportPassphrase, '\0');
+      pendingExportPassphrase = null;
+    }
+  }
+
   private void asyncExportDb(Uri uri) {
     Context appContext = requireContext().getApplicationContext();
+    char[] passphrase = pendingExportPassphrase;
+    pendingExportPassphrase = null;
     AppExecutors.disk(() -> {
       try (OutputStream out = appContext.getContentResolver().openOutputStream(uri)) {
         if (out == null) {
           throw new java.io.IOException("Could not open the selected file");
         }
-        DatabaseBackup.exportTo(appContext, out);
+        if (passphrase != null && passphrase.length > 0) {
+          DatabaseBackup.exportEncryptedTo(appContext, out, passphrase);
+        } else {
+          DatabaseBackup.exportTo(appContext, out);
+        }
       } catch (Exception e) {
         Log.e("GM/exportDb", Log.getStackTraceString(e));
         AppExecutors.main(() -> {
-          if (!isAdded()) {
-            return;
+          if (isAdded()) {
+            Toast.makeText(appContext, R.string.export_db_failed, Toast.LENGTH_SHORT).show();
           }
-          Toast.makeText(appContext, R.string.export_db_failed, Toast.LENGTH_SHORT).show();
         });
         return;
+      } finally {
+        if (passphrase != null) {
+          Arrays.fill(passphrase, '\0');
+        }
       }
       AppExecutors.main(() -> {
         if (!isAdded()) {

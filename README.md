@@ -21,17 +21,22 @@ training, or categorizing messages (see [Privacy](#privacy)).
 
 ## Features
 
-- Automatic categorization of incoming SMS using a hybrid on-device classifier
-  (word TF-IDF cosine + character-trigram similarity, see
+- Categorizes SMS from your inbox when you open the app, using a hybrid on-device
+  classifier (word TF-IDF cosine + character-trigram similarity, see
   [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md))
 - User-defined categories with colors; Unknown fallback for unclassified messages
 - Training: move a message to the right category and similar future messages follow;
   re-training can propagate a correction to already-stored similar messages
 - Per-category read/unread counts and mark-all-read
-- Search within a category by message text, sender or contact name
+- Search within a category or across all categories by message text, sender or
+  contact name
+- Review unclassified messages with a suggested category and one-tap training
+- Batch move, mark-read and delete from a long-press selection
+- Dark mode via the system DayNight theme
 - Configurable similarity mode (balanced / words only / characters only / legacy
   Levenshtein) and threshold in Settings
-- Database backup and restore through the system file picker
+- Database backup and restore through the system file picker, with optional
+  passphrase encryption
 - Opt-in update check against GitHub releases (the app's only network call)
 
 ## Screenshots
@@ -110,10 +115,13 @@ store workflow.
 ## Backup & export
 
 Settings exports a consistent copy of the SQLite database to a destination you choose in
-the system file picker. The file contains every stored SMS, sender address, contact name
-and category in plain text. Import validates the SQLite header, `PRAGMA integrity_check`,
-the schema version and required tables on a scratch copy before replacing the live
-database. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#backup-format-notes) for details.
+the system file picker. A plaintext backup contains every stored SMS, sender address and
+category; set a passphrase on the export screen to write an AES-256-GCM encrypted
+container instead. Contact names are resolved at runtime and are not stored in the
+database. Import validates the SQLite header, `PRAGMA integrity_check`, the schema
+version and required tables on a scratch copy before replacing the live database; an
+encrypted backup prompts for its passphrase. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#backup-format-notes) for details.
 
 ## License
 

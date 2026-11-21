@@ -11,8 +11,8 @@ Features:
 - User-defined categories with colors and an Unknown fallback
 - Per-category read/unread counts and mark-all-read
 - Search within a category by message text, sender or contact name
-- Manual database backup and restore, with a warning that the backup contains
-  message text
+- Manual database backup and restore, with optional passphrase encryption and a
+  warning that a plaintext backup contains message text
 - Optional update check against GitHub releases; it is off by default
 
 Permissions:

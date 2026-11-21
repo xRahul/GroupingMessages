@@ -1,0 +1,5 @@
+1.7.1
+
+- Maintenance release: reproducible-build and checksum fixes in the release pipeline
+- Refreshed PII-free screenshots
+- No changes to SMS handling or stored data

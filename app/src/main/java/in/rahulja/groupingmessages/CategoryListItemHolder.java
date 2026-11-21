@@ -7,7 +7,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import androidx.fragment.app.DialogFragment;
 import androidx.appcompat.widget.PopupMenu;
+import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.RecyclerView;
+import android.graphics.Color;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -71,6 +73,12 @@ class CategoryListItemHolder extends RecyclerView.ViewHolder
     }
 
     categoryListViewParent.setBackgroundColor(category.getColor());
+    int textColor = ColorUtils.calculateLuminance(category.getColor()) > 0.5
+        ? Color.BLACK
+        : Color.WHITE;
+    categoryNameTextView.setTextColor(textColor);
+    categoryUnreadCountTextView.setTextColor(textColor);
+    categoryReadCountTextView.setTextColor(textColor);
   }
 
   @Override

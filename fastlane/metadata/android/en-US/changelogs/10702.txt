@@ -1,0 +1,4 @@
+1.7.2
+
+- Maintenance release: release-workflow dependency updates
+- No changes to SMS handling or stored data

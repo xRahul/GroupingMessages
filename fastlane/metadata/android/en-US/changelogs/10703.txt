@@ -1,0 +1,4 @@
+1.7.3
+
+- Maintenance release: release-artifact download fix
+- No changes to SMS handling or stored data

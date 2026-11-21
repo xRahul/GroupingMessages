@@ -6,12 +6,14 @@ import androidx.preference.PreferenceManager;
 import android.util.Log;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import in.rahulja.groupingmessages.classify.SmsCategorizer;
 import in.rahulja.groupingmessages.db.SmsDao;
+import in.rahulja.groupingmessages.model.Sms;
 
 @SuppressWarnings("WeakerAccess") public class TrainSms {
 
@@ -40,6 +42,58 @@ import in.rahulja.groupingmessages.db.SmsDao;
 
   private TrainSms() {
     // empty constructor
+  }
+
+  /** Best category suggestion for an unclassified message. */
+  public static final class Suggestion {
+    public final long categoryId;
+    public final double score;
+
+    Suggestion(long categoryId, double score) {
+      this.categoryId = categoryId;
+      this.score = score;
+    }
+  }
+
+  /**
+   * Scores messages against the trained exemplars without applying the
+   * threshold. Used by the review queue to show the best candidate even when
+   * the classifier would fall back to Unknown.
+   */
+  public static Map<Long, Suggestion> suggestCategories(Context context, List<Sms> smsList) {
+    Map<Long, Suggestion> suggestions = new HashMap<>();
+    if (smsList == null || smsList.isEmpty()) {
+      return suggestions;
+    }
+
+    List<Map<String, String>> exemplars = cleanListOfSms(SmsDao.getSelfTrained(context));
+    if (exemplars.isEmpty()) {
+      return suggestions;
+    }
+
+    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+    String mode = SmsCategorizer.resolveMode(prefs.getString("key_similarity_algorithm", null));
+    SmsCategorizer.Batch batch = SmsCategorizer.Batch.build(
+        cleanedTextsOf(exemplars), new ArrayList<>(stopWordsSet), mode);
+
+    for (Sms sms : smsList) {
+      double[] scores = batch.scores(cleanString(sms.getAddress() + " " + sms.getBody()));
+      int bestIndex = -1;
+      double bestScore = -1.0;
+      for (int i = 0; i < scores.length; i++) {
+        if (scores[i] > bestScore) {
+          bestIndex = i;
+          bestScore = scores[i];
+        }
+      }
+      if (bestIndex >= 0 && bestScore > 0.0) {
+        String categoryId = exemplars.get(bestIndex)
+            .get(DatabaseContract.Sms.KEY_CATEGORY_ID);
+        suggestions.put(sms.getId(),
+            new Suggestion(Long.parseLong(categoryId), bestScore));
+      }
+    }
+    return suggestions;
   }
 
   public static List<Map<String, String>> getTrainedListOfSms(Context context,
@@ -211,6 +265,8 @@ import in.rahulja.groupingmessages.db.SmsDao;
     List<Map<String, String>> allSms = SmsDao.getAll(context);
     List<Map<String, String>> reTrainedSmsList = new ArrayList<>();
     List<Map<String, String>> cleanedAllSms = cleanListOfSms(allSms);
+    List<Map<String, String>> cleanedExemplars =
+        cleanListOfSms(SmsDao.getSelfTrained(context));
     Map<String, String> cleanedTrainedSms = cleanSmsMap(trainedSms);
 
     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
@@ -219,8 +275,10 @@ import in.rahulja.groupingmessages.db.SmsDao;
         SmsCategorizer.defaultThresholdPercent(mode)) / (double) 100;
 
     List<String> candidateTexts = cleanedTextsOf(cleanedAllSms);
-    SmsCategorizer.Batch batch =
-        SmsCategorizer.Batch.build(candidateTexts, new ArrayList<>(stopWordsSet), mode);
+    List<String> corpusTexts = cleanedTextsOf(cleanedExemplars);
+    // Keep IDF on the exemplar corpus so first-pass and retrain scores agree.
+    SmsCategorizer.Batch batch = SmsCategorizer.Batch.build(
+        corpusTexts, candidateTexts, new ArrayList<>(stopWordsSet), mode);
     double[] scores = batch.scores(cleanedTrainedSms.get(CLEAN_SMS));
 
     for (int i = 0; i < cleanedAllSms.size(); i++) {

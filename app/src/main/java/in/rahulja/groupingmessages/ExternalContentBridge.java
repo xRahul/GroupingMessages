@@ -45,59 +45,55 @@ import in.rahulja.groupingmessages.db.ConfigDao;
 
     Log.d("GM/searchString", searchString.toString());
 
-    Cursor cursor = context.getContentResolver().query(
+    long firstInboxSmsId = -1;
+    try (Cursor cursor = context.getContentResolver().query(
         uri,
         projection,
         searchString.toString(),
         null,
         DatabaseContract.Sms.KEY_DATE + " asc"
-    );
+    )) {
+      if (cursor != null && cursor.moveToFirst()) {
+        int indexId = cursor.getColumnIndexOrThrow(DatabaseContract.Sms._ID);
+        int indexDate = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_DATE);
+        int indexPerson = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_PERSON);
+        int indexRead = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ);
+        int indexSeen = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SEEN);
+        int indexSubject = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SUBJECT);
+        int indexBody = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_BODY);
+        int indexAddress = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_ADDRESS);
+        Map<String, String> smsTemp;
 
-    long firstInboxSmsId = -1;
-    if (cursor != null && cursor.moveToFirst()) {
-      int indexId = cursor.getColumnIndexOrThrow(DatabaseContract.Sms._ID);
-      int indexDate = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_DATE);
-      int indexPerson = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_PERSON);
-      int indexRead = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ);
-      int indexSeen = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SEEN);
-      int indexSubject = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SUBJECT);
-      int indexBody = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_BODY);
-      int indexAddress = cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_ADDRESS);
-      Map<String, String> smsTemp;
+        while (!cursor.isAfterLast()) {
 
-      while (!cursor.isAfterLast()) {
+          long providerId = cursor.getLong(indexId);
+          long longDate = cursor.getLong(indexDate);
+          long longPerson = cursor.getLong(indexPerson);
+          long longRead = cursor.getLong(indexRead);
+          long longSeen = cursor.getLong(indexSeen);
+          String strSubject = cursor.getString(indexSubject);
+          String strBody = cursor.getString(indexBody);
+          String strAddress = cursor.getString(indexAddress);
 
-        long providerId = cursor.getLong(indexId);
-        long longDate = cursor.getLong(indexDate);
-        long longPerson = cursor.getLong(indexPerson);
-        long longRead = cursor.getLong(indexRead);
-        long longSeen = cursor.getLong(indexSeen);
-        String strSubject = cursor.getString(indexSubject);
-        String strBody = cursor.getString(indexBody);
-        String strAddress = cursor.getString(indexAddress);
+          smsTemp = new HashMap<>();
+          smsTemp.put(DatabaseContract.Sms.KEY_PROVIDER_ID, String.valueOf(providerId));
+          smsTemp.put(DatabaseContract.Sms.KEY_DATE, String.valueOf(longDate));
+          smsTemp.put(DatabaseContract.Sms.KEY_PERSON, String.valueOf(longPerson));
+          smsTemp.put(DatabaseContract.Sms.KEY_READ, String.valueOf(longRead));
+          smsTemp.put(DatabaseContract.Sms.KEY_SEEN, String.valueOf(longSeen));
+          smsTemp.put(DatabaseContract.Sms.KEY_SUBJECT, strSubject);
+          smsTemp.put(DatabaseContract.Sms.KEY_BODY, strBody);
+          smsTemp.put(DatabaseContract.Sms.KEY_ADDRESS, strAddress);
 
-        smsTemp = new HashMap<>();
-        smsTemp.put(DatabaseContract.Sms.KEY_PROVIDER_ID, String.valueOf(providerId));
-        smsTemp.put(DatabaseContract.Sms.KEY_DATE, String.valueOf(longDate));
-        smsTemp.put(DatabaseContract.Sms.KEY_PERSON, String.valueOf(longPerson));
-        smsTemp.put(DatabaseContract.Sms.KEY_READ, String.valueOf(longRead));
-        smsTemp.put(DatabaseContract.Sms.KEY_SEEN, String.valueOf(longSeen));
-        smsTemp.put(DatabaseContract.Sms.KEY_SUBJECT, strSubject);
-        smsTemp.put(DatabaseContract.Sms.KEY_BODY, strBody);
-        smsTemp.put(DatabaseContract.Sms.KEY_ADDRESS, strAddress);
-
-        latestSms.add(smsTemp);
-        if (latestSms.size() == 1) {
-          firstInboxSmsId = providerId;
+          latestSms.add(smsTemp);
+          if (latestSms.size() == 1) {
+            firstInboxSmsId = providerId;
+          }
+          cursor.moveToNext();
         }
-        cursor.moveToNext();
+      } else {
+        Log.e(GM_CURSOR, CURSOR_IS_NULL + "getLatestSmsFromInbox");
       }
-    } else {
-      Log.e(GM_CURSOR, CURSOR_IS_NULL + "getLatestSmsFromInbox");
-    }
-
-    if (cursor != null && !cursor.isClosed()) {
-      cursor.close();
     }
 
     Log.i("GM/inboxSmsCount", String.valueOf(latestSms.size()));

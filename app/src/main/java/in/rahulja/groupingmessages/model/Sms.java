@@ -15,9 +15,15 @@ public final class Sms {
   private final String address;
   private final String body;
   private final long similarTo;
+  private final float simScore;
 
   public Sms(long id, long categoryId, long date, int visibility, int read, String address,
       String body, long similarTo) {
+    this(id, categoryId, date, visibility, read, address, body, similarTo, 0.0f);
+  }
+
+  public Sms(long id, long categoryId, long date, int visibility, int read, String address,
+      String body, long similarTo, float simScore) {
     this.id = id;
     this.categoryId = categoryId;
     this.date = date;
@@ -26,9 +32,12 @@ public final class Sms {
     this.address = address;
     this.body = body;
     this.similarTo = similarTo;
+    this.simScore = simScore;
   }
 
   public static Sms fromCursor(Cursor cursor) {
+    int simScoreIndex = cursor.getColumnIndex(DatabaseContract.Sms.KEY_SIM_SCORE);
+    float simScore = simScoreIndex >= 0 ? cursor.getFloat(simScoreIndex) : 0.0f;
     return new Sms(
         cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Sms._ID)),
         cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_CATEGORY_ID)),
@@ -37,7 +46,8 @@ public final class Sms {
         cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_READ)),
         cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_ADDRESS)),
         cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_BODY)),
-        cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SIMILAR_TO)));
+        cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseContract.Sms.KEY_SIMILAR_TO)),
+        simScore);
   }
 
   public ContentValues toContentValues() {
@@ -80,5 +90,9 @@ public final class Sms {
 
   public long getSimilarTo() {
     return similarTo;
+  }
+
+  public float getSimScore() {
+    return simScore;
   }
 }

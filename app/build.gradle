@@ -16,7 +16,10 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
-        resConfigs 'en'
+    }
+
+    androidResources {
+        localeFilters = ['en']
     }
 
     def releaseStoreFile = System.getenv("STORE_FILE")

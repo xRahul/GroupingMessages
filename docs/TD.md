@@ -24,11 +24,14 @@
 
 - Export: checkpoint the WAL, close the live database under `synchronized
   (AppDatabase.class)`, stream the file to a user-selected SAF `OutputStream`.
-- Import: copy to a scratch file, verify the SQLite header, `PRAGMA integrity_check`,
+  With a passphrase, write the versioned AES-256-GCM container from `BackupCrypto`.
+- Import: copy to a scratch file; detect the `GMBK1` header, decrypt with the supplied
+  passphrase when present, verify the SQLite header, `PRAGMA integrity_check`,
   `user_version <= DATABASE_VERSION`, and required tables, then close and atomically
   replace the live file.
 - The legacy fixed-path export remains only for existing tests/backward compatibility.
-- The backup is plaintext. The UI warns before export.
+- The backup is plaintext by default or encrypted when a passphrase is set. The
+  passphrase is never stored; the UI warns before export.
 
 ## Network
 

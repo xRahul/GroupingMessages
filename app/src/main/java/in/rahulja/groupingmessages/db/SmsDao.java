@@ -23,6 +23,7 @@ public final class SmsDao {
   private static final String EQUALS_QUESTION = " = ? ";
   private static final long UNKNOWN_CATEGORY_ID = 1L;
   private static final long INSERT_DUPLICATE = -2L;
+  private static final int MAX_SQL_VARIABLES = 900;
 
   private SmsDao() {
   }
@@ -39,6 +40,65 @@ public final class SmsDao {
 
     Log.i(TAG, "getSelfTrained, selection= " + selection);
     return queryMaps(context, selection, null);
+  }
+
+  public static List<Map<String, String>> getByIds(Context context, List<Long> ids) {
+    List<Map<String, String>> rows = new ArrayList<>();
+    if (ids == null || ids.isEmpty()) {
+      return rows;
+    }
+    for (int start = 0; start < ids.size(); start += MAX_SQL_VARIABLES) {
+      int end = Math.min(start + MAX_SQL_VARIABLES, ids.size());
+      List<Long> chunk = ids.subList(start, end);
+      StringBuilder placeholders = new StringBuilder();
+      String[] selectionArgs = new String[chunk.size()];
+      for (int i = 0; i < chunk.size(); i++) {
+        placeholders.append("?");
+        selectionArgs[i] = String.valueOf(chunk.get(i));
+        if (i < chunk.size() - 1) {
+          placeholders.append(",");
+        }
+      }
+      rows.addAll(queryMaps(context,
+          DatabaseContract.Sms._ID + " IN (" + placeholders + ")", selectionArgs));
+    }
+    return rows;
+  }
+
+  /**
+   * Restores a snapshot taken before {@link #deleteSmsByIds}. Hidden
+   * self-trained rows are made visible again; removed untrained rows are
+   * reinserted.
+   */
+  public static int restoreSms(Context context, List<Map<String, String>> rows) {
+    if (rows == null || rows.isEmpty()) {
+      return 0;
+    }
+    SQLiteDatabase db = AppDatabase.get(context);
+    int restored = 0;
+    db.beginTransaction();
+    try {
+      for (Map<String, String> row : rows) {
+        String id = row.get(DatabaseContract.Sms._ID);
+        String similarTo = row.get(DatabaseContract.Sms.KEY_SIMILAR_TO);
+        if (id != null && id.equals(similarTo)) {
+          ContentValues values = new ContentValues();
+          values.put(DatabaseContract.Sms.KEY_VISIBILITY,
+              Long.parseLong(row.get(DatabaseContract.Sms.KEY_VISIBILITY)));
+          restored += db.update(
+              DatabaseContract.Sms.TABLE_NAME,
+              values,
+              DatabaseContract.Sms._ID + EQUALS_QUESTION,
+              new String[] { id });
+        } else if (insertInTransaction(db, row) >= 0) {
+          restored++;
+        }
+      }
+      db.setTransactionSuccessful();
+    } finally {
+      db.endTransaction();
+    }
+    return restored;
   }
 
   public static Map<String, String> getById(Context context, long smsId) {
@@ -77,12 +137,22 @@ public final class SmsDao {
 
   public static List<Sms> getVisibleByCategory(Context context, long categoryId) {
 
-    List<Sms> smsList = new ArrayList<>();
-
     String selection = DatabaseContract.Sms.KEY_CATEGORY_ID + EQUALS_QUESTION
         + " AND " + DatabaseContract.Sms.KEY_VISIBILITY + EQUALS_QUESTION;
     String[] selectionArgs = { String.valueOf(categoryId), String.valueOf(1) };
 
+    return querySms(context, selection, selectionArgs);
+  }
+
+  public static List<Sms> getAllVisible(Context context) {
+    return querySms(context,
+        DatabaseContract.Sms.KEY_VISIBILITY + EQUALS_QUESTION,
+        new String[] { String.valueOf(1) });
+  }
+
+  private static List<Sms> querySms(Context context, String selection, String[] selectionArgs) {
+
+    List<Sms> smsList = new ArrayList<>();
     SQLiteDatabase db = AppDatabase.get(context);
     try (Cursor cursor = db.query(
         DatabaseContract.Sms.TABLE_NAME,
@@ -357,6 +427,54 @@ public final class SmsDao {
     );
   }
 
+  /**
+   * Batch delete matching the single-row contract: hide self-trained rows so
+   * their exemplar survives, delete untrained rows. Chunked for large
+   * selections and atomic across the whole batch.
+   */
+  public static int deleteSmsByIds(Context context, List<Long> ids) {
+    if (ids == null || ids.isEmpty()) {
+      return 0;
+    }
+
+    SQLiteDatabase db = AppDatabase.get(context);
+    db.beginTransaction();
+    try {
+      int affected = 0;
+      for (int start = 0; start < ids.size(); start += MAX_SQL_VARIABLES) {
+        int end = Math.min(start + MAX_SQL_VARIABLES, ids.size());
+        List<Long> chunk = ids.subList(start, end);
+        StringBuilder placeholders = new StringBuilder();
+        String[] selectionArgs = new String[chunk.size()];
+        for (int i = 0; i < chunk.size(); i++) {
+          placeholders.append("?");
+          selectionArgs[i] = String.valueOf(chunk.get(i));
+          if (i < chunk.size() - 1) {
+            placeholders.append(",");
+          }
+        }
+
+        ContentValues hidden = new ContentValues();
+        hidden.put(DatabaseContract.Sms.KEY_VISIBILITY, 0);
+        affected += db.update(
+            DatabaseContract.Sms.TABLE_NAME,
+            hidden,
+            DatabaseContract.Sms._ID + " IN (" + placeholders + ") AND "
+                + DatabaseContract.Sms._ID + " = " + DatabaseContract.Sms.KEY_SIMILAR_TO,
+            selectionArgs);
+        affected += db.delete(
+            DatabaseContract.Sms.TABLE_NAME,
+            DatabaseContract.Sms._ID + " IN (" + placeholders + ") AND "
+                + DatabaseContract.Sms._ID + " != " + DatabaseContract.Sms.KEY_SIMILAR_TO,
+            selectionArgs);
+      }
+      db.setTransactionSuccessful();
+      return affected;
+    } finally {
+      db.endTransaction();
+    }
+  }
+
   public static int countAll(Context context) {
 
     SQLiteDatabase db = AppDatabase.get(context);
@@ -405,23 +523,29 @@ public final class SmsDao {
       return 0;
     }
 
-    StringBuilder placeholders = new StringBuilder();
-    String[] selectionArgs = new String[ids.size()];
-    for (int i = 0; i < ids.size(); i++) {
-      placeholders.append("?");
-      selectionArgs[i] = String.valueOf(ids.get(i));
-      if (i < ids.size() - 1) {
-        placeholders.append(",");
-      }
-    }
-
     SQLiteDatabase db = AppDatabase.get(context);
-    return db.update(
-        DatabaseContract.Sms.TABLE_NAME,
-        values,
-        DatabaseContract.Sms._ID + " IN (" + placeholders + ")",
-        selectionArgs
-    );
+    int updated = 0;
+    // Stay below SQLite's bind-variable limit for large selections.
+    for (int start = 0; start < ids.size(); start += MAX_SQL_VARIABLES) {
+      int end = Math.min(start + MAX_SQL_VARIABLES, ids.size());
+      List<Long> chunk = ids.subList(start, end);
+      StringBuilder placeholders = new StringBuilder();
+      String[] selectionArgs = new String[chunk.size()];
+      for (int i = 0; i < chunk.size(); i++) {
+        placeholders.append("?");
+        selectionArgs[i] = String.valueOf(chunk.get(i));
+        if (i < chunk.size() - 1) {
+          placeholders.append(",");
+        }
+      }
+      updated += db.update(
+          DatabaseContract.Sms.TABLE_NAME,
+          values,
+          DatabaseContract.Sms._ID + " IN (" + placeholders + ")",
+          selectionArgs
+      );
+    }
+    return updated;
   }
 
   private static List<Map<String, String>> queryMaps(Context context, String selection,

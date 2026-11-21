@@ -33,9 +33,15 @@
     <string name="pref_title_developer">Developer</string>
     <string name="pref_title_version">Version</string>
     <string name="import_db_title">Import and overwrite the existing database?</string>
-    <string name="import_db_warning">Choose a Grouping Messages backup file. Every stored SMS, sender address and category in the current database will be replaced. Real SMS messages are not affected.</string>
+    <string name="import_db_warning">Choose a Grouping Messages backup file. Every stored SMS, sender address and category in the current database will be replaced. Encrypted backups ask for their passphrase. Real SMS messages are not affected.</string>
     <string name="export_db_title">Export database</string>
-    <string name="export_db_warning">The backup contains every stored SMS, sender address and contact name in plain text. Store it somewhere you trust and delete it when you are done.</string>
+    <string name="export_db_warning">A plaintext backup contains every stored SMS and sender address. Set a passphrase on the next screen to encrypt it. Store the file somewhere you trust and delete it when you are done.</string>
+    <string name="export_encrypt_title">Encrypt backup?</string>
+    <string name="export_encrypt_message">Set a passphrase to encrypt the backup. Leave it blank for a plaintext file. The passphrase cannot be recovered.</string>
+    <string name="export_passphrase_hint">Passphrase (optional)</string>
+    <string name="import_passphrase_title">Backup passphrase</string>
+    <string name="import_passphrase_message">This backup is encrypted. Enter the passphrase used when it was exported.</string>
+    <string name="import_passphrase_hint">Passphrase</string>
     <string name="import_db_failed">Import failed</string>
     <string name="import_db_completed">Import completed</string>
     <string name="export_db_failed">Export failed</string>
@@ -52,6 +58,22 @@
 
     <string name="edit">Edit</string>
     <string name="delete">Delete</string>
+    <string name="action_move">Move to category</string>
+    <string name="action_mark_read">Mark read</string>
+    <string name="action_delete_selected">Delete</string>
+    <plurals name="selection_count">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <plurals name="delete_selected_title">
+        <item quantity="one">Delete %1$d message?</item>
+        <item quantity="other">Delete %1$d messages?</item>
+    </plurals>
+    <plurals name="deleted_count">
+        <item quantity="one">%1$d message deleted</item>
+        <item quantity="other">%1$d messages deleted</item>
+    </plurals>
+    <string name="delete_selected_warning">Self-trained messages are hidden so their training survives; other messages are removed from this app\'s database. Real SMS are not affected.</string>
     <string name="mark_all_as_read">Mark all as Read</string>
     <string name="deleted">Deleted</string>
     <string name="undo">Undo</string>
@@ -75,10 +97,21 @@
     <string name="permission_read_sms_entry">Read SMS</string>
     <string name="permission_rationale_prefix" translatable="false">"You need to grant access to "</string>
     <string name="permission_rationale_separator" translatable="false">", "</string>
-    <string name="some_permission_denied">Some Permission is Denied</string>
+    <string name="onboarding_title">Welcome to Grouping Messages</string>
+    <string name="onboarding_message">Grouping Messages reads SMS on this device and sorts them into categories you define. Correct a message’s category and similar future messages follow it. Nothing is uploaded: there is no account, analytics or cloud sync. SMS access is required for the inbox; contacts are optional display names.</string>
+    <string name="onboarding_continue">Continue</string>
+    <string name="permission_denied_title">SMS access is required</string>
+    <string name="permission_denied_message">Without SMS access the app cannot read or categorize your inbox. Open app settings, allow SMS, then return.</string>
+    <string name="open_settings">Open settings</string>
     <string name="sms_not_found">SMS not found</string>
 
     <string name="action_search">Search</string>
+    <string name="all_messages">All messages</string>
+    <string name="classification_confidence">%1$d%% match</string>
+    <string name="unclassified">Unclassified</string>
+    <string name="review_unclassified">Review unclassified</string>
+    <string name="review_suggestion">Suggested: %1$s · %2$d%%</string>
+    <string name="review_no_suggestion">No suggestion</string>
     <string name="search_messages_hint">Search messages…</string>
     <string name="no_matching_sms">No messages matching \"%1$s\"</string>
 

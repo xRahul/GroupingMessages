@@ -9,8 +9,8 @@ import org.simmetrics.metrics.Levenshtein;
 
 /**
  * Mode-based scoring for the 1-NN categorization pipeline. A Batch precomputes
- * per-exemplar features once (tf-idf vectors + char trigram profiles over the
- * exemplar corpus) and scores any number of query messages against it.
+ * per-candidate features once (tf-idf vectors + char trigram profiles over a
+ * corpus) and scores any number of query messages against it.
  *
  * Modes: balanced = 0.6 word-cosine + 0.4 char-trigram-dice; wordsOnly = 1/0;
  * charactersOnly = 0/1; legacyLevenshtein = whole-string simmetrics Levenshtein
@@ -79,51 +79,70 @@ public final class SmsCategorizer {
     return documentFrequency;
   }
 
-  /** Immutable batch of exemplar features; one instance per classification pass. */
+  /** Immutable batch of candidate features; one instance per classification pass. */
   public static final class Batch {
 
     private final String mode;
     private final TextVectorizer vectorizer;
-    private final List<String> exemplarTexts;
-    private final List<Map<String, Double>> exemplarVectors;
-    private final List<Map<String, Integer>> exemplarProfiles;
+    private final List<String> candidateTexts;
+    private final List<Map<String, Double>> candidateVectors;
+    private final List<Map<String, Integer>> candidateProfiles;
     private final Map<String, Integer> documentFrequency;
+    private final long corpusSize;
     private final StringMetric legacyMetric;
 
-    private Batch(String mode, TextVectorizer vectorizer, List<String> exemplarTexts,
-        List<Map<String, Double>> exemplarVectors, List<Map<String, Integer>> exemplarProfiles,
-        Map<String, Integer> documentFrequency, StringMetric legacyMetric) {
+    private Batch(String mode, TextVectorizer vectorizer, List<String> candidateTexts,
+        List<Map<String, Double>> candidateVectors,
+        List<Map<String, Integer>> candidateProfiles,
+        Map<String, Integer> documentFrequency, long corpusSize, StringMetric legacyMetric) {
       this.mode = mode;
       this.vectorizer = vectorizer;
-      this.exemplarTexts = exemplarTexts;
-      this.exemplarVectors = exemplarVectors;
-      this.exemplarProfiles = exemplarProfiles;
+      this.candidateTexts = candidateTexts;
+      this.candidateVectors = candidateVectors;
+      this.candidateProfiles = candidateProfiles;
       this.documentFrequency = documentFrequency;
+      this.corpusSize = corpusSize;
       this.legacyMetric = legacyMetric;
     }
 
+    /** Scores candidates against a corpus of the same texts. */
     public static Batch build(List<String> exemplarTexts, List<String> stopwords, String mode) {
-      List<String> texts = exemplarTexts == null
+      return build(exemplarTexts, exemplarTexts, stopwords, mode);
+    }
+
+    /**
+     * Builds candidate features against an explicit IDF corpus. Use this when
+     * the documents being scored are not the corpus that defines IDF — for
+     * example, re-scoring stored SMS against the user's trained exemplars.
+     */
+    public static Batch build(List<String> corpusTexts, List<String> candidateTexts,
+        List<String> stopwords, String mode) {
+      List<String> corpus = corpusTexts == null
           ? new ArrayList<String>()
-          : new ArrayList<>(exemplarTexts);
+          : new ArrayList<>(corpusTexts);
+      List<String> candidates = candidateTexts == null
+          ? new ArrayList<String>()
+          : new ArrayList<>(candidateTexts);
       TextVectorizer vectorizer = new TextVectorizer(stopwords);
       if (MODE_LEGACY_LEVENSHTEIN.equals(mode)) {
-        return new Batch(mode, vectorizer, texts, null, null, null, new Levenshtein());
+        return new Batch(mode, vectorizer, candidates, null, null, null,
+            candidates.size(), new Levenshtein());
       }
-      Map<String, Integer> documentFrequency = buildDocumentFrequency(texts, vectorizer);
-      long corpusSize = texts.size();
-      int size = texts.size();
+      Map<String, Integer> documentFrequency = buildDocumentFrequency(corpus, vectorizer);
+      long corpusSize = corpus.size();
+      int size = candidates.size();
       List<Map<String, Double>> vectors = new ArrayList<>(size);
       List<Map<String, Integer>> profiles = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
-        vectors.add(vectorizer.tfIdfVector(texts.get(i), documentFrequency, corpusSize));
-        profiles.add(CharTrigramProfile.of(TextVectorizer.normalize(texts.get(i))));
+        vectors.add(vectorizer.tfIdfVector(candidates.get(i), documentFrequency, corpusSize));
+        profiles.add(CharTrigramProfile.of(TextVectorizer.normalize(candidates.get(i))));
       }
-      return new Batch(mode, vectorizer, texts, vectors, profiles, documentFrequency, null);
+      return new Batch(mode, vectorizer, candidates, vectors, profiles,
+          documentFrequency, corpusSize, null);
     }
 
     public int size() {
-      return exemplarTexts.size();
+      return candidateTexts.size();
     }
 
     public String getMode() {
@@ -131,24 +150,24 @@ public final class SmsCategorizer {
     }
 
     /**
-     * Scores the cleaned query message against every exemplar in pipeline order.
-     * Index i of the result corresponds to the i-th exemplar passed to build.
+     * Scores the cleaned query message against every candidate in pipeline
+     * order. Index i corresponds to the i-th candidate passed to build.
      */
     public double[] scores(String queryCleanedText) {
-      double[] scores = new double[exemplarTexts.size()];
+      double[] scores = new double[candidateTexts.size()];
       if (legacyMetric != null) {
         for (int i = 0; i < scores.length; i++) {
-          scores[i] = legacyMetric.compare(queryCleanedText, exemplarTexts.get(i));
+          scores[i] = legacyMetric.compare(queryCleanedText, candidateTexts.get(i));
         }
         return scores;
       }
       Map<String, Double> queryVector =
-          vectorizer.tfIdfVector(queryCleanedText, documentFrequency, exemplarTexts.size());
+          vectorizer.tfIdfVector(queryCleanedText, documentFrequency, corpusSize);
       Map<String, Integer> queryProfile =
           CharTrigramProfile.of(TextVectorizer.normalize(queryCleanedText));
       for (int i = 0; i < scores.length; i++) {
-        double wordScore = TextVectorizer.cosine(queryVector, exemplarVectors.get(i));
-        double charScore = CharTrigramProfile.dice(queryProfile, exemplarProfiles.get(i));
+        double wordScore = TextVectorizer.cosine(queryVector, candidateVectors.get(i));
+        double charScore = CharTrigramProfile.dice(queryProfile, candidateProfiles.get(i));
         switch (mode) {
           case MODE_WORDS_ONLY:
             scores[i] = WEIGHT_EXCLUSIVE * wordScore + WEIGHT_DISABLED * charScore;

@@ -34,6 +34,10 @@ import java.util.Set;
 
   private Map<String, String> contactNamesByAddress = Collections.emptyMap();
   private Map<Long, String> categoryNamesById = Collections.emptyMap();
+  private Map<Long, TrainSms.Suggestion> suggestionsById = Collections.emptyMap();
+  private Set<Long> selectedIds = Collections.emptySet();
+  private boolean reviewMode;
+  private boolean selectionMode;
 
   SmsListArrayAdapter(Context context, OnSmsRemovedListener listener) {
     super(new SmsDiffCallback());
@@ -42,17 +46,22 @@ import java.util.Set;
   }
 
   void submitSms(List<Sms> smsList, Map<String, String> contactNamesByAddress,
-      Map<Long, String> categoryNamesById) {
+      Map<Long, String> categoryNamesById, Map<Long, TrainSms.Suggestion> suggestionsById,
+      boolean reviewMode) {
 
     // resolved display names live outside the diffed item; when they change,
     // rebind everything so rows never show a stale name/category label
     boolean displayDataChanged =
         !this.contactNamesByAddress.equals(contactNamesByAddress)
-            || !this.categoryNamesById.equals(categoryNamesById);
+            || !this.categoryNamesById.equals(categoryNamesById)
+            || this.reviewMode != reviewMode;
     this.contactNamesByAddress = contactNamesByAddress != null
         ? contactNamesByAddress : Collections.emptyMap();
     this.categoryNamesById = categoryNamesById != null
         ? categoryNamesById : Collections.emptyMap();
+    this.suggestionsById = suggestionsById != null
+        ? suggestionsById : Collections.emptyMap();
+    this.reviewMode = reviewMode;
 
     if (displayDataChanged) {
       submitList(smsList, this::notifyDataSetChanged);
@@ -91,8 +100,36 @@ import java.util.Set;
       holder.getSwipeLayout().setVisibility(View.GONE);
       holder.bindSms(data,
           displayNameFor(data),
-          categoryNamesById.getOrDefault(data.getCategoryId(), ""));
+          categoryNamesById.getOrDefault(data.getCategoryId(), ""),
+          suggestionTextFor(data),
+          selectionMode,
+          selectedIds.contains(data.getId()));
     }
+  }
+
+  void setSelection(Set<Long> ids) {
+    selectedIds = ids == null ? Collections.emptySet() : new HashSet<>(ids);
+    selectionMode = !selectedIds.isEmpty();
+    notifyItemRangeChanged(0, getItemCount());
+  }
+
+  void clearSelection() {
+    selectedIds = Collections.emptySet();
+    selectionMode = false;
+    notifyItemRangeChanged(0, getItemCount());
+  }
+
+  private String suggestionTextFor(Sms sms) {
+    if (!reviewMode) {
+      return null;
+    }
+    TrainSms.Suggestion suggestion = suggestionsById.get(sms.getId());
+    if (suggestion == null) {
+      return context.getString(R.string.review_no_suggestion);
+    }
+    String categoryName = categoryNamesById.getOrDefault(suggestion.categoryId, "");
+    return context.getString(R.string.review_suggestion, categoryName,
+        Math.round(suggestion.score * 100));
   }
 
   private String displayNameFor(Sms sms) {

@@ -3,7 +3,7 @@
 ## Project structure
 
 - Native Android app, Java, single `app` module.
-- Build: Gradle wrapper 9.7.1, AGP 9.3.1, JDK 21, source/target Java 17.
+- Build: Gradle wrapper 9.9.2, AGP 9.5.2, JDK 21, source/target Java 17.
 - `compileSdk`/`targetSdk` 36, `minSdk` 24.
 - Database schema version 4.
 

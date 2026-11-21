@@ -290,6 +290,54 @@ public class DaoTest {
   }
 
   @Test
+  public void visibleRowsExposeSimilarityScore() {
+    SmsDao.storeTrainedInboxSms(ctx, Collections.singletonList(
+        smsMap(1000L, "scored", 1L, 0L, 0.42d)));
+
+    List<Sms> visible = SmsDao.getVisibleByCategory(ctx, 1L);
+    assertEquals(1, visible.size());
+    assertEquals(0.42f, visible.get(0).getSimScore(), 0.001f);
+  }
+
+  @Test
+  public void deleteSmsByIdsHidesTrainedRowsAndChunksLargeSelections() {
+    List<Map<String, String>> rows = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      rows.add(smsMap(1000L + i, "delete-" + i, 1L, 0L, 0.0d));
+    }
+    SmsDao.storeTrainedInboxSms(ctx, rows);
+
+    List<Map<String, String>> stored = SmsDao.getAll(ctx);
+    assertEquals(1000, stored.size());
+    Map<String, String> trained = stored.get(0);
+    trained.put(DatabaseContract.Sms.KEY_SIMILAR_TO,
+        trained.get(DatabaseContract.Sms._ID));
+    trained.put(DatabaseContract.Sms.KEY_SIM_SCORE, "1.0");
+    SmsDao.updateSmsData(ctx, trained);
+
+    List<Long> ids = idsOf(stored);
+    assertEquals(1000, SmsDao.deleteSmsByIds(ctx, ids));
+
+    List<Map<String, String>> remaining = SmsDao.getAll(ctx);
+    assertEquals(1, remaining.size());
+    assertEquals("0", remaining.get(0).get(DatabaseContract.Sms.KEY_VISIBILITY));
+  }
+
+  @Test
+  public void batchMutatorsChunkLargeSelections() {
+    List<Map<String, String>> rows = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      rows.add(smsMap(1000L + i, "chunk-" + i, 1L, 0L, 0.0d));
+    }
+    SmsDao.storeTrainedInboxSms(ctx, rows);
+
+    List<Long> ids = idsOf(SmsDao.getAll(ctx));
+    assertEquals(1000, ids.size());
+    assertEquals(1000, SmsDao.markRead(ctx, ids));
+    assertEquals(0, SmsDao.countUnreadInCategory(ctx, 1L));
+  }
+
+  @Test
   public void storeReTrainedSmsUpdatesAllRowsInTransaction() {
     SmsDao.storeTrainedInboxSms(ctx, Arrays.asList(
         smsMap(1000L, "alpha", 1L, 0L, 0.0d),

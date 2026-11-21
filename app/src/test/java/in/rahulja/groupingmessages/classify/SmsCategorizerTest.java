@@ -113,6 +113,27 @@ public class SmsCategorizerTest {
   }
 
   @Test
+  public void explicitCorpusKeepsCandidateScoresConsistent() {
+    List<String> corpus = Arrays.asList(
+        "bank debit account",
+        "sale discount offer",
+        "otp login code");
+    List<String> candidates = Arrays.asList(
+        "bank debit account",
+        "unrelated weather report");
+
+    SmsCategorizer.Batch selfCorpus = SmsCategorizer.Batch.build(
+        corpus, STOPWORDS, SmsCategorizer.MODE_BALANCED);
+    SmsCategorizer.Batch explicitCorpus = SmsCategorizer.Batch.build(
+        corpus, candidates, STOPWORDS, SmsCategorizer.MODE_BALANCED);
+
+    double[] selfScores = selfCorpus.scores("bank debit account extra");
+    double[] explicitScores = explicitCorpus.scores("bank debit account extra");
+    assertEquals(selfScores[0], explicitScores[0], DELTA);
+    assertEquals(2, explicitCorpus.size());
+  }
+
+  @Test
   public void emptyCorpusYieldsNoScores() {
     SmsCategorizer.Batch batch = SmsCategorizer.Batch.build(
         Collections.<String>emptyList(), STOPWORDS, SmsCategorizer.MODE_BALANCED);
